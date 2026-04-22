@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: openfednow
+
+  # Shadow Ledger — Redis configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  # RabbitMQ — async message queue for maintenance window bridge
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASS:guest}
+
+  # JPA — Shadow Ledger persistence
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+openfednow:
+  # Core banking adapter to use: fiserv | jackhenry | fis
+  adapter: ${CORE_ADAPTER:fiserv}
+
+  # FedNow gateway settings
+  gateway:
+    fednow-endpoint: ${FEDNOW_ENDPOINT:https://connect.fednow.org}
+    response-timeout-seconds: 18   # must be < FedNow's 20-second window
+
+  # Shadow Ledger settings
+  shadow-ledger:
+    idempotency-ttl-hours: 48
+    reconciliation-poll-interval-seconds: 30
+
+  # TLS / Certificate settings
+  tls:
+    keystore-path: ${TLS_KEYSTORE_PATH:}
+    keystore-password: ${TLS_KEYSTORE_PASSWORD:}
+    fed-truststore-path: ${FED_TRUSTSTORE_PATH:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics
+  endpoint:
+    health:
+      show-details: always
