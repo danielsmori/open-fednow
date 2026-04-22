@@ -1,0 +1,46 @@
+version: '3.8'
+
+# Local development environment for OpenFedNow
+# Starts Redis (Shadow Ledger cache) and RabbitMQ (async message queue)
+#
+# Usage:
+#   docker-compose up -d        # start in background
+#   docker-compose down         # stop and remove containers
+#   docker-compose logs -f      # follow logs
+
+services:
+
+  redis:
+    image: redis:7-alpine
+    container_name: openfednow-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: openfednow-rabbitmq
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # Management UI — http://localhost:15672 (guest/guest)
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis-data:
+  rabbitmq-data:
