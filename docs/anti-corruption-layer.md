@@ -22,6 +22,29 @@ This means building adapters for Fiserv, Jack Henry, and FIS makes the full fram
 | FIS | Horizon, IBS | 9% banks | Planned (Phase 2) |
 | Jack Henry | SilverLake, Symitar, CIF 20/20 | 21% banks, 12% CUs | Planned (Phase 3) |
 
+## Vendor-Specific Implementation Notes
+
+### Fiserv
+
+Fiserv's platforms are not uniform — each product line uses a different API style, which is why Fiserv integration is non-trivial despite the vendor being the same:
+
+- **DNA:** RESTful API. Most compatible with ISO 20022's REST/JSON model; the translation overhead is primarily field mapping and amount formatting.
+- **Precision / Premier:** SOAP/XML API. Requires XML marshalling/unmarshalling and character encoding conversion (Fiserv Precision/Premier use ASCII, not UTF-8).
+- **Cleartouch:** Similar to Precision/Premier in API style.
+
+Additional Fiserv implementation considerations:
+- Amount fields are represented as fixed-point strings (e.g., `"10050"` for $100.50), not as decimal numbers
+- Session tokens expire after 30 minutes of inactivity — the adapter must handle token refresh transparently
+- Fiserv-specific rejection codes must be mapped to ISO 20022 reason codes (e.g., Fiserv `INSUF_FUNDS` → ISO `AM04`)
+
+### FIS
+
+FIS Horizon and IBS use proprietary REST APIs distinct from Fiserv's. Field naming conventions differ significantly from ISO 20022. FIS adapters are planned for Phase 2.
+
+### Jack Henry
+
+Jack Henry SilverLake (banks) and Symitar (credit unions) use different APIs despite being the same vendor. The adapter layer will require two concrete implementations under the Jack Henry umbrella. Planned for Phase 3.
+
 ## Sync-to-Async Bridge
 
 FedNow requires a synchronous response within 20 seconds. Legacy core systems process asynchronously. The SyncAsyncBridge resolves this by:

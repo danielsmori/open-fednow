@@ -48,3 +48,6 @@ application-secret.yml
 
 # Docker
 docker-compose.override.yml
+
+# Cowork / Claude session files — not project content
+.claude/
