@@ -90,3 +90,40 @@ springdoc:
     path: /swagger-ui.html
     operations-sorter: method
     tags-sorter: alpha
+
+# ── Resilience4j — circuit breakers for core banking adapter calls ─────────
+#
+# A single 'corebanking' circuit breaker instance protects all three
+# adapter implementations (Fiserv, FIS, Jack Henry).  The Sandbox adapter
+# is excluded — it runs in-process and never makes network calls.
+#
+# Rationale for the thresholds:
+#   slidingWindowSize: 10        — recent call window; large enough to avoid
+#                                  false trips from momentary spikes
+#   failureRateThreshold: 50     — trip at 50% failures; aggressive for a
+#                                  payment system where every failed call
+#                                  risks a FedNow SLA breach
+#   slowCallDurationThreshold    — 15 s matches the SyncAsyncBridge timeout;
+#                                  calls that take this long are treated as
+#                                  failures even if they eventually return
+#   waitDurationInOpenState: 30s — allow the core system 30 seconds to
+#                                  recover before retrying (half-open)
+#   automaticTransition: true    — probe automatically after wait duration
+#                                  so ops don't need to manually reset
+#   registerHealthIndicator      — exposes coreBankingCircuitBreaker at
+#                                  /actuator/health alongside the custom
+#                                  coreBanking indicator
+resilience4j:
+  circuitbreaker:
+    instances:
+      corebanking:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        slowCallDurationThreshold: 15s
+        slowCallRateThreshold: 50
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        registerHealthIndicator: true
