@@ -1,0 +1,28 @@
+OpenFedNow {{ .Chart.AppVersion }} has been deployed.
+
+Profile:  {{ .Values.spring.profiles.active }}
+Adapter:  {{ .Values.openfednow.adapter }}
+Replicas: {{ if .Values.autoscaling.enabled }}{{ .Values.autoscaling.minReplicas }}–{{ .Values.autoscaling.maxReplicas }} (autoscaling enabled){{ else }}{{ .Values.replicaCount }}{{ end }}
+
+━━━ Health check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  kubectl port-forward svc/{{ include "openfednow.fullname" . }} 8080:{{ .Values.service.port }}
+  curl http://localhost:8080/actuator/health
+
+━━━ FedNow endpoint ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  {{ .Values.openfednow.gateway.fednowEndpoint }}
+
+━━━ Required Secrets ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Verify that all credential Secrets exist before the pod starts:
+
+  kubectl get secret {{ .Values.existingSecrets.database }} {{ .Values.existingSecrets.rabbitmq }} {{ .Values.existingSecrets.tls }}
+
+If any Secret is missing the pod will fail to start. See values.yaml
+for the required keys within each Secret.
+{{- if eq .Values.spring.profiles.active "prod" }}
+
+━━━ Production notes ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Swagger UI and /v3/api-docs are DISABLED in the prod profile.
+• Health details are visible only to authenticated callers.
+• The Sandbox adapter (openfednow.adapter=sandbox) is NOT valid in prod;
+  the application will refuse to start if CORE_ADAPTER is not set.
+{{- end }}

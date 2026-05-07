@@ -1,0 +1,12 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "openfednow.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openfednow.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "openfednow.selectorLabels" . | nindent 6 }}

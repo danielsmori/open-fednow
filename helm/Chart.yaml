@@ -1,0 +1,16 @@
+apiVersion: v2
+name: openfednow
+description: >-
+  Open-source middleware connecting legacy core banking systems to the Federal
+  Reserve FedNow Instant Payment Service (ISO 20022 / HTTPS).
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - fednow
+  - payments
+  - iso20022
+  - banking
+home: https://github.com/danielsmori/open-fednow
+sources:
+  - https://github.com/danielsmori/open-fednow

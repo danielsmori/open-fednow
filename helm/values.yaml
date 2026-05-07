@@ -1,0 +1,133 @@
+# Default values for openfednow — production-oriented.
+# Override with values-staging.yaml for staging deployments.
+
+# ── Image ──────────────────────────────────────────────────────────────────
+image:
+  repository: ghcr.io/danielsmori/open-fednow
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# ── Replicas / Autoscaling ─────────────────────────────────────────────────
+replicaCount: 2
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+# Minimum available pods during voluntary disruptions (node drains, upgrades).
+podDisruptionBudget:
+  minAvailable: 1
+
+# ── Service Account ────────────────────────────────────────────────────────
+serviceAccount:
+  create: true
+  annotations: {}
+  # Leave blank to default to the chart fullname.
+  name: ""
+
+# ── Spring profile ─────────────────────────────────────────────────────────
+spring:
+  profiles:
+    active: prod
+
+# ── Application config (non-sensitive) ─────────────────────────────────────
+openfednow:
+  # Core banking adapter: fiserv | fis | jackhenry  (never sandbox in prod)
+  adapter: fiserv
+  gateway:
+    fednowEndpoint: "https://connect.fednow.org"
+    responseTimeoutSeconds: 18
+
+redis:
+  host: redis-master
+  port: 6379
+
+rabbitmq:
+  host: rabbitmq
+  port: 5672
+
+database:
+  # Full JDBC URL — override for your PostgreSQL service name and database.
+  url: "jdbc:postgresql://postgresql:5432/openfednow"
+
+# ── Credentials (pre-existing Secrets) ────────────────────────────────────
+# The chart does NOT create these Secrets. Provision them before installing:
+#
+#   kubectl create secret generic openfednow-db \
+#     --from-literal=DB_USERNAME=app \
+#     --from-literal=DB_PASSWORD=<password>
+#
+#   kubectl create secret generic openfednow-rabbitmq \
+#     --from-literal=RABBITMQ_USER=openfednow \
+#     --from-literal=RABBITMQ_PASS=<password>
+#
+#   kubectl create secret generic openfednow-tls \
+#     --from-literal=TLS_KEYSTORE_PASSWORD=<password> \
+#     --from-file=keystore.p12=/path/to/institution-keystore.p12 \
+#     --from-file=fed-truststore.jks=/path/to/fed-truststore.jks
+existingSecrets:
+  database: openfednow-db
+  rabbitmq: openfednow-rabbitmq
+  tls: openfednow-tls
+
+# ── TLS keystore volume ────────────────────────────────────────────────────
+# Keystore files are sourced from existingSecrets.tls and mounted read-only.
+tls:
+  mountPath: /etc/openfednow/tls
+  # Key names inside the Secret that contain the binary keystore files.
+  keystoreFilename: keystore.p12
+  fedTruststoreFilename: fed-truststore.jks
+
+# ── Service ────────────────────────────────────────────────────────────────
+service:
+  type: ClusterIP
+  port: 8080
+
+# ── Ingress ────────────────────────────────────────────────────────────────
+# Disabled by default — the FedNow gateway is typically not internet-facing;
+# FedNow connections are initiated from the cluster outbound (mTLS to the Fed).
+# Enable if your institution routes inbound FedNow messages via an ingress.
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+  host: openfednow.example.com
+  tls: []
+
+# ── Resources ─────────────────────────────────────────────────────────────
+# Sized for a Spring Boot payment service under moderate FedNow load.
+# Review and adjust for your cluster's capacity and observed utilization.
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: 2000m
+    memory: 1Gi
+
+# ── Scheduling ────────────────────────────────────────────────────────────
+nodeSelector: {}
+
+tolerations: []
+
+# Prefer spreading pods across nodes for high availability.
+# Override with an empty {} to disable.
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - openfednow
+          topologyKey: kubernetes.io/hostname

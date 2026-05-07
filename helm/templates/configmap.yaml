@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "openfednow.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openfednow.labels" . | nindent 4 }}
+data:
+  # Spring profile activates the matching application-<profile>.yml
+  SPRING_PROFILES_ACTIVE: {{ .Values.spring.profiles.active | quote }}
+
+  # Core banking adapter selection
+  CORE_ADAPTER: {{ .Values.openfednow.adapter | quote }}
+
+  # FedNow gateway
+  FEDNOW_ENDPOINT: {{ .Values.openfednow.gateway.fednowEndpoint | quote }}
+
+  # Redis — Shadow Ledger real-time balance cache
+  REDIS_HOST: {{ .Values.redis.host | quote }}
+  REDIS_PORT: {{ .Values.redis.port | toString | quote }}
+
+  # RabbitMQ — maintenance-window transaction queue
+  RABBITMQ_HOST: {{ .Values.rabbitmq.host | quote }}
+  RABBITMQ_PORT: {{ .Values.rabbitmq.port | toString | quote }}
+
+  # PostgreSQL — Shadow Ledger persistent store and reconciliation audit log
+  DB_URL: {{ .Values.database.url | quote }}
+
+  # TLS keystore paths (files mounted from the tls Secret volume)
+  TLS_KEYSTORE_PATH: {{ printf "%s/%s" .Values.tls.mountPath .Values.tls.keystoreFilename | quote }}
+  FED_TRUSTSTORE_PATH: {{ printf "%s/%s" .Values.tls.mountPath .Values.tls.fedTruststoreFilename | quote }}

@@ -74,6 +74,11 @@ management:
   endpoint:
     health:
       show-details: always
+      # Explicitly enable liveness and readiness groups so that the Kubernetes
+      # Deployment health probes work regardless of how the container runtime
+      # sets KUBERNETES_SERVICE_HOST.
+      probes:
+        enabled: true
 
 springdoc:
   api-docs:

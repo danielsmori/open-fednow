@@ -1,0 +1,47 @@
+# Staging overrides for openfednow.
+# Apply with: helm upgrade --install openfednow ./helm -f helm/values-staging.yaml
+#
+# Differences from production defaults:
+#   - Single replica, no autoscaling
+#   - Sandbox adapter so QA can run without a live vendor connection
+#   - Relaxed resource limits
+#   - existingSecrets names match the staging namespace convention
+
+replicaCount: 1
+
+autoscaling:
+  enabled: false
+
+podDisruptionBudget:
+  minAvailable: 1
+
+spring:
+  profiles:
+    active: staging
+
+openfednow:
+  # Sandbox adapter by default; set CORE_ADAPTER=fiserv to hit a real vendor
+  # in staging integration tests.
+  adapter: sandbox
+  gateway:
+    # Override to target a FedNow certification environment if available.
+    fednowEndpoint: "https://connect.fednow.org"
+
+existingSecrets:
+  database: openfednow-staging-db
+  rabbitmq: openfednow-staging-rabbitmq
+  tls: openfednow-staging-tls
+
+database:
+  url: "jdbc:postgresql://postgresql:5432/openfednow_staging"
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 384Mi
+  limits:
+    cpu: 1000m
+    memory: 768Mi
+
+# No anti-affinity needed with a single replica in staging.
+affinity: {}

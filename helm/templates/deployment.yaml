@@ -1,0 +1,141 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "openfednow.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openfednow.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "openfednow.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      # Restart pods automatically when the ConfigMap changes.
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "openfednow.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "openfednow.serviceAccountName" . }}
+
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      containers:
+        - name: openfednow
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          # ── Environment — non-sensitive (ConfigMap) ──────────────────────
+          envFrom:
+            - configMapRef:
+                name: {{ include "openfednow.fullname" . }}
+
+          # ── Environment — sensitive (Secrets) ───────────────────────────
+          env:
+            # Database credentials
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecrets.database }}
+                  key: DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecrets.database }}
+                  key: DB_PASSWORD
+
+            # RabbitMQ credentials
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecrets.rabbitmq }}
+                  key: RABBITMQ_USER
+            - name: RABBITMQ_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecrets.rabbitmq }}
+                  key: RABBITMQ_PASS
+
+            # TLS keystore passphrase
+            - name: TLS_KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecrets.tls }}
+                  key: TLS_KEYSTORE_PASSWORD
+
+          # ── TLS keystore volume ──────────────────────────────────────────
+          volumeMounts:
+            - name: tls-keystores
+              mountPath: {{ .Values.tls.mountPath }}
+              readOnly: true
+
+          # ── Health probes ────────────────────────────────────────────────
+          # Spring Boot Actuator exposes /actuator/health/liveness and
+          # /actuator/health/readiness when running in Kubernetes.
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            failureThreshold: 3
+            timeoutSeconds: 5
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 5
+
+          # ── Resources ────────────────────────────────────────────────────
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false   # Spring Boot writes temp files
+            capabilities:
+              drop:
+                - ALL
+
+      volumes:
+        - name: tls-keystores
+          secret:
+            secretName: {{ .Values.existingSecrets.tls }}
+            items:
+              - key: {{ .Values.tls.keystoreFilename }}
+                path: {{ .Values.tls.keystoreFilename }}
+              - key: {{ .Values.tls.fedTruststoreFilename }}
+                path: {{ .Values.tls.fedTruststoreFilename }}
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
