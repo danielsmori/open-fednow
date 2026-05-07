@@ -1,0 +1,75 @@
+# OpenFedNow — Production profile
+# Activate: SPRING_PROFILES_ACTIVE=prod
+#
+# All infrastructure connection strings and credentials are REQUIRED environment
+# variables with no fallback defaults. If any variable is absent the application
+# will refuse to start — this is intentional to prevent silent misconfiguration
+# in a regulated payment environment.
+#
+# Required environment variables:
+#
+#   Core adapter (must NOT be 'sandbox' in production):
+#     CORE_ADAPTER          fiserv | fis | jackhenry
+#
+#   PostgreSQL (Shadow Ledger persistent store):
+#     DB_URL                jdbc:postgresql://<host>:<port>/<database>
+#     DB_USERNAME
+#     DB_PASSWORD
+#
+#   Redis (Shadow Ledger real-time balance cache):
+#     REDIS_HOST
+#     REDIS_PORT
+#
+#   RabbitMQ (maintenance-window transaction queue):
+#     RABBITMQ_HOST
+#     RABBITMQ_PORT
+#     RABBITMQ_USER
+#     RABBITMQ_PASS
+#
+#   Federal Reserve PKI (mutual TLS with FedNow):
+#     TLS_KEYSTORE_PATH     Path to institution PKCS#12 keystore
+#     TLS_KEYSTORE_PASSWORD Keystore passphrase
+#     FED_TRUSTSTORE_PATH   Path to Federal Reserve CA truststore
+
+openfednow:
+  # No default — application will not start if CORE_ADAPTER is unset.
+  # The Sandbox adapter must never be used in production.
+  adapter: ${CORE_ADAPTER}
+
+  gateway:
+    fednow-endpoint: ${FEDNOW_ENDPOINT:https://connect.fednow.org}
+    response-timeout-seconds: 18
+
+  tls:
+    keystore-path: ${TLS_KEYSTORE_PATH}
+    keystore-password: ${TLS_KEYSTORE_PASSWORD}
+    fed-truststore-path: ${FED_TRUSTSTORE_PATH}
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    show-sql: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # health and info only on the public management port.
+        # Expose metrics on a separate internal port via management.server.port.
+        include: health, info
+  endpoint:
+    health:
+      # Do not expose internal component details to unauthenticated callers.
+      show-details: when-authorized
+
+# Swagger UI and the raw OpenAPI spec are disabled in production.
+# The spec can be generated at build time with springdoc-openapi-maven-plugin
+# and distributed to integration partners out-of-band.
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false

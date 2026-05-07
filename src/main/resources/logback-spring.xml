@@ -29,8 +29,13 @@
         </encoder>
     </appender>
 
-    <!-- OpenFedNow application code: DEBUG so payment processing steps are visible -->
-    <logger name="io.openfednow" level="DEBUG"/>
+    <!-- OpenFedNow application code: DEBUG in dev/staging, INFO in production -->
+    <springProfile name="prod">
+        <logger name="io.openfednow" level="INFO"/>
+    </springProfile>
+    <springProfile name="!prod">
+        <logger name="io.openfednow" level="DEBUG"/>
+    </springProfile>
 
     <!-- Spring framework: INFO to surface context startup and request mapping -->
     <logger name="org.springframework.web"             level="INFO"/>

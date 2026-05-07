@@ -1,0 +1,43 @@
+# OpenFedNow — Staging profile
+# Activate: SPRING_PROFILES_ACTIVE=staging
+#
+# Targets a staging environment with real PostgreSQL, Redis, and RabbitMQ.
+# The Sandbox adapter is the default so QA can run end-to-end tests without
+# a vendor connection; set CORE_ADAPTER=fiserv to exercise a real adapter.
+#
+# Required environment variables:
+#   DB_URL, DB_USERNAME, DB_PASSWORD
+#   REDIS_HOST, REDIS_PORT
+#   RABBITMQ_HOST, RABBITMQ_PORT, RABBITMQ_USER, RABBITMQ_PASS
+#
+# Optional environment variables (FedNow defaults to the real endpoint):
+#   CORE_ADAPTER          — defaults to 'sandbox'; set to fiserv|fis|jackhenry for integration tests
+#   FEDNOW_ENDPOINT       — override to point at a FedNow test/certification environment
+#   SANDBOX_CORE_AVAILABLE, SANDBOX_DEFAULT_BALANCE, SANDBOX_LATENCY_MS
+
+openfednow:
+  adapter: ${CORE_ADAPTER:sandbox}
+  sandbox:
+    core-available: ${SANDBOX_CORE_AVAILABLE:true}
+    default-balance: ${SANDBOX_DEFAULT_BALANCE:50000.00}
+    simulate-latency-ms: ${SANDBOX_LATENCY_MS:0}
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    show-sql: false
+
+management:
+  endpoint:
+    health:
+      # Full health details visible in staging so engineers can diagnose failures.
+      show-details: always
+
+springdoc:
+  swagger-ui:
+    enabled: true
+  api-docs:
+    enabled: true
