@@ -5,10 +5,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.openfednow.iso20022.Pacs002Message;
 import io.openfednow.iso20022.Pacs008Message;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
-import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
@@ -19,16 +17,16 @@ import java.util.List;
  * HTTP implementation of {@link FedNowClient}.
  *
  * <p>POSTs pacs.008 messages as JSON to
- * {@code {openfednow.gateway.fednow-endpoint}/transfers} and deserializes
- * the pacs.002 response body. Network errors and HTTP error responses are
- * caught and converted to a synthetic RJCT pacs.002 — callers always receive
- * a well-formed {@link Pacs002Message}, never a raw exception.
+ * {@code {fednowEndpoint}/transfers} and deserializes the pacs.002 response.
+ * Network errors and HTTP error responses are caught and converted to a
+ * synthetic RJCT pacs.002 — callers always receive a well-formed
+ * {@link Pacs002Message}, never a raw exception.
  *
- * <p>A package-private constructor (taking the endpoint URL and timeout seconds
- * directly) is provided for use in {@code FedNowSimulatorTest}, which points
- * this client at a WireMock server rather than the real FedNow endpoint.
+ * <p>This class is not a {@code @Component}; it is created by
+ * {@link FedNowClientConfig} as a Spring bean so the endpoint URL and timeout
+ * can be injected from application properties. Tests instantiate it directly
+ * via the single public constructor, pointing it at a WireMock base URL.
  */
-@Component
 public class HttpFedNowClient implements FedNowClient {
 
     /** Path appended to the configured base endpoint for credit transfer submission. */
@@ -37,19 +35,15 @@ public class HttpFedNowClient implements FedNowClient {
     private final String fednowEndpoint;
     private final RestTemplate restTemplate;
 
-    /** Spring-managed constructor — reads endpoint and timeout from application properties. */
-    public HttpFedNowClient(
-            @Value("${openfednow.gateway.fednow-endpoint}") String fednowEndpoint,
-            @Value("${openfednow.gateway.response-timeout-seconds}") int timeoutSeconds) {
-        this.fednowEndpoint = fednowEndpoint;
-        this.restTemplate = buildRestTemplate(timeoutSeconds);
-    }
-
     /**
-     * Package-private: supply the endpoint URL and timeout directly.
-     * Used by {@code FedNowSimulatorTest} to target a local WireMock server.
+     * Creates a client targeting the given endpoint with the specified timeout.
+     * Called by {@link FedNowClientConfig} for Spring-managed usage, and
+     * directly from {@code FedNowSimulatorTest} with a WireMock base URL.
+     *
+     * @param fednowEndpoint base URL of the FedNow endpoint (no trailing slash)
+     * @param timeoutSeconds connect and read timeout applied to every request
      */
-    HttpFedNowClient(String fednowEndpoint, int timeoutSeconds) {
+    public HttpFedNowClient(String fednowEndpoint, int timeoutSeconds) {
         this.fednowEndpoint = fednowEndpoint;
         this.restTemplate = buildRestTemplate(timeoutSeconds);
     }
@@ -83,8 +77,8 @@ public class HttpFedNowClient implements FedNowClient {
         factory.setConnectTimeout(timeoutSeconds * 1000);
         factory.setReadTimeout(timeoutSeconds * 1000);
 
-        // Register the Java Time module so OffsetDateTime fields in pacs.002
-        // responses are deserialized correctly without Spring Boot's auto-config.
+        // Register JavaTimeModule so OffsetDateTime fields in pacs.002 responses
+        // deserialize correctly without Spring Boot's auto-configured ObjectMapper.
         ObjectMapper objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
