@@ -15,10 +15,21 @@ spring:
     username: ${RABBITMQ_USER:guest}
     password: ${RABBITMQ_PASS:guest}
 
-  # JPA — Shadow Ledger persistence
+  # Datasource — PostgreSQL in production; H2 (PostgreSQL-compatible mode) for local dev
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:openfednow;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+
+  # Flyway — schema migration management
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  # JPA — schema is managed by Flyway; Hibernate must not alter tables
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     show-sql: false
 
 openfednow:
