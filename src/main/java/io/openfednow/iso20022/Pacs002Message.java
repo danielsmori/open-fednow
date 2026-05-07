@@ -1,9 +1,10 @@
 package io.openfednow.iso20022;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.OffsetDateTime;
 
@@ -25,11 +26,17 @@ import java.time.OffsetDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Schema(description = "ISO 20022 pacs.002.001.10 — Payment Status Report. " +
+        "Returned in response to a pacs.008 credit transfer to indicate whether the payment was accepted or rejected.")
 public class Pacs002Message {
 
     /**
      * ISO 20022 transaction status codes used in FedNow.
      */
+    @Schema(description = "ISO 20022 transaction status code. " +
+            "ACSC = AcceptedSettlementCompleted (payment fully accepted and settled). " +
+            "RJCT = Rejected (see rejectReasonCode for the ISO 20022 reason). " +
+            "ACSP = AcceptedSettlementInProcess (accepted, settlement pending — provisional response).")
     public enum TransactionStatus {
         /** AcceptedSettlementCompleted — payment fully accepted and settled. */
         ACSC,
@@ -39,29 +46,29 @@ public class Pacs002Message {
         ACSP
     }
 
-    /** Message identification for this status report. */
+    @Schema(description = "Message identifier for this status report.", example = "STATUS-20240115-001", maxLength = 35)
     private String messageId;
 
-    /** Creation date and time of this status report. */
+    @Schema(description = "ISO 8601 creation timestamp of this status report.")
     private OffsetDateTime creationDateTime;
 
-    /** Original end-to-end ID from the pacs.008 this report responds to. */
+    @Schema(description = "EndToEndId from the originating pacs.008.", example = "E2E-20240115-001", maxLength = 35)
     private String originalEndToEndId;
 
-    /** Original transaction ID from the pacs.008 this report responds to. */
+    @Schema(description = "TransactionId from the originating pacs.008.", example = "TXN-20240115-001", maxLength = 35)
     private String originalTransactionId;
 
-    /** Transaction status (ACSC, RJCT, or ACSP). */
+    @Schema(description = "Transaction status: ACSC (settled), RJCT (rejected), or ACSP (settlement in process).")
     private TransactionStatus transactionStatus;
 
-    /**
-     * ISO 20022 reason code for rejections (e.g., "AC01" for invalid account,
-     * "AM04" for insufficient funds, "NARR" for narrative reason).
-     * Null if transactionStatus is ACSC.
-     */
+    @Schema(description = "ISO 20022 reason code for rejections (e.g. AC01 = invalid account, " +
+            "AM04 = insufficient funds, AC04 = closed account, NARR = narrative reason). " +
+            "Null when transactionStatus is ACSC or ACSP.",
+            example = "AM04", maxLength = 4)
     private String rejectReasonCode;
 
-    /** Human-readable description of the rejection reason. */
+    @Schema(description = "Human-readable description of the rejection reason. Null when transactionStatus is ACSC or ACSP.",
+            example = "Insufficient funds in debtor account")
     private String rejectReasonDescription;
 
     /** Convenience factory for an acceptance response. */

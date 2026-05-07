@@ -1,9 +1,10 @@
 package io.openfednow.iso20022;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -26,47 +27,50 @@ import java.time.OffsetDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Schema(description = "ISO 20022 pacs.008.001.08 — FI-to-FI Customer Credit Transfer. " +
+        "The primary payment message used by FedNow for real-time credit transfers between financial institutions.")
 public class Pacs008Message {
 
-    /** Message identification — unique identifier for this message instance. */
+    @Schema(description = "Unique identifier for this message instance.", example = "MSG-20240115-001", maxLength = 35)
     private String messageId;
 
-    /** Creation date and time of the message. */
+    @Schema(description = "ISO 8601 creation timestamp of the message.")
     private OffsetDateTime creationDateTime;
 
-    /** Number of individual transactions in this message (FedNow: always 1). */
+    @Schema(description = "Number of individual transactions in this message. FedNow always submits exactly 1.", example = "1")
     private int numberOfTransactions;
 
-    /** End-to-end identification — assigned by the originating party, carried through. */
+    @Schema(description = "End-to-end identification assigned by the originating party and carried unchanged through FedNow. " +
+            "Used as the deduplication key by IdempotencyService.", example = "E2E-20240115-001", maxLength = 35)
     private String endToEndId;
 
-    /** Transaction identification — unique ID assigned by the instructing agent. */
+    @Schema(description = "Transaction identification assigned by the instructing agent.", example = "TXN-20240115-001", maxLength = 35)
     private String transactionId;
 
-    /** Interbank settlement amount in USD. */
+    @Schema(description = "Interbank settlement amount in USD. Must be greater than zero.", example = "1000.00")
     private BigDecimal interbankSettlementAmount;
 
-    /** Interbank settlement currency (FedNow: always "USD"). */
+    @Schema(description = "Interbank settlement currency. FedNow only supports USD.", example = "USD")
     private String interbankSettlementCurrency;
 
-    /** ABA routing number of the debtor's financial institution. */
+    @Schema(description = "ABA routing number of the debtor's (sending) financial institution.", example = "021000021", minLength = 9, maxLength = 9)
     private String debtorAgentRoutingNumber;
 
-    /** ABA routing number of the creditor's financial institution. */
+    @Schema(description = "ABA routing number of the creditor's (receiving) financial institution.", example = "026009593", minLength = 9, maxLength = 9)
     private String creditorAgentRoutingNumber;
 
-    /** Debtor account number. */
+    @Schema(description = "Debtor account number at the sending institution.", example = "123456789", maxLength = 34)
     private String debtorAccountNumber;
 
-    /** Creditor account number. */
+    @Schema(description = "Creditor account number at the receiving institution.", example = "987654321", maxLength = 34)
     private String creditorAccountNumber;
 
-    /** Debtor name. */
+    @Schema(description = "Name of the debtor (payer).", example = "Alice Smith")
     private String debtorName;
 
-    /** Creditor name. */
+    @Schema(description = "Name of the creditor (payee).", example = "Bob Jones")
     private String creditorName;
 
-    /** Remittance information (payment memo). */
+    @Schema(description = "Remittance information / payment memo.", example = "Invoice #12345")
     private String remittanceInformation;
 }
