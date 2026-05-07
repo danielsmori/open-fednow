@@ -21,6 +21,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class MessageRouter {
 
+    private final FedNowClient fedNowClient;
+
+    public MessageRouter(FedNowClient fedNowClient) {
+        this.fedNowClient = fedNowClient;
+    }
+
     /**
      * Routes an inbound pacs.008 credit transfer from FedNow to the
      * Anti-Corruption Layer for processing against the core banking system.
@@ -38,14 +44,15 @@ public class MessageRouter {
     }
 
     /**
-     * Routes an outbound pacs.008 credit transfer from the core banking system
-     * to the FedNow Service.
+     * Routes an outbound pacs.008 credit transfer to the FedNow Service.
+     * Submits the message via {@link FedNowClient} and wraps the pacs.002
+     * status report in an HTTP 200 response.
      *
      * @param message pacs.008.001.08 message assembled by the ACL
      * @return pacs.002 status report returned by FedNow
      */
     public ResponseEntity<Pacs002Message> routeOutbound(Pacs008Message message) {
-        // TODO: implement outbound routing and FedNow submission
-        throw new UnsupportedOperationException("Not yet implemented");
+        Pacs002Message response = fedNowClient.submitCreditTransfer(message);
+        return ResponseEntity.ok(response);
     }
 }
