@@ -28,11 +28,11 @@ CREATE TABLE idempotency_keys (
     -- ISO 20022 reason code; non-null when response_status = RJCT
     response_reason_code    VARCHAR(4),
 
-    processed_at            TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    processed_at            TIMESTAMP WITH TIME ZONE     NOT NULL DEFAULT NOW(),
 
     -- Absolute expiry timestamp (processed_at + 48 hours).
     -- A scheduled cleanup job deletes rows where expires_at < NOW().
-    expires_at              TIMESTAMPTZ     NOT NULL,
+    expires_at              TIMESTAMP WITH TIME ZONE     NOT NULL,
 
     CONSTRAINT chk_idempotency_response_status CHECK (
         response_status IN ('ACSC', 'RJCT', 'ACSP')

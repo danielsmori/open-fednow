@@ -38,7 +38,7 @@ CREATE TABLE shadow_ledger_transaction_log (
     -- Rows where core_confirmed = FALSE are the reconciliation replay queue.
     core_confirmed      BOOLEAN         NOT NULL DEFAULT FALSE,
 
-    applied_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    applied_at          TIMESTAMP WITH TIME ZONE     NOT NULL DEFAULT NOW(),
 
     CONSTRAINT chk_sltl_transaction_type CHECK (
         transaction_type IN ('DEBIT', 'CREDIT', 'REVERSAL', 'RECONCILIATION')

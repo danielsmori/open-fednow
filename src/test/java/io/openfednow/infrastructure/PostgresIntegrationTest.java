@@ -92,21 +92,18 @@ class PostgresIntegrationTest extends AbstractInfrastructureIntegrationTest {
 
     @Test
     void bigserialGeneratesSequentialIds() {
-        jdbc.execute("""
-                INSERT INTO reconciliation_run (triggered_by)
-                VALUES ('MANUAL')
-                """);
-        jdbc.execute("""
-                INSERT INTO reconciliation_run (triggered_by)
-                VALUES ('MANUAL')
-                """);
-
-        List<Long> ids = jdbc.queryForList(
-                "SELECT id FROM reconciliation_run ORDER BY id",
+        // Use RETURNING to capture the assigned IDs directly, so this test is
+        // independent of rows inserted by other test methods in the same transaction.
+        Long id1 = jdbc.queryForObject(
+                "INSERT INTO reconciliation_run (triggered_by) VALUES ('MANUAL') RETURNING id",
+                Long.class);
+        Long id2 = jdbc.queryForObject(
+                "INSERT INTO reconciliation_run (triggered_by) VALUES ('MANUAL') RETURNING id",
                 Long.class);
 
-        assertThat(ids).hasSize(2);
-        assertThat(ids.get(1)).isGreaterThan(ids.get(0));
+        assertThat(id1).isNotNull();
+        assertThat(id2).isNotNull();
+        assertThat(id2).isGreaterThan(id1);
     }
 
     // --- TIMESTAMPTZ timezone handling ---

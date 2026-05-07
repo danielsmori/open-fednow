@@ -28,8 +28,8 @@ CREATE TABLE saga_state (
     -- Human-readable description of the failure or compensation reason
     failure_description VARCHAR(256),
 
-    created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    updated_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    created_at          TIMESTAMP WITH TIME ZONE     NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMP WITH TIME ZONE     NOT NULL DEFAULT NOW(),
 
     CONSTRAINT uq_saga_transaction_id  UNIQUE (transaction_id),
     CONSTRAINT uq_saga_end_to_end_id   UNIQUE (end_to_end_id),

@@ -14,10 +14,10 @@
 CREATE TABLE reconciliation_run (
     id                      BIGSERIAL       PRIMARY KEY,
 
-    started_at              TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    started_at              TIMESTAMP WITH TIME ZONE     NOT NULL DEFAULT NOW(),
 
     -- NULL until the run completes (successfully or with errors)
-    completed_at            TIMESTAMPTZ,
+    completed_at            TIMESTAMP WITH TIME ZONE,
 
     -- Count of transactions replayed from the RabbitMQ queue against the core
     transactions_replayed   INT             NOT NULL DEFAULT 0,
