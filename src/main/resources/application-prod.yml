@@ -64,6 +64,7 @@ management:
     health:
       # Do not expose internal component details to unauthenticated callers.
       show-details: when-authorized
+      show-components: when-authorized
 
 # Swagger UI and the raw OpenAPI spec are disabled in production.
 # The spec can be generated at build time with springdoc-openapi-maven-plugin

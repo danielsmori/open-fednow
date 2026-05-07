@@ -74,6 +74,9 @@ management:
   endpoint:
     health:
       show-details: always
+      # Show each named component (coreBanking, shadowLedger, db, redis, …)
+      # at /actuator/health. Overridden to 'when-authorized' in prod profile.
+      show-components: always
       # Explicitly enable liveness and readiness groups so that the Kubernetes
       # Deployment health probes work regardless of how the container runtime
       # sets KUBERNETES_SERVICE_HOST.
