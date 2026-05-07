@@ -124,20 +124,21 @@ class RabbitMqIntegrationTest extends AbstractInfrastructureIntegrationTest {
     void queueAccumulatesMessagesBeforeConsumption() {
         // During a maintenance window, multiple payments may arrive before
         // ReconciliationService begins replay. Verify the queue holds all of them.
+        // Note: getQueueInfo().getMessageCount() is updated asynchronously by RabbitMQ
+        // and can lag behind sends, so we consume and count instead of reading the
+        // queue depth — this is the observable behaviour that actually matters.
         int messageCount = 5;
         for (int i = 0; i < messageCount; i++) {
             rabbitTemplate.convertAndSend(MAINTENANCE_QUEUE,
                     "{\"transactionId\":\"TXN-BATCH-" + i + "\"}");
         }
 
-        QueueInformation info = amqpAdmin.getQueueInfo(MAINTENANCE_QUEUE);
-        assertThat(info).isNotNull();
-        assertThat(info.getMessageCount()).isGreaterThanOrEqualTo(messageCount);
-
-        // Drain the queue
+        List<Object> received = new ArrayList<>();
         for (int i = 0; i < messageCount; i++) {
-            rabbitTemplate.receiveAndConvert(MAINTENANCE_QUEUE, 3000);
+            Object msg = rabbitTemplate.receiveAndConvert(MAINTENANCE_QUEUE, 3000);
+            if (msg != null) received.add(msg);
         }
+        assertThat(received).hasSize(messageCount);
     }
 
     @Test
