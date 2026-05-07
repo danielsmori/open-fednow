@@ -2,11 +2,12 @@ package io.openfednow.infrastructure;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import io.openfednow.shadowledger.RabbitMqConfig;
 import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
-import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueInformation;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -34,11 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class RabbitMqIntegrationTest extends AbstractInfrastructureIntegrationTest {
 
-    /**
-     * The queue name used by AvailabilityBridge during maintenance windows.
-     * Transactions queued here are replayed by ReconciliationService on core return.
-     */
-    static final String MAINTENANCE_QUEUE = "maintenance-window-transactions";
+    static final String MAINTENANCE_QUEUE = RabbitMqConfig.MAINTENANCE_QUEUE;
 
     @Autowired
     private RabbitTemplate rabbitTemplate;
@@ -47,13 +44,12 @@ class RabbitMqIntegrationTest extends AbstractInfrastructureIntegrationTest {
     private AmqpAdmin amqpAdmin;
 
     @BeforeEach
-    void resetQueue() {
-        // Delete and re-declare the queue before each test to guarantee a clean
-        // slate. Without purging, messages left by a previous test can leak into
-        // the next one — causing FIFO-order and queue-depth tests to fail.
-        // Durable = true: messages survive a RabbitMQ broker restart.
-        amqpAdmin.deleteQueue(MAINTENANCE_QUEUE);
-        amqpAdmin.declareQueue(new Queue(MAINTENANCE_QUEUE, /* durable */ true));
+    void purgeQueue() {
+        // Purge rather than delete+redeclare: RabbitMqConfig declares the queue
+        // with dead-letter arguments on context startup, and redeclaring with
+        // different arguments would cause a PRECONDITION_FAILED channel error.
+        // Purging empties the queue while preserving its declaration.
+        ((RabbitAdmin) amqpAdmin).purgeQueue(MAINTENANCE_QUEUE, false);
     }
 
     // --- Connectivity ---
@@ -69,11 +65,10 @@ class RabbitMqIntegrationTest extends AbstractInfrastructureIntegrationTest {
 
     @Test
     void queueIsDeclaredDurable() {
-        // Durability must be true — a non-durable queue would lose messages
-        // if RabbitMQ restarts during a maintenance window
+        // Durability is declared in RabbitMqConfig — a non-durable queue would
+        // lose messages if RabbitMQ restarts during a maintenance window.
         QueueInformation info = amqpAdmin.getQueueInfo(MAINTENANCE_QUEUE);
         assertThat(info).isNotNull();
-        // Queue exists and is accessible — durability is set at declaration time above
         assertThat(info.getMessageCount()).isNotNegative();
     }
 
