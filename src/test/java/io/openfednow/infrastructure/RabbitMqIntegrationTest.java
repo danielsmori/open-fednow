@@ -47,10 +47,12 @@ class RabbitMqIntegrationTest extends AbstractInfrastructureIntegrationTest {
     private AmqpAdmin amqpAdmin;
 
     @BeforeEach
-    void declareQueue() {
+    void resetQueue() {
+        // Delete and re-declare the queue before each test to guarantee a clean
+        // slate. Without purging, messages left by a previous test can leak into
+        // the next one — causing FIFO-order and queue-depth tests to fail.
         // Durable = true: messages survive a RabbitMQ broker restart.
-        // This is a critical requirement for the maintenance-window bridge —
-        // queued transactions must not be lost if the middleware restarts.
+        amqpAdmin.deleteQueue(MAINTENANCE_QUEUE);
         amqpAdmin.declareQueue(new Queue(MAINTENANCE_QUEUE, /* durable */ true));
     }
 

@@ -20,9 +20,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * the {@code spring.flyway} settings in {@code application.yml}. This keeps the
  * test fast, self-contained, and independent of Redis and RabbitMQ.
  *
- * <p>H2's PostgreSQL mode ({@code MODE=PostgreSQL}) supports the SQL constructs
- * used in the migrations: {@code BIGSERIAL}, {@code TIMESTAMPTZ}, {@code NUMERIC},
- * and partial indexes with {@code WHERE} clauses.
+ * <p>All test methods share a single H2 database created in {@code @BeforeAll}.
+ * "Table exists" checks use {@code information_schema} rather than asserting a
+ * zero row count, so they are not sensitive to the order in which JUnit runs the
+ * other test methods (which insert rows).
  */
 class FlywayMigrationTest {
 
@@ -80,14 +81,13 @@ class FlywayMigrationTest {
 
     @Test
     void shadowLedgerTransactionLogTableExists() {
-        Integer count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM shadow_ledger_transaction_log", Integer.class);
-        assertThat(count).isZero();
+        assertThat(tableExists("shadow_ledger_transaction_log")).isTrue();
     }
 
     @Test
     void shadowLedgerTransactionLogHasRequiredColumns() {
-        // Insert a row to verify all NOT NULL columns and constraints are correct
+        int before = rowCount("shadow_ledger_transaction_log");
+
         jdbc.execute("""
                 INSERT INTO shadow_ledger_transaction_log
                     (transaction_id, end_to_end_id, account_id, transaction_type,
@@ -97,9 +97,7 @@ class FlywayMigrationTest {
                      100.00, 50000.00, 49900.00, FALSE)
                 """);
 
-        Integer count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM shadow_ledger_transaction_log", Integer.class);
-        assertThat(count).isEqualTo(1);
+        assertThat(rowCount("shadow_ledger_transaction_log")).isEqualTo(before + 1);
     }
 
     @Test
@@ -113,7 +111,6 @@ class FlywayMigrationTest {
                         ('TXN-BAD', 'E2E-BAD', 'ACC-001', 'INVALID_TYPE',
                          100.00, 50000.00, 49900.00, FALSE)
                     """);
-            // Should not reach here
             assertThat(false).as("Expected constraint violation for invalid transaction_type").isTrue();
         } catch (Exception e) {
             assertThat(e.getMessage()).containsIgnoringCase("constraint");
@@ -124,9 +121,7 @@ class FlywayMigrationTest {
 
     @Test
     void sagaStateTableExists() {
-        Integer count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM saga_state", Integer.class);
-        assertThat(count).isZero();
+        assertThat(tableExists("saga_state")).isTrue();
     }
 
     @Test
@@ -136,6 +131,8 @@ class FlywayMigrationTest {
             "FEDNOW_CONFIRMED", "COMPLETED", "COMPENSATING", "FAILED"
         };
 
+        int before = rowCount("saga_state");
+
         for (int i = 0; i < states.length; i++) {
             jdbc.update("""
                     INSERT INTO saga_state (saga_id, transaction_id, end_to_end_id, state)
@@ -144,8 +141,7 @@ class FlywayMigrationTest {
                     "SAGA-" + i, "TXN-SAGA-" + i, "E2E-SAGA-" + i, states[i]);
         }
 
-        Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM saga_state", Integer.class);
-        assertThat(count).isEqualTo(states.length);
+        assertThat(rowCount("saga_state")).isEqualTo(before + states.length);
     }
 
     @Test
@@ -170,13 +166,13 @@ class FlywayMigrationTest {
 
     @Test
     void idempotencyKeysTableExists() {
-        Integer count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM idempotency_keys", Integer.class);
-        assertThat(count).isZero();
+        assertThat(tableExists("idempotency_keys")).isTrue();
     }
 
     @Test
     void idempotencyKeysTableAcceptsAllResponseStatuses() {
+        int before = rowCount("idempotency_keys");
+
         jdbc.execute("""
                 INSERT INTO idempotency_keys
                     (end_to_end_id, message_id, response_status, expires_at)
@@ -193,14 +189,11 @@ class FlywayMigrationTest {
                 VALUES ('E2E-IDEM-RJCT', 'MSG-003', 'RJCT', 'AM04', NOW() + INTERVAL '48' HOUR)
                 """);
 
-        Integer count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM idempotency_keys", Integer.class);
-        assertThat(count).isEqualTo(3);
+        assertThat(rowCount("idempotency_keys")).isEqualTo(before + 3);
     }
 
     @Test
     void idempotencyKeysEnforcesReasonCodeOnRejection() {
-        // A RJCT response without a reason code must be rejected by the constraint
         try {
             jdbc.execute("""
                     INSERT INTO idempotency_keys
@@ -217,13 +210,13 @@ class FlywayMigrationTest {
 
     @Test
     void reconciliationRunTableExists() {
-        Integer count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM reconciliation_run", Integer.class);
-        assertThat(count).isZero();
+        assertThat(tableExists("reconciliation_run")).isTrue();
     }
 
     @Test
     void reconciliationRunTableAcceptsScheduledAndManualTriggers() {
+        int before = rowCount("reconciliation_run");
+
         jdbc.execute("""
                 INSERT INTO reconciliation_run (transactions_replayed, triggered_by)
                 VALUES (42, 'SCHEDULED')
@@ -233,9 +226,7 @@ class FlywayMigrationTest {
                 VALUES (5, 'MANUAL')
                 """);
 
-        Integer count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM reconciliation_run", Integer.class);
-        assertThat(count).isEqualTo(2);
+        assertThat(rowCount("reconciliation_run")).isEqualTo(before + 2);
     }
 
     @Test
@@ -250,5 +241,20 @@ class FlywayMigrationTest {
         } catch (Exception e) {
             assertThat(e.getMessage()).containsIgnoringCase("constraint");
         }
+    }
+
+    // --- Helpers ---
+
+    private boolean tableExists(String tableName) {
+        Integer count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = ?",
+                Integer.class, tableName);
+        return count != null && count > 0;
+    }
+
+    private int rowCount(String tableName) {
+        Integer count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM " + tableName, Integer.class);
+        return count != null ? count : 0;
     }
 }
