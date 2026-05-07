@@ -3,6 +3,7 @@ package io.openfednow.acl.adapters;
 import io.openfednow.acl.core.CoreBankingAdapter;
 import io.openfednow.acl.core.CoreBankingResponse;
 import io.openfednow.iso20022.Pacs008Message;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -31,6 +32,7 @@ import java.math.BigDecimal;
  * @see CoreBankingAdapter
  */
 @Component("fiservAdapter")
+@ConditionalOnProperty(name = "openfednow.adapter", havingValue = "fiserv")
 public class FiservAdapter implements CoreBankingAdapter {
 
     @Override

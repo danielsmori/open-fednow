@@ -5,6 +5,7 @@ import io.openfednow.acl.core.CoreBankingResponse;
 import io.openfednow.acl.core.CoreBankingResponse.Status;
 import io.openfednow.iso20022.Pacs008Message;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -52,6 +53,7 @@ import java.math.BigDecimal;
  * @see CoreBankingAdapter
  */
 @Component("sandboxAdapter")
+@ConditionalOnProperty(name = "openfednow.adapter", havingValue = "sandbox")
 public class SandboxAdapter implements CoreBankingAdapter {
 
     // --- Account-number prefix constants for scenario routing ---
