@@ -49,6 +49,7 @@ CREATE TABLE reconciliation_run (
 -- Time-range queries: "show me all reconciliation runs in the last 7 days"
 CREATE INDEX idx_recon_started_at ON reconciliation_run (started_at);
 
--- Alert query: find any reconciliation runs that completed with discrepancies
-CREATE INDEX idx_recon_failed     ON reconciliation_run (started_at)
-    WHERE successful = FALSE;
+-- Index to surface failed reconciliation runs.
+-- On PostgreSQL in production this can be narrowed with WHERE successful = FALSE;
+-- H2 does not support partial index syntax.
+CREATE INDEX idx_recon_failed ON reconciliation_run (successful, started_at);

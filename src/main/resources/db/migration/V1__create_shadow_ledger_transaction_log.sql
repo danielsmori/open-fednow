@@ -56,7 +56,7 @@ CREATE INDEX idx_sltl_account_id      ON shadow_ledger_transaction_log (account_
 -- Time-ordered scan for reconciliation replay after a maintenance window
 CREATE INDEX idx_sltl_applied_at      ON shadow_ledger_transaction_log (applied_at);
 
--- Partial index: only unconfirmed rows — the pending reconciliation queue.
--- This index stays small because confirmed rows are excluded.
-CREATE INDEX idx_sltl_pending_confirm ON shadow_ledger_transaction_log (applied_at)
-    WHERE core_confirmed = FALSE;
+-- Index on unconfirmed rows — the pending reconciliation queue.
+-- On PostgreSQL in production this can be narrowed with WHERE core_confirmed = FALSE
+-- for a smaller, faster index; H2 does not support partial index syntax.
+CREATE INDEX idx_sltl_pending_confirm ON shadow_ledger_transaction_log (core_confirmed, applied_at);

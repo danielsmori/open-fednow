@@ -70,21 +70,21 @@ class PostgresIntegrationTest extends AbstractInfrastructureIntegrationTest {
     // --- Partial indexes exist (PostgreSQL-specific; not reliably verified in H2) ---
 
     @Test
-    void partialIndexOnUnconfirmedShadowLedgerRowsExists() {
-        // idx_sltl_pending_confirm — WHERE core_confirmed = FALSE
-        // This is the reconciliation replay queue index; must exist on real PostgreSQL
+    void reconciliationQueueIndexExists() {
+        // idx_sltl_pending_confirm — (core_confirmed, applied_at)
+        // Serves as the reconciliation replay queue index
         boolean exists = indexExists("idx_sltl_pending_confirm");
         assertThat(exists)
-                .as("Partial index idx_sltl_pending_confirm should exist")
+                .as("Index idx_sltl_pending_confirm should exist")
                 .isTrue();
     }
 
     @Test
-    void partialIndexOnFailedReconciliationRunsExists() {
-        // idx_recon_failed — WHERE successful = FALSE
+    void failedReconciliationRunIndexExists() {
+        // idx_recon_failed — (successful, started_at)
         boolean exists = indexExists("idx_recon_failed");
         assertThat(exists)
-                .as("Partial index idx_recon_failed should exist")
+                .as("Index idx_recon_failed should exist")
                 .isTrue();
     }
 
