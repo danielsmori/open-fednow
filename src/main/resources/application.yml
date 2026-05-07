@@ -22,8 +22,22 @@ spring:
     show-sql: false
 
 openfednow:
-  # Core banking adapter to use: fiserv | jackhenry | fis
-  adapter: ${CORE_ADAPTER:fiserv}
+  # Core banking adapter to use: sandbox | fiserv | fis | jackhenry
+  # Default is 'sandbox' for local development. Set CORE_ADAPTER=fiserv (etc.)
+  # to target a real vendor integration.
+  adapter: ${CORE_ADAPTER:sandbox}
+
+  # Sandbox adapter — local development simulation of a core banking system.
+  # Only active when openfednow.adapter=sandbox.
+  sandbox:
+    # Toggle isCoreSystemAvailable(). Set to false to exercise the Shadow
+    # Ledger maintenance-window and RabbitMQ queueing paths.
+    core-available: ${SANDBOX_CORE_AVAILABLE:true}
+    # Balance returned by getAvailableBalance() for non-LOWBAL_ accounts.
+    default-balance: ${SANDBOX_DEFAULT_BALANCE:50000.00}
+    # Artificial per-call delay in milliseconds (0 = disabled).
+    # Useful for stress-testing the 20-second FedNow SLA locally.
+    simulate-latency-ms: ${SANDBOX_LATENCY_MS:0}
 
   # FedNow gateway settings
   gateway:
