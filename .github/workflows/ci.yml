@@ -47,6 +47,10 @@ jobs:
         run: mvn -B clean compile --no-transfer-progress
 
       - name: Run tests
+        # Unit tests run without infrastructure dependencies.
+        # Integration tests (infrastructure package) use Testcontainers to start
+        # their own Redis, RabbitMQ, and PostgreSQL containers — Docker is
+        # available by default on ubuntu-latest runners.
         run: mvn -B test --no-transfer-progress
 
       - name: Upload test results
