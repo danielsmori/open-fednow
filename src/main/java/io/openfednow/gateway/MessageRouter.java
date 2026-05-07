@@ -2,6 +2,9 @@ package io.openfednow.gateway;
 
 import io.openfednow.iso20022.Pacs002Message;
 import io.openfednow.iso20022.Pacs008Message;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +23,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class MessageRouter {
+
+    private static final Logger log = LoggerFactory.getLogger(MessageRouter.class);
 
     private final FedNowClient fedNowClient;
 
@@ -45,14 +50,26 @@ public class MessageRouter {
 
     /**
      * Routes an outbound pacs.008 credit transfer to the FedNow Service.
-     * Submits the message via {@link FedNowClient} and wraps the pacs.002
-     * status report in an HTTP 200 response.
+     * Populates MDC with the ISO 20022 identifiers from the message so that
+     * all log lines emitted during this request carry the payment context.
      *
      * @param message pacs.008.001.08 message assembled by the ACL
      * @return pacs.002 status report returned by FedNow
      */
     public ResponseEntity<Pacs002Message> routeOutbound(Pacs008Message message) {
+        MDC.put(CorrelationFilter.MDC_END_TO_END_ID, message.getEndToEndId());
+        MDC.put(CorrelationFilter.MDC_TRANSACTION_ID, message.getTransactionId());
+
+        log.info("Routing outbound credit transfer amount={} currency={}",
+                message.getInterbankSettlementAmount(),
+                message.getInterbankSettlementCurrency());
+
         Pacs002Message response = fedNowClient.submitCreditTransfer(message);
+
+        log.info("FedNow response status={} rejectCode={}",
+                response.getTransactionStatus(),
+                response.getRejectReasonCode());
+
         return ResponseEntity.ok(response);
     }
 }

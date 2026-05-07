@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.openfednow.iso20022.Pacs002Message;
 import io.openfednow.iso20022.Pacs008Message;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -29,6 +31,8 @@ import java.util.List;
  */
 public class HttpFedNowClient implements FedNowClient {
 
+    private static final Logger log = LoggerFactory.getLogger(HttpFedNowClient.class);
+
     /** Path appended to the configured base endpoint for credit transfer submission. */
     static final String TRANSFERS_PATH = "/transfers";
 
@@ -51,20 +55,25 @@ public class HttpFedNowClient implements FedNowClient {
     @Override
     public Pacs002Message submitCreditTransfer(Pacs008Message message) {
         String url = fednowEndpoint + TRANSFERS_PATH;
+        log.info("Submitting pacs.008 to FedNow endpoint={}", url);
         try {
             Pacs002Message response = restTemplate.postForObject(url, message, Pacs002Message.class);
             if (response == null) {
+                log.warn("FedNow returned empty response body");
                 return Pacs002Message.rejected(
                         message.getEndToEndId(), message.getTransactionId(),
                         "NARR", "FedNow returned an empty response body");
             }
+            log.debug("FedNow raw response messageId={}", response.getMessageId());
             return response;
         } catch (HttpStatusCodeException e) {
+            log.warn("FedNow returned HTTP error status={}", e.getStatusCode().value());
             return Pacs002Message.rejected(
                     message.getEndToEndId(), message.getTransactionId(),
                     "NARR",
                     "FedNow returned HTTP " + e.getStatusCode().value());
         } catch (ResourceAccessException e) {
+            log.warn("FedNow connection error: {}", e.getMessage());
             return Pacs002Message.rejected(
                     message.getEndToEndId(), message.getTransactionId(),
                     "NARR",

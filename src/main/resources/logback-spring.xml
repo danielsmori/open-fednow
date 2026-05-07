@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!--
+        OpenFedNow structured logging configuration.
+
+        Every log line includes the three MDC correlation fields populated by
+        CorrelationFilter and MessageRouter:
+
+          req  — UUID assigned to each HTTP request (always present)
+          e2e  — ISO 20022 EndToEndId (set from X-End-To-End-Id header or parsed pacs.008)
+          txn  — ISO 20022 TransactionId (set by MessageRouter from the parsed pacs.008)
+
+        A '?' is printed for any field not yet set, making it easy to spot log
+        lines that were emitted outside a payment context.
+
+        Example output:
+          2024-01-15T10:30:00.123+00:00 INFO  [http-nio-8080-exec-1] i.o.g.MessageRouter
+            [req=f3a1...,e2e=E2E-20240115-001,txn=TXN-20240115-001]
+            Routing outbound credit transfer amount=1000.00 currency=USD
+    -->
+
+    <property name="LOG_PATTERN"
+              value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%thread] %logger{40} [req=%X{requestId:-?},e2e=%X{endToEndId:-?},txn=%X{transactionId:-?}] %msg%n"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- OpenFedNow application code: DEBUG so payment processing steps are visible -->
+    <logger name="io.openfednow" level="DEBUG"/>
+
+    <!-- Spring framework: INFO to surface context startup and request mapping -->
+    <logger name="org.springframework.web"             level="INFO"/>
+    <logger name="org.springframework.amqp"            level="INFO"/>
+    <logger name="org.springframework.data.redis"      level="INFO"/>
+    <logger name="org.flywaydb"                        level="INFO"/>
+
+    <!-- Suppress noisy infrastructure startup chatter -->
+    <logger name="com.zaxxer.hikari"                   level="WARN"/>
+    <logger name="org.hibernate"                       level="WARN"/>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+</configuration>
