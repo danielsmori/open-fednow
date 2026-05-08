@@ -18,6 +18,9 @@ package io.openfednow.processing.saga;
  *   <li>Confirm to FedNow (compensate: send return payment pacs.004)</li>
  *   <li>Reconcile Shadow Ledger with core confirmation (no compensation needed)</li>
  * </ol>
+ *
+ * <p>State is persisted to {@code saga_state} by {@link SagaOrchestrator};
+ * this class is a pure state machine with no infrastructure dependencies.
  */
 public class PaymentSaga {
 
@@ -34,6 +37,7 @@ public class PaymentSaga {
     private final String sagaId;
     private final String transactionId;
     private SagaState state;
+    private String failureReason;
 
     public PaymentSaga(String sagaId, String transactionId) {
         this.sagaId = sagaId;
@@ -41,29 +45,65 @@ public class PaymentSaga {
         this.state = SagaState.INITIATED;
     }
 
+    /** Package-private constructor used by {@link SagaOrchestrator} to restore state from DB. */
+    PaymentSaga(String sagaId, String transactionId, SagaState restoredState) {
+        this.sagaId = sagaId;
+        this.transactionId = transactionId;
+        this.state = restoredState;
+    }
+
     /**
      * Advances the saga to the next state after successful step completion.
      *
+     * <p>Validates that the requested transition is legal according to the
+     * saga state machine. The calling orchestrator is responsible for
+     * persisting the new state to the database before acting on it.
+     *
      * @param nextState the state to transition to
+     * @throws IllegalStateException if the transition is not valid from the current state
      */
     public void advance(SagaState nextState) {
-        // TODO: implement state machine with persistence
-        throw new UnsupportedOperationException("Not yet implemented");
+        validateTransition(this.state, nextState);
+        this.state = nextState;
     }
 
     /**
      * Triggers the compensation sequence, rolling back completed steps
      * in reverse order.
      *
+     * <p>Sets the saga state to {@code COMPENSATING} and records the failure
+     * reason. The orchestrator is responsible for executing the actual
+     * compensation steps and persisting the final {@code FAILED} state.
+     *
      * @param failedState the state at which the failure occurred
      * @param reason ISO 20022 reason code for the failure
      */
     public void compensate(SagaState failedState, String reason) {
-        // TODO: implement compensation chain
-        throw new UnsupportedOperationException("Not yet implemented");
+        this.state = SagaState.COMPENSATING;
+        this.failureReason = reason;
     }
 
-    public String getSagaId() { return sagaId; }
+    // ── Getters ────────────────────────────────────────────────────────────────
+
+    public String getSagaId()       { return sagaId; }
     public String getTransactionId() { return transactionId; }
-    public SagaState getState() { return state; }
+    public SagaState getState()     { return state; }
+    public String getFailureReason() { return failureReason; }
+
+    // ── State machine validation ───────────────────────────────────────────────
+
+    private static void validateTransition(SagaState from, SagaState to) {
+        boolean valid = switch (from) {
+            case INITIATED        -> to == SagaState.FUNDS_RESERVED   || to == SagaState.COMPENSATING;
+            case FUNDS_RESERVED   -> to == SagaState.CORE_SUBMITTED    || to == SagaState.COMPENSATING;
+            case CORE_SUBMITTED   -> to == SagaState.FEDNOW_CONFIRMED  || to == SagaState.COMPENSATING;
+            case FEDNOW_CONFIRMED -> to == SagaState.COMPLETED         || to == SagaState.COMPENSATING;
+            case COMPENSATING     -> to == SagaState.FAILED;
+            case COMPLETED, FAILED -> false; // terminal states
+        };
+        if (!valid) {
+            throw new IllegalStateException(
+                    "Invalid saga transition: " + from + " → " + to);
+        }
+    }
 }
