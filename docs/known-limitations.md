@@ -89,13 +89,25 @@ The framework handles the receive side: an inbound pacs.008 from FedNow arrives,
 
 ---
 
-### 9. Cancellation message flow (camt.056 / camt.029) is modeled but not wired
+### 9. RtpGateway is a documented stub
+
+`RtpGateway` exists in `io.openfednow.gateway` and documents the architectural intent for RTP® network connectivity, but it is not connected to The Clearing House's network. Specifically:
+
+- **TCH certificate validation** is not implemented. `CertificateManager` currently handles Federal Reserve PKI only; TCH uses a separate certificate authority.
+- **RTP XML envelope parsing** is not implemented. RTP uses the canonical ISO 20022 XML envelope; FedNow uses a JSON wrapper. The endpoint currently accepts the same JSON model as FedNow for stub purposes.
+- **TCH network transport** requires a dedicated private-network connection that cannot be obtained outside of The Clearing House participation.
+
+Layers 2–4 require **no changes** for RTP support — they are intentionally rail-agnostic and operate on parsed `Pacs008Message` objects regardless of source rail. Only the Layer 1 gateway implementation is pending. See [ADR-0005](adr/0005-dual-rail-architecture-fednow-rtp.md) and [rtp-compatibility.md](rtp-compatibility.md).
+
+---
+
+### 10. Cancellation message flow (camt.056 / camt.029) is modeled but not wired
 
 The ISO 20022 message classes `Camt056Message` (payment cancellation request) and `Camt029Message` (resolution of investigation) are implemented with their field mappings. There is no endpoint, handler, or service that processes an inbound camt.056 or generates an outbound camt.029.
 
 ---
 
-### 10. No authentication on admin endpoints
+### 11. No authentication on admin endpoints
 
 `POST /admin/reconcile` is open to any caller. In production, admin endpoints must be protected by network-level access controls (VPN, bastion host) or application-level authentication (OAuth2, client certificates). The Javadoc on `AdminController` notes this. It is not implemented in the framework itself because the appropriate mechanism varies by institution.
 
@@ -105,7 +117,7 @@ The ISO 20022 message classes `Camt056Message` (payment cancellation request) an
 
 These are behaviors that differ between the local H2-backed development setup and a production PostgreSQL deployment.
 
-### 11. H2 in-memory does not persist across restarts
+### 12. H2 in-memory does not persist across restarts
 
 Transaction records written to `shadow_ledger_transaction_log`, `saga_state`, and `idempotency_keys` are lost when the application restarts. In a PostgreSQL deployment, these records survive restarts, which means:
 
@@ -117,7 +129,7 @@ In local development with H2, `transactionsReplayed` is always 0 after a restart
 
 ---
 
-### 12. Redis has no replication or persistence in docker-compose
+### 13. Redis has no replication or persistence in docker-compose
 
 The `docker-compose.yml` starts a single Redis node with no replicas and no AOF/RDB persistence configured. If Redis is stopped and restarted between a maintenance window and reconciliation, all Shadow Ledger balance entries are lost — the reconciliation would read zero balances from Redis and flag discrepancies for every account.
 
