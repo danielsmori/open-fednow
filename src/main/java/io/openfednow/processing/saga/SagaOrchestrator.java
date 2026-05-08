@@ -99,6 +99,15 @@ public class SagaOrchestrator {
      */
     public void compensate(String sagaId, String reason) {
         PaymentSaga saga = resume(sagaId);
+
+        // Guard: terminal states cannot be compensated again
+        if (saga.getState() == PaymentSaga.SagaState.FAILED
+                || saga.getState() == PaymentSaga.SagaState.COMPENSATING) {
+            log.warn("Saga already in terminal/compensating state — skipping sagaId={} state={}",
+                    sagaId, saga.getState());
+            return;
+        }
+
         log.info("Saga compensation starting sagaId={} fromState={} reason={}",
                 sagaId, saga.getState(), reason);
 
