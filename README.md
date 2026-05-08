@@ -413,6 +413,7 @@ openfednow/
 │   ├── anti-corruption-layer.md
 │   ├── saga-pattern.md
 │   ├── iso20022-mapping.md
+│   ├── known-limitations.md   # What is and isn't production-ready
 │   └── adr/                  # Architecture Decision Records
 │       ├── 0001-optimistic-locking-shadow-ledger-debits.md
 │       ├── 0002-redis-shadow-ledger-over-direct-core-reads.md
@@ -421,6 +422,18 @@ openfednow/
 ├── LICENSE                   # Apache 2.0
 └── README.md
 ```
+
+---
+
+## Known Limitations
+
+The framework is a reference architecture, not a production-ready product. See [docs/known-limitations.md](docs/known-limitations.md) for the full list. Key items:
+
+- **Vendor adapters are stubs.** `FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` define the contract but do not make real vendor API calls. Only `SandboxAdapter` is functional.
+- **Shadow Ledger not wired into the HTTP flow.** `ShadowLedger.applyDebit()` / `applyCredit()` are fully implemented and tested in isolation; they are not yet called from the payment endpoint.
+- **Single-instance.** The `WATCH`/`MULTI`/`EXEC` optimistic locking is safe for one pod. Multi-pod deployments require a distributed lock per account or consistent-hash routing.
+- **No authentication on `/admin/*`.** Production deployments must place admin endpoints behind network-level or application-level access controls.
+- **Post-reconciliation reversals are customer-visible.** If the core rejects a provisionally accepted transaction, a pacs.004 return goes back to FedNow. The sender's institution sees a credit followed by a return.
 
 ---
 
