@@ -47,6 +47,266 @@ Three adapter implementations make the complete framework available to thousands
 
 ---
 
+## Quick Start
+
+**Prerequisites:** Java 17+, Docker. No other infrastructure setup required — the framework uses H2 in-memory for local development.
+
+```bash
+git clone https://github.com/danielsmori/open-fednow
+cd open-fednow
+docker-compose up -d        # Redis (Shadow Ledger) + RabbitMQ (maintenance queue)
+./mvnw spring-boot:run      # starts on :8080 with sandbox adapter and H2 in-memory
+```
+
+### 1. Send a payment (core online)
+
+```bash
+curl -s -X POST http://localhost:8080/fednow/receive \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messageId":                  "MSG-DEMO-001",
+    "endToEndId":                 "E2E-DEMO-001",
+    "transactionId":              "TXN-DEMO-001",
+    "interbankSettlementAmount":  250.00,
+    "interbankSettlementCurrency":"USD",
+    "creditorAccountNumber":      "ACC-DEMO-12345"
+  }'
+```
+
+```json
+{"transactionStatus":"ACSC","originalEndToEndId":"E2E-DEMO-001","originalTransactionId":"TXN-DEMO-001"}
+```
+
+`ACSC` — AcceptedSettlementCompleted. The sandbox core accepted the transfer.
+
+### 2. Test a rejection scenario
+
+The sandbox adapter routes by `creditorAccountNumber` prefix. No config change needed:
+
+```bash
+curl -s -X POST http://localhost:8080/fednow/receive \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messageId":                  "MSG-DEMO-002",
+    "endToEndId":                 "E2E-DEMO-002",
+    "transactionId":              "TXN-DEMO-002",
+    "interbankSettlementAmount":  250.00,
+    "interbankSettlementCurrency":"USD",
+    "creditorAccountNumber":      "RJCT_FUNDS_ACC-DEMO-67890"
+  }'
+```
+
+```json
+{"transactionStatus":"RJCT","originalEndToEndId":"E2E-DEMO-002","rejectReasonCode":"AM04"}
+```
+
+`RJCT / AM04` — Rejected, insufficient funds. Other prefixes: `RJCT_ACCT_` (AC01), `RJCT_CLOSED_` (AC04), `TOUT_` (triggers the ACSP provisional-acceptance path).
+
+### 3. Simulate a maintenance window
+
+Stop the app, restart with the core marked offline:
+
+```bash
+SANDBOX_CORE_AVAILABLE=false ./mvnw spring-boot:run
+```
+
+```bash
+curl -s -X POST http://localhost:8080/fednow/receive \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messageId":                  "MSG-DEMO-003",
+    "endToEndId":                 "E2E-DEMO-003",
+    "transactionId":              "TXN-DEMO-003",
+    "interbankSettlementAmount":  300.00,
+    "interbankSettlementCurrency":"USD",
+    "creditorAccountNumber":      "ACC-DEMO-12345"
+  }'
+```
+
+```json
+{"transactionStatus":"ACSP","originalEndToEndId":"E2E-DEMO-003","originalTransactionId":"TXN-DEMO-003"}
+```
+
+`ACSP` — AcceptedSettlementInProcess. The payment was provisionally accepted and queued. FedNow got a response within its 20-second window. The core never saw the request.
+
+Verify the transaction is in the RabbitMQ maintenance queue:
+
+```bash
+curl -s -u guest:guest \
+  'http://localhost:15672/api/queues/%2F/maintenance-window-transactions' \
+  | python3 -m json.tool | grep '"messages"'
+# → "messages": 1
+```
+
+### 4. Core returns — replay and reconcile
+
+Stop the app, restart normally (no env var), then trigger reconciliation:
+
+```bash
+./mvnw spring-boot:run
+
+curl -s -X POST http://localhost:8080/admin/reconcile
+```
+
+```json
+{
+  "transactionsReplayed": 1,
+  "discrepanciesDetected": 0,
+  "reconciliationSuccessful": true,
+  "summary": "Clean reconciliation: 1 entries confirmed across all accounts"
+}
+```
+
+The queued transaction is now `core_confirmed = TRUE` in the audit log. The Shadow Ledger balance matches the core.
+
+---
+
+## The Shadow Ledger in Action
+
+The Shadow Ledger is what makes 24/7 FedNow participation possible with a legacy core that has nightly maintenance windows. It's the most defensible piece of this architecture, so here's what it actually does.
+
+### The problem it solves
+
+```
+Legacy core: offline 2am–6am for batch processing
+FedNow:      $300 payment arrives at 3am
+Without Shadow Ledger: institution doesn't respond → FedNow marks you unavailable
+With Shadow Ledger:    institution responds ACSP in under 1 second → FedNow happy
+```
+
+### Concrete behavior, step by step
+
+**Account balance is seeded from the core at startup (stored in Redis as integer cents):**
+
+```bash
+$ redis-cli SET balance:ACC-12345 5000000     # $50,000.00
+$ redis-cli GET balance:ACC-12345
+"5000000"
+```
+
+Balances are stored as integer cents — no floating-point arithmetic on money.
+
+---
+
+**Stage 1: 11pm — Core is online. A $250 payment arrives.**
+
+```java
+// Inside MessageRouter.routeInbound() when core is available:
+shadowLedger.applyDebit("ACC-12345", new BigDecimal("250.00"), "TXN-0001");
+```
+
+The debit uses Redis WATCH / MULTI / EXEC — atomic, safe under concurrent load:
+
+```
+WATCH  balance:ACC-12345
+GET    balance:ACC-12345           → "5000000"
+MULTI
+  SET  balance:ACC-12345  4975000  ← $50,000 – $250 = $49,750
+EXEC                               → success (key unchanged since WATCH)
+```
+
+```bash
+$ redis-cli GET balance:ACC-12345
+"4975000"                          # $49,750.00
+```
+
+An audit row is written to PostgreSQL:
+
+```
+shadow_ledger_transaction_log:
+  transaction_id  = TXN-0001
+  type            = DEBIT
+  amount          = 250.00
+  balance_before  = 50000.00
+  balance_after   = 49750.00
+  core_confirmed  = FALSE          ← pending core confirmation
+```
+
+`pacs.002 ACSC` is returned to FedNow. The core is contacted and confirms.
+`core_confirmed` flips to `TRUE`. The Shadow Ledger and core are in sync.
+
+---
+
+**Stage 2: 2am — Core goes offline for scheduled maintenance.**
+
+The `AvailabilityBridge` polls every 30 seconds and detects the transition:
+
+```
+[WARN] Core banking system OFFLINE — entering bridge mode,
+       transactions will be queued for replay
+```
+
+**A $300 payment arrives at 2:47am.**
+
+```java
+// AvailabilityBridge.isInBridgeMode() == true
+// Balance check passes against Shadow Ledger: $49,750 > $300
+shadowLedger.applyDebit("ACC-12345", new BigDecimal("300.00"), "TXN-0002");
+availabilityBridge.queueForCoreProcessing("E2E-MAINT-001", serializedPacs008);
+```
+
+```bash
+$ redis-cli GET balance:ACC-12345
+"4945000"                          # $49,450.00 — debit applied to Shadow Ledger
+
+$ curl -s -u guest:guest \
+    'http://localhost:15672/api/queues/%2F/maintenance-window-transactions' \
+    | python3 -c "import sys,json; q=json.load(sys.stdin); print('queued:', q['messages'])"
+queued: 1
+```
+
+`pacs.002 ACSP` is returned to FedNow immediately — well within the 20-second window.
+The core never saw this request. FedNow has no idea the core was offline.
+
+---
+
+**Stage 3: 6am — Core comes back online.**
+
+```
+[INFO] Core banking system ONLINE — exiting bridge mode, reconciliation pending
+```
+
+```bash
+$ curl -s -X POST http://localhost:8080/admin/reconcile
+```
+
+```json
+{
+  "transactionsReplayed": 1,
+  "discrepanciesDetected": 0,
+  "reconciliationSuccessful": true,
+  "summary": "Clean reconciliation: 1 entries confirmed across all accounts"
+}
+```
+
+The `ReconciliationService`:
+1. Finds all accounts with `core_confirmed = FALSE` entries
+2. Fetches the authoritative balance from the core for each account
+3. If the Shadow Ledger balance matches: marks entries confirmed, done
+4. If there's a discrepancy (e.g., the core processed something OpenFedNow didn't know about): overwrites the Shadow Ledger with the core's figure, logs a `RECONCILIATION` row, and alerts — **zero discrepancy tolerance**
+
+```bash
+$ redis-cli GET balance:ACC-12345
+"4945000"                          # $49,450.00 — confirmed by core
+```
+
+The institution was available to FedNow for the entire 4-hour maintenance window. Every payment was accepted and the ledger is correct.
+
+### What protects against overdrafts under concurrent load
+
+Three payments arrive simultaneously at 3am for the same account:
+
+```
+Thread 1: WATCH balance:ACC-12345 → GET "4945000" → MULTI → SET "4895000" → EXEC ✓
+Thread 2: WATCH balance:ACC-12345 → GET "4945000" → EXEC returns [] (conflict) → retry
+Thread 3: WATCH balance:ACC-12345 → GET "4895000" → MULTI → SET "4845000" → EXEC ✓
+Thread 2: WATCH balance:ACC-12345 → GET "4845000" → MULTI → SET "4795000" → EXEC ✓
+```
+
+Each thread retries until its EXEC succeeds. The balance is always consistent. See [ADR-0001](docs/adr/0001-optimistic-locking-shadow-ledger-debits.md) for the full analysis including the Lettuce empty-list caveat.
+
+---
+
 ## Architecture
 
 The framework is structured as five independent layers. Each layer addresses a specific dimension of the legacy-to-real-time incompatibility.
@@ -138,7 +398,8 @@ openfednow/
 │   ├── gateway/              # Layer 1 — API Gateway & Security
 │   │   ├── FedNowGateway.java
 │   │   ├── CertificateManager.java
-│   │   └── MessageRouter.java
+│   │   ├── MessageRouter.java
+│   │   └── AdminController.java  # /admin/reconcile
 │   ├── acl/                  # Layer 2 — Anti-Corruption Layer
 │   │   ├── core/
 │   │   │   ├── CoreBankingAdapter.java      # Abstract interface
@@ -166,7 +427,12 @@ openfednow/
 │   ├── shadow-ledger.md
 │   ├── anti-corruption-layer.md
 │   ├── saga-pattern.md
-│   └── iso20022-mapping.md
+│   ├── iso20022-mapping.md
+│   └── adr/                  # Architecture Decision Records
+│       ├── 0001-optimistic-locking-shadow-ledger-debits.md
+│       ├── 0002-redis-shadow-ledger-over-direct-core-reads.md
+│       ├── 0003-provisional-acceptance-acsp.md
+│       └── 0004-eventual-consistency-shadow-ledger-and-core.md
 ├── LICENSE                   # Apache 2.0
 └── README.md
 ```
