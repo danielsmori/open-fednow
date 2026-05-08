@@ -105,7 +105,7 @@ public class ShadowLedger {
                 }
             });
 
-            if (txResult != null) {
+            if (txResult != null && !txResult.isEmpty()) {
                 long balanceBeforeCents = capturedBalance[0];
                 long balanceAfterCents = balanceBeforeCents - amountCents;
                 logTransaction(transactionId, transactionId, accountId, "DEBIT",

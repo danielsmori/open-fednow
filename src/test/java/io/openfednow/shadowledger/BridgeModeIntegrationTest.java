@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -68,7 +69,7 @@ class BridgeModeIntegrationTest extends AbstractInfrastructureIntegrationTest {
         Object received = rabbitTemplate.receiveAndConvert(RabbitMqConfig.MAINTENANCE_QUEUE, 3_000);
 
         assertThat(received).isNotNull();
-        assertThat(received.toString()).contains("E2E-BRIDGE-001");
+        assertThat(new String((byte[]) received, StandardCharsets.UTF_8)).contains("E2E-BRIDGE-001");
     }
 
     @Test
