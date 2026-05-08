@@ -125,7 +125,7 @@ public class IdempotencyService {
                     (end_to_end_id, message_id, response_status, response_reason_code,
                      processed_at, expires_at)
                 VALUES (?, ?, ?, ?, ?, ?)
-                ON CONFLICT (end_to_end_id) DO NOTHING
+                ON CONFLICT DO NOTHING
                 """,
                 endToEndId,
                 response.getOriginalEndToEndId() != null ? response.getOriginalEndToEndId() : endToEndId,

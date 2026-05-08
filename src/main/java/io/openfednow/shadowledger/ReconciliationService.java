@@ -4,9 +4,12 @@ import io.openfednow.acl.core.CoreBankingAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.sql.PreparedStatement;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -55,9 +58,14 @@ public class ReconciliationService {
         log.info("Reconciliation cycle starting");
 
         // Open the run audit record
-        Long runId = jdbc.queryForObject(
-                "INSERT INTO reconciliation_run (triggered_by) VALUES ('SCHEDULED') RETURNING id",
-                Long.class);
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbc.update(connection -> {
+            PreparedStatement ps = connection.prepareStatement(
+                    "INSERT INTO reconciliation_run (triggered_by) VALUES ('SCHEDULED')",
+                    new String[]{"id"});
+            return ps;
+        }, keyHolder);
+        Long runId = keyHolder.getKey().longValue();
 
         int transactionsReplayed = 0;
         int discrepanciesDetected = 0;

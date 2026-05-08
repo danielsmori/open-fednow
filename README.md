@@ -55,7 +55,7 @@ Three adapter implementations make the complete framework available to thousands
 git clone https://github.com/danielsmori/open-fednow
 cd open-fednow
 docker-compose up -d        # Redis (Shadow Ledger) + RabbitMQ (maintenance queue)
-./mvnw spring-boot:run      # starts on :8080 with sandbox adapter and H2 in-memory
+mvn spring-boot:run         # starts on :8080 with sandbox adapter and H2 in-memory
 ```
 
 ### 1. Send a payment (core online)
@@ -102,13 +102,9 @@ curl -s -X POST http://localhost:8080/fednow/receive \
 
 `RJCT / AM04` — Rejected, insufficient funds. Other prefixes: `RJCT_ACCT_` (AC01), `RJCT_CLOSED_` (AC04), `TOUT_` (triggers the ACSP provisional-acceptance path).
 
-### 3. Simulate a maintenance window
+### 3. Trigger provisional acceptance (ACSP)
 
-Stop the app, restart with the core marked offline:
-
-```bash
-SANDBOX_CORE_AVAILABLE=false ./mvnw spring-boot:run
-```
+The `TOUT_` prefix makes the sandbox adapter return a TIMEOUT status immediately. The `SyncAsyncBridge` maps this to a provisional acceptance without waiting. No app restart needed:
 
 ```bash
 curl -s -X POST http://localhost:8080/fednow/receive \
@@ -119,7 +115,7 @@ curl -s -X POST http://localhost:8080/fednow/receive \
     "transactionId":              "TXN-DEMO-003",
     "interbankSettlementAmount":  300.00,
     "interbankSettlementCurrency":"USD",
-    "creditorAccountNumber":      "ACC-DEMO-12345"
+    "creditorAccountNumber":      "TOUT_ACC-DEMO-12345"
   }'
 ```
 
@@ -127,37 +123,26 @@ curl -s -X POST http://localhost:8080/fednow/receive \
 {"transactionStatus":"ACSP","originalEndToEndId":"E2E-DEMO-003","originalTransactionId":"TXN-DEMO-003"}
 ```
 
-`ACSP` — AcceptedSettlementInProcess. The payment was provisionally accepted and queued. FedNow got a response within its 20-second window. The core never saw the request.
+`ACSP` — AcceptedSettlementInProcess. FedNow received a response within its 20-second window. The `PEND_` prefix works identically. For the full maintenance-window path (core offline → ACSP → RabbitMQ queue → reconcile), restart the app with `OPENFEDNOW_SANDBOX_CORE_AVAILABLE=false mvn spring-boot:run`.
 
-Verify the transaction is in the RabbitMQ maintenance queue:
+### 4. Trigger reconciliation
 
-```bash
-curl -s -u guest:guest \
-  'http://localhost:15672/api/queues/%2F/maintenance-window-transactions' \
-  | python3 -m json.tool | grep '"messages"'
-# → "messages": 1
-```
-
-### 4. Core returns — replay and reconcile
-
-Stop the app, restart normally (no env var), then trigger reconciliation:
+No restart needed — reconcile against the same running instance:
 
 ```bash
-./mvnw spring-boot:run
-
 curl -s -X POST http://localhost:8080/admin/reconcile
 ```
 
 ```json
 {
-  "transactionsReplayed": 1,
+  "transactionsReplayed": 0,
   "discrepanciesDetected": 0,
   "reconciliationSuccessful": true,
-  "summary": "Clean reconciliation: 1 entries confirmed across all accounts"
+  "summary": "Clean reconciliation: 0 entries confirmed across all accounts"
 }
 ```
 
-The queued transaction is now `core_confirmed = TRUE` in the audit log. The Shadow Ledger balance matches the core.
+`transactionsReplayed: 0` — H2 in-memory resets on restart, so this run starts with a clean ledger. In a PostgreSQL deployment, bridge-mode transactions accumulated during the offline window appear here as `transactionsReplayed: N`. The reconciliation path is fully exercised in `BridgeModeIntegrationTest` and `ReconciliationServiceIntegrationTest` using Testcontainers.
 
 ---
 
