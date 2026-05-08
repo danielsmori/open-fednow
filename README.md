@@ -26,9 +26,11 @@
 | Saga orchestration — compensation on core rejection | ✅ Implemented + tested |
 | Idempotency — Redis + PostgreSQL dual-write, 48h window | ✅ Implemented + tested |
 | Concurrent overdraft prevention under load | ✅ Tested (race-condition suite) |
+| Dual-rail architecture (FedNow + RTP) | ✅ ISO 20022 foundation; Layer 1 varies, Layers 2–4 rail-agnostic |
 | Fiserv / FIS / Jack Henry adapters | 🔲 Interface defined, implementation pending |
 | Shadow Ledger wired into HTTP payment endpoint | 🔲 Tested in isolation, not yet in the request path |
 | Real FedNow connectivity (mTLS, message signing) | 🔲 Stub only |
+| RTP gateway connectivity (TCH network, XML envelope) | 🔲 Stub — see docs/rtp-compatibility.md |
 | Send-side (outbound) payment flow | 🔲 Not yet implemented |
 
 See [docs/known-limitations.md](docs/known-limitations.md) for the full gap analysis.
@@ -67,6 +69,8 @@ flowchart TD
 | Document | What it answers |
 |----------|-----------------|
 | [docs/known-limitations.md](docs/known-limitations.md) | What is and isn't production-ready |
+| [docs/rtp-compatibility.md](docs/rtp-compatibility.md) | How RTP fits in — what's rail-agnostic, what's stubbed |
+| [docs/adr/0005-dual-rail-architecture-fednow-rtp.md](docs/adr/0005-dual-rail-architecture-fednow-rtp.md) | Decision: keep Layers 2–4 rail-agnostic |
 | [docs/adr/0004-eventual-consistency-shadow-ledger-and-core.md](docs/adr/0004-eventual-consistency-shadow-ledger-and-core.md) | Why eventual consistency, why not 2PC |
 | [docs/shadow-ledger.md](docs/shadow-ledger.md) | How the Shadow Ledger works, failure modes |
 | [docs/adr/0001-optimistic-locking-shadow-ledger-debits.md](docs/adr/0001-optimistic-locking-shadow-ledger-debits.md) | Why WATCH/MULTI/EXEC, the Lettuce caveat |
@@ -524,6 +528,7 @@ openfednow/
 ├── src/main/java/io/openfednow/
 │   ├── gateway/              # Layer 1 — API Gateway & Security
 │   │   ├── FedNowGateway.java
+│   │   ├── RtpGateway.java       # Stub — architectural intent only (see ADR-0005)
 │   │   ├── CertificateManager.java
 │   │   ├── MessageRouter.java
 │   │   └── AdminController.java  # /admin/reconcile
@@ -556,11 +561,13 @@ openfednow/
 │   ├── saga-pattern.md
 │   ├── iso20022-mapping.md
 │   ├── known-limitations.md   # What is and isn't production-ready
+│   ├── rtp-compatibility.md   # Dual-rail design: what's shared, what varies
 │   └── adr/                  # Architecture Decision Records
 │       ├── 0001-optimistic-locking-shadow-ledger-debits.md
 │       ├── 0002-redis-shadow-ledger-over-direct-core-reads.md
 │       ├── 0003-provisional-acceptance-acsp.md
-│       └── 0004-eventual-consistency-shadow-ledger-and-core.md
+│       ├── 0004-eventual-consistency-shadow-ledger-and-core.md
+│       └── 0005-dual-rail-architecture-fednow-rtp.md
 ├── LICENSE                   # Apache 2.0
 └── README.md
 ```
@@ -589,6 +596,7 @@ The framework is a reference architecture, not a production-ready product. See [
 
 **Phase 2 — FIS Adapter & Open Publication (Months 10–18)**
 - FIS IBS / Horizon adapter
+- RTP gateway connectivity (The Clearing House TCH network, XML envelope, TCH certificate validation)
 - Public open-source release with documentation
 - Reference architecture whitepaper
 
