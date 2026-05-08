@@ -1,11 +1,113 @@
-# OpenFedNow — Legacy-to-Real-Time Payment Integration Framework
+# OpenFedNow — Legacy-to-FedNow Integration Framework
 
-**An open-source middleware framework for connecting legacy core banking systems to the Federal Reserve's FedNow Instant Payment Service.**
+**Open-source middleware for connecting legacy core banking systems to the Federal Reserve's FedNow real-time payment network.**
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Early%20Development-yellow)]()
 [![Java](https://img.shields.io/badge/Java-17%2B-orange)]()
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-green)]()
+
+73% of U.S. financial institutions can't connect to FedNow because their core banking systems — Fiserv, FIS, Jack Henry — were built for batch processing, not 24/7 real-time settlement. This framework bridges the gap without touching the core.
+
+---
+
+## What works today
+
+| Component | Status |
+|-----------|--------|
+| Five-layer architecture skeleton | ✅ Implemented |
+| ISO 20022 message models (pacs.008, pacs.002, pacs.004, camt.056/029) | ✅ Implemented |
+| Sandbox core adapter (all scenarios: ACSC, RJCT, ACSP, timeout) | ✅ Implemented |
+| Shadow Ledger — Redis-backed, WATCH/MULTI/EXEC optimistic locking | ✅ Implemented + tested |
+| 24/7 Bridge Mode — queues payments during core maintenance window | ✅ Implemented + tested |
+| Reconciliation — replay and sync after core returns online | ✅ Implemented + tested |
+| Saga orchestration — compensation on core rejection | ✅ Implemented + tested |
+| Idempotency — Redis + PostgreSQL dual-write, 48h window | ✅ Implemented + tested |
+| Concurrent overdraft prevention under load | ✅ Tested (race-condition suite) |
+| Fiserv / FIS / Jack Henry adapters | 🔲 Interface defined, implementation pending |
+| Shadow Ledger wired into HTTP payment endpoint | 🔲 Tested in isolation, not yet in the request path |
+| Real FedNow connectivity (mTLS, message signing) | 🔲 Stub only |
+| Send-side (outbound) payment flow | 🔲 Not yet implemented |
+
+See [docs/known-limitations.md](docs/known-limitations.md) for the full gap analysis.
+
+---
+
+## Architecture
+
+```
+FedNow Service
+     │  pacs.008 (credit transfer, 20s window)
+     ▼
+┌─────────────────────────────────────────────────────────┐
+│  Layer 1 — API Gateway                                  │
+│  ISO 20022 parsing · idempotency · correlation IDs      │
+└────────────────────────┬────────────────────────────────┘
+                         │
+              Core online?  ◄── AvailabilityBridge polls every 30s
+             /            \
+           Yes             No (maintenance window)
+            │               │
+            │               ▼
+            │    ┌──────────────────────┐
+            │    │  Shadow Ledger       │  Redis WATCH/MULTI/EXEC
+            │    │  balance check +     │  Integer cents, no floats
+            │    │  optimistic debit    │  MAX_RETRY = 3
+            │    └──────────┬───────────┘
+            │               │
+            │               ▼
+            │    ┌──────────────────────┐
+            │    │  RabbitMQ queue      │  Durable, persistent
+            │    │  (maintenance-window │  FIFO ordering preserved
+            │    │   transactions)      │  DLQ for poison messages
+            │    └──────────┬───────────┘
+            │               │
+            │          ACSP returned to FedNow immediately
+            │
+            ▼
+┌─────────────────────────────────────────────────────────┐
+│  Layer 2 — Anti-Corruption Layer                        │
+│  SyncAsyncBridge (15s timeout) · vendor translation     │
+└────────────────────────┬────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────┐
+│  Layer 3 — Processing Engine                            │
+│  Saga state machine · idempotency · circuit breakers    │
+└────────────────────────┬────────────────────────────────┘
+                         │
+                ┌────────┴────────┐
+               ACSC             RJCT
+                │                │
+                │      Saga compensation:
+                │      ShadowLedger.reverseDebit()
+                │      → pacs.004 return to FedNow
+                ▼
+┌─────────────────────────────────────────────────────────┐
+│  Layer 5 — Core Banking System (unchanged)              │
+│  Fiserv · FIS · Jack Henry · any vendor                 │
+└─────────────────────────────────────────────────────────┘
+
+         ↑ Core returns online
+         │
+         └── ReconciliationService.reconcile()
+             Replay queued transactions in timestamp order
+             Compare Shadow Ledger vs core balance
+             Zero-discrepancy tolerance — alert on any diff
+```
+
+---
+
+## Key documents
+
+| Document | What it answers |
+|----------|-----------------|
+| [docs/known-limitations.md](docs/known-limitations.md) | What is and isn't production-ready |
+| [docs/adr/0004-eventual-consistency-shadow-ledger-and-core.md](docs/adr/0004-eventual-consistency-shadow-ledger-and-core.md) | Why eventual consistency, why not 2PC |
+| [docs/shadow-ledger.md](docs/shadow-ledger.md) | How the Shadow Ledger works, failure modes |
+| [docs/adr/0001-optimistic-locking-shadow-ledger-debits.md](docs/adr/0001-optimistic-locking-shadow-ledger-debits.md) | Why WATCH/MULTI/EXEC, the Lettuce caveat |
+| [docs/adr/0003-provisional-acceptance-acsp.md](docs/adr/0003-provisional-acceptance-acsp.md) | Why ACSP is returned, the exposure window |
+| [docs/saga-pattern.md](docs/saga-pattern.md) | Compensation path when core rejects post-ACSP |
 
 ---
 
@@ -49,14 +151,24 @@ Three adapter implementations make the complete framework available to thousands
 
 ## Quick Start
 
-**Prerequisites:** Java 17+, Docker. No other infrastructure setup required — the framework uses H2 in-memory for local development.
+**Prerequisites:** Java 17+, Docker.
 
 ```bash
 git clone https://github.com/danielsmori/open-fednow
 cd open-fednow
-docker-compose up -d        # Redis (Shadow Ledger) + RabbitMQ (maintenance queue)
-mvn spring-boot:run         # starts on :8080 with sandbox adapter and H2 in-memory
+docker-compose up -d    # Redis + RabbitMQ
+mvn spring-boot:run     # → http://localhost:8080
 ```
+
+Once the app is running (look for `Started OpenFedNowApplication`):
+
+```bash
+./demo/run-demo.sh
+```
+
+That's it. The script runs all four scenarios — ACSC, RJCT, ACSP, reconcile — and prints pass/fail for each.
+
+### What the demo does (step by step)
 
 ### 1. Send a payment (core online)
 
