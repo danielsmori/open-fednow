@@ -9,6 +9,8 @@
 
 73% of U.S. financial institutions can't connect to FedNow because their core banking systems — Fiserv, FIS, Jack Henry — were built for batch processing, not 24/7 real-time settlement. This framework bridges the gap without touching the core.
 
+> **Early development.** The architecture, Shadow Ledger, reconciliation, saga, and idempotency layers are implemented and tested. Vendor adapters (Fiserv, FIS, Jack Henry) are stubbed. See [docs/known-limitations.md](docs/known-limitations.md) for the full gap list before drawing any conclusions.
+
 ---
 
 ## What works today
@@ -35,65 +37,27 @@ See [docs/known-limitations.md](docs/known-limitations.md) for the full gap anal
 
 ## Architecture
 
-```
-FedNow Service
-     │  pacs.008 (credit transfer, 20s window)
-     ▼
-┌─────────────────────────────────────────────────────────┐
-│  Layer 1 — API Gateway                                  │
-│  ISO 20022 parsing · idempotency · correlation IDs      │
-└────────────────────────┬────────────────────────────────┘
-                         │
-              Core online?  ◄── AvailabilityBridge polls every 30s
-             /            \
-           Yes             No (maintenance window)
-            │               │
-            │               ▼
-            │    ┌──────────────────────┐
-            │    │  Shadow Ledger       │  Redis WATCH/MULTI/EXEC
-            │    │  balance check +     │  Integer cents, no floats
-            │    │  optimistic debit    │  MAX_RETRY = 3
-            │    └──────────┬───────────┘
-            │               │
-            │               ▼
-            │    ┌──────────────────────┐
-            │    │  RabbitMQ queue      │  Durable, persistent
-            │    │  (maintenance-window │  FIFO ordering preserved
-            │    │   transactions)      │  DLQ for poison messages
-            │    └──────────┬───────────┘
-            │               │
-            │          ACSP returned to FedNow immediately
-            │
-            ▼
-┌─────────────────────────────────────────────────────────┐
-│  Layer 2 — Anti-Corruption Layer                        │
-│  SyncAsyncBridge (15s timeout) · vendor translation     │
-└────────────────────────┬────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────┐
-│  Layer 3 — Processing Engine                            │
-│  Saga state machine · idempotency · circuit breakers    │
-└────────────────────────┬────────────────────────────────┘
-                         │
-                ┌────────┴────────┐
-               ACSC             RJCT
-                │                │
-                │      Saga compensation:
-                │      ShadowLedger.reverseDebit()
-                │      → pacs.004 return to FedNow
-                ▼
-┌─────────────────────────────────────────────────────────┐
-│  Layer 5 — Core Banking System (unchanged)              │
-│  Fiserv · FIS · Jack Henry · any vendor                 │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    FN([FedNow Service\npacs.008 — 20s window])
 
-         ↑ Core returns online
-         │
-         └── ReconciliationService.reconcile()
-             Replay queued transactions in timestamp order
-             Compare Shadow Ledger vs core balance
-             Zero-discrepancy tolerance — alert on any diff
+    FN --> GW["Layer 1 — API Gateway\nISO 20022 parsing · idempotency · correlation IDs"]
+
+    GW --> CHK{Core online?\nAvailabilityBridge\npoll / 30s}
+
+    CHK -->|Yes| ACL["Layer 2 — Anti-Corruption Layer\nSyncAsyncBridge 15s timeout\nVendor protocol translation"]
+    CHK -->|No — maintenance window| SL["Shadow Ledger\nRedis WATCH/MULTI/EXEC\nInteger cents · MAX_RETRY=3"]
+
+    SL --> MQ["RabbitMQ\nmaintenance-window-transactions\nDurable · FIFO · DLQ"]
+    MQ --> ACSP([pacs.002 ACSP\nreturned to FedNow])
+
+    ACL --> PE["Layer 3 — Processing Engine\nSaga state machine · Idempotency\nCircuit breakers"]
+
+    PE -->|ACSC| CORE["Layer 5 — Core Banking\nFiserv · FIS · Jack Henry\nunchanged"]
+    PE -->|RJCT| COMP["Saga compensation\nShadowLedger.reverseDebit\npacs.004 return to FedNow"]
+
+    CORE -->|Core returns online| RECON["ReconciliationService.reconcile\nReplay in timestamp order\nZero-discrepancy tolerance"]
+    RECON --> CORE
 ```
 
 ---
@@ -255,6 +219,65 @@ curl -s -X POST http://localhost:8080/admin/reconcile
 ```
 
 `transactionsReplayed: 0` — H2 in-memory resets on restart, so this run starts with a clean ledger. In a PostgreSQL deployment, bridge-mode transactions accumulated during the offline window appear here as `transactionsReplayed: N`. The reconciliation path is fully exercised in `BridgeModeIntegrationTest` and `ReconciliationServiceIntegrationTest` using Testcontainers.
+
+---
+
+## What a maintenance window looks like in production
+
+Annotated log output from the full cycle: core goes offline, payment arrives, core returns, reconciliation runs.
+
+```
+# 01:58 — AvailabilityBridge detects core going offline
+WARN  [scheduling-1] AvailabilityBridge  Core banking system OFFLINE — entering bridge mode,
+                                          transactions will be queued for replay
+
+# 02:03 — $300 payment arrives during maintenance window
+INFO  [http-nio-8080-exec-2] MessageRouter  Inbound credit transfer received amount=300.00 currency=USD
+INFO  [http-nio-8080-exec-2] AvailabilityBridge  Bridge mode active — queuing inbound payment e2e=E2E-MAINT-001
+INFO  [http-nio-8080-exec-2] AvailabilityBridge  Transaction queued for core replay transactionId=E2E-MAINT-001
+INFO  [http-nio-8080-exec-2] MessageRouter  Inbound credit transfer status=ACSP rejectCode=null
+# → pacs.002 ACSP returned to FedNow in 6ms. FedNow satisfied.
+
+# 02:03 — RabbitMQ queue depth: 1
+#   maintenance-window-transactions: messages=1, consumers=0
+
+# 05:47 — Core returns online
+INFO  [scheduling-1] AvailabilityBridge  Core banking system ONLINE — exiting bridge mode,
+                                          reconciliation pending
+
+# 05:47 — Operator triggers reconciliation (or automatic on core-return event)
+INFO  [http-nio-8080-exec-5] ReconciliationService  Reconciliation cycle starting
+INFO  [http-nio-8080-exec-5] ReconciliationService  Reconciliation found 1 accounts with pending entries
+INFO  [http-nio-8080-exec-5] ReconciliationService  Reconciliation cycle complete
+                                                      replayed=1 discrepancies=0 success=true
+
+# Response to POST /admin/reconcile
+{
+  "transactionsReplayed": 1,
+  "discrepanciesDetected": 0,
+  "reconciliationSuccessful": true,
+  "summary": "Clean reconciliation: 1 entries confirmed across all accounts"
+}
+# shadow_ledger_transaction_log: core_confirmed = TRUE
+# Balance in Redis matches core confirmed balance. Divergence window closed.
+```
+
+---
+
+## Test coverage
+
+The test suite uses Testcontainers (PostgreSQL + Redis + RabbitMQ) for all integration tests — no mocking of infrastructure.
+
+| Test class | What it covers |
+|---|---|
+| `ShadowLedgerConcurrencyTest` | 10 concurrent debits, overdraft prevention under race conditions, credit atomicity, audit row count matches successful ops |
+| `ReplayOrderingIntegrationTest` | FIFO ordering across 5 queued messages, targeted replay without confirming unlisted entries, poison message → DLQ without blocking queue, idempotent re-replay |
+| `BridgeModeIntegrationTest` | Full bridge mode cycle: payment queued during offline window, RabbitMQ message verified, reconciliation run, `core_confirmed` flipped |
+| `SagaCompensationIntegrationTest` | Saga initiated → INITIATED state persisted, compensation reverses Shadow Ledger debit, double-compensation is no-op, reason code stored |
+| `IdempotencyServiceIntegrationTest` | Redis fast-path dedup, DB fallback when Redis key absent, concurrent `recordOutcome` calls produce exactly one row, 48h TTL |
+| `ReconciliationServiceIntegrationTest` | Discrepancy detection → alert + Shadow Ledger overwrite, clean run, multi-account run |
+| `RabbitMqDlqTest` | DLQ topology declared on startup, nack-without-requeue routes to DLQ, main queue unaffected |
+| `FlywayMigrationTest` | All migrations apply cleanly to a fresh PostgreSQL container |
 
 ---
 
