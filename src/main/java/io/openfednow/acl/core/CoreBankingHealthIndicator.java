@@ -8,7 +8,8 @@ import org.springframework.stereotype.Component;
  * Layer 2 — Core Banking Adapter health indicator.
  *
  * <p>Exposes the reachability of the active core banking system at
- * {@code /actuator/health/coreBanking}.
+ * {@code /actuator/health/coreBanking} (Spring Boot strips the
+ * {@code HealthIndicator} suffix from the bean name automatically).
  *
  * <p>Status semantics:
  * <ul>
@@ -25,7 +26,7 @@ import org.springframework.stereotype.Component;
  * {@code readiness} group by default). It is intended for the operations
  * dashboard and alerting.
  */
-@Component("coreBanking")
+@Component
 public class CoreBankingHealthIndicator implements HealthIndicator {
 
     private final CoreBankingAdapter coreBankingAdapter;

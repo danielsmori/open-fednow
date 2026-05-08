@@ -8,7 +8,8 @@ import org.springframework.stereotype.Component;
  * Layer 4 — Shadow Ledger health indicator.
  *
  * <p>Exposes the current operating mode of the Shadow Ledger at
- * {@code /actuator/health/shadowLedger}.
+ * {@code /actuator/health/shadowLedger} (Spring Boot strips the
+ * {@code HealthIndicator} suffix from the bean name automatically).
  *
  * <p>Status semantics:
  * <ul>
@@ -30,7 +31,7 @@ import org.springframework.stereotype.Component;
  * (custom {@code HealthIndicator} beans are excluded from the
  * {@code readiness} group by default).
  */
-@Component("shadowLedger")
+@Component
 public class ShadowLedgerHealthIndicator implements HealthIndicator {
 
     private final AvailabilityBridge availabilityBridge;
