@@ -124,7 +124,14 @@ docker-compose up -d    # Redis + RabbitMQ
 mvn spring-boot:run     # → http://localhost:8080
 ```
 
-Once the app is running (look for `Started OpenFedNowApplication`):
+Once the app is running (look for `Started OpenFedNowApplication` in the console), verify it's up:
+
+```bash
+curl http://localhost:8080/fednow/health
+# → OpenFedNow Gateway — operational
+```
+
+Then run the demo:
 
 ```bash
 ./demo/run-demo.sh
@@ -526,9 +533,9 @@ openfednow/
 │   │   │   ├── MessageTranslator.java
 │   │   │   └── SyncAsyncBridge.java
 │   │   └── adapters/
-│   │       ├── FiservAdapter.java           # In development
-│   │       ├── FisAdapter.java              # Planned
-│   │       └── JackHenryAdapter.java        # Planned
+│   │       ├── FiservAdapter.java           # Stub — interface only, // TODO bodies
+│   │       ├── FisAdapter.java              # Stub — interface only, // TODO bodies
+│   │       └── JackHenryAdapter.java        # Stub — interface only, // TODO bodies
 │   ├── processing/           # Layer 3 — Real-Time Processing Engine
 │   │   ├── saga/
 │   │   │   ├── PaymentSaga.java
