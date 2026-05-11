@@ -42,8 +42,10 @@ See [docs/known-limitations.md](docs/known-limitations.md) for the full gap anal
 ```mermaid
 flowchart TD
     FN([FedNow Service\npacs.008 — 20s window])
+    RTP([RTP Network — TCH\npacs.008 — stub])
 
-    FN --> GW["Layer 1 — API Gateway\nISO 20022 parsing · idempotency · correlation IDs"]
+    FN  --> GW["Layer 1 — API Gateway\nFedNowGateway · RtpGateway\nISO 20022 parsing · idempotency · correlation IDs"]
+    RTP --> GW
 
     GW --> CHK{Core online?\nAvailabilityBridge\npoll / 30s}
 
@@ -51,12 +53,12 @@ flowchart TD
     CHK -->|No — maintenance window| SL["Shadow Ledger\nRedis WATCH/MULTI/EXEC\nInteger cents · MAX_RETRY=3"]
 
     SL --> MQ["RabbitMQ\nmaintenance-window-transactions\nDurable · FIFO · DLQ"]
-    MQ --> ACSP([pacs.002 ACSP\nreturned to FedNow])
+    MQ --> ACSP([pacs.002 ACSP\nreturned to rail])
 
     ACL --> PE["Layer 3 — Processing Engine\nSaga state machine · Idempotency\nCircuit breakers"]
 
     PE -->|ACSC| CORE["Layer 5 — Core Banking\nFiserv · FIS · Jack Henry\nunchanged"]
-    PE -->|RJCT| COMP["Saga compensation\nShadowLedger.reverseDebit\npacs.004 return to FedNow"]
+    PE -->|RJCT| COMP["Saga compensation\nShadowLedger.reverseDebit\npacs.004 return"]
 
     CORE -->|Core returns online| RECON["ReconciliationService.reconcile\nReplay in timestamp order\nZero-discrepancy tolerance"]
     RECON --> CORE
@@ -443,16 +445,18 @@ Each thread retries until its EXEC succeeds. The balance is always consistent. S
 The framework is structured as five independent layers. Each layer addresses a specific dimension of the legacy-to-real-time incompatibility.
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│              FedNow Service (Federal Reserve)                │
-│                    ISO 20022 / HTTPS                         │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────────┐
-│         LAYER 1 — API Gateway & Security                     │
-│  TLS mutual auth · Fed PKI certificates · Rate limiting      │
-│  Fraud pre-screening · pacs.008 / pacs.002 routing           │
-└────────────────────────┬────────────────────────────────────┘
+┌───────────────────────────┐   ┌───────────────────────────┐
+│  FedNow Service           │   │  RTP Network — TCH        │
+│  Federal Reserve          │   │  (stub — see ADR-0005)    │
+│  ISO 20022 JSON / HTTPS   │   │  ISO 20022 XML / private  │
+└─────────────┬─────────────┘   └─────────────┬─────────────┘
+              │                               │
+┌─────────────▼───────────────────────────────▼─────────────┐
+│         LAYER 1 — API Gateway & Security  ★ rail varies   │
+│  FedNowGateway · RtpGateway (stub)                         │
+│  TLS mutual auth · PKI certificates · Rate limiting        │
+│  Fraud pre-screening · pacs.008 / pacs.002 routing         │
+└────────────────────────┬───────────────────────────────────┘
                          │
 ┌────────────────────────▼────────────────────────────────────┐
 │    LAYER 2 — Anti-Corruption Layer / Core Banking Adapter ★  │
@@ -479,12 +483,12 @@ The framework is structured as five independent layers. Each layer addresses a s
 └─────────────────────────────────────────────────────────────┘
 ```
 
-★ Novel architectural contributions: the Anti-Corruption Layer and Shadow Ledger resolve the two hardest problems in legacy payment integration.
+★ Rail varies at Layer 1 only — Layers 2–4 are rail-agnostic. Novel contributions: the Anti-Corruption Layer and Shadow Ledger resolve the two hardest problems in legacy payment integration.
 
 ### Layer Descriptions
 
 **Layer 1 — API Gateway & Security**
-Manages all communication with the Federal Reserve's FedNow Service. Handles TLS mutual authentication using Federal Reserve PKI certificates, ISO 20022 message parsing and validation (pacs.008.001.08 credit transfers, pacs.002.001.10 payment status reports), rate limiting, and fraud pre-screening on all inbound and outbound paths.
+The only layer that varies between payment rails. `FedNowGateway` handles FedNow-specific connectivity: Federal Reserve PKI certificates, JSON envelope parsing, and REST/HTTPS transport. `RtpGateway` (stubbed) extends the same pattern for RTP: TCH certificates and ISO 20022 XML envelope. Both gateways deliver the same `Pacs008Message` to `MessageRouter` — Layers 2–4 have no knowledge of which rail the message arrived on. Also handles rate limiting and fraud pre-screening on all inbound and outbound paths.
 
 **Layer 2 — Anti-Corruption Layer / Core Banking Adapter**
 The architectural core of the framework. Translates between the modern ISO 20022 world (REST APIs, JSON, UTF-8) and the proprietary world of each core banking vendor (vendor-specific APIs, proprietary formats). Also manages the synchronous-to-asynchronous bridge: FedNow requires synchronous sub-20-second responses, but legacy core processing is inherently asynchronous. This layer decouples the two models. The vendor-specific adapter is the only component that varies between institutions (~15% of total scope).
@@ -493,7 +497,7 @@ The architectural core of the framework. Translates between the modern ISO 20022
 Manages transaction orchestration and state across distributed systems. Key components: Saga pattern implementation for distributed transaction management (with compensation logic for rollback across multiple systems), idempotency key management to prevent duplicate processing, distributed cache for real-time balance availability, and circuit breakers to prevent cascade failures.
 
 **Layer 4 — Shadow Ledger & 24/7 Availability Bridge**
-Resolves the hardest operational problem: legacy core systems go offline for maintenance while FedNow never does. The Shadow Ledger maintains a real-time view of available balances independently of the core system. Transactions arriving during core downtime are queued via async messaging and processed against the Shadow Ledger. A reconciliation service ensures the core ledger remains authoritative when it returns online. From FedNow's perspective, the institution is always available.
+Resolves the hardest operational problem: legacy core systems go offline for maintenance while instant payment rails never do. The Shadow Ledger maintains a real-time view of available balances independently of the core system. Transactions arriving during core downtime are queued via async messaging and processed against the Shadow Ledger. A reconciliation service ensures the core ledger remains authoritative when it returns online. From the payment network's perspective, the institution is always available.
 
 **Layer 5 — Legacy Core Banking**
 The existing core banking infrastructure — unchanged. A deliberate architectural principle: the framework works around legacy systems, never requiring their transformation. This protects the stability of core banking operations while enabling full FedNow participation.
