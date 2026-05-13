@@ -171,6 +171,28 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Spring Kafka — optional event streaming bus alongside RabbitMQ.
+             Activated via openfednow.kafka.enabled=true; disabled by default so
+             existing deployments need no Kafka broker. -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
+        <!-- Testcontainers Kafka — self-contained Kafka broker for integration tests -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>kafka</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Spring Kafka Test — KafkaTestUtils for consumer polling in integration tests -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>

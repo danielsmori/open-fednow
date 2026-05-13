@@ -15,6 +15,20 @@ spring:
     username: ${RABBITMQ_USER:guest}
     password: ${RABBITMQ_PASS:guest}
 
+  # Kafka — optional event streaming bus (coexists with RabbitMQ).
+  # Only active when openfednow.kafka.enabled=true. When disabled, NoOpPaymentEventPublisher
+  # handles all event publishing silently — no broker connection is made.
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      # Require acks from all in-sync replicas before confirming (safe default for payments)
+      acks: all
+      # Retry up to 3 times on transient send errors (events are fire-and-forget but
+      # at-least-once delivery is preferred when Kafka is healthy)
+      retries: 3
+
   # Datasource — PostgreSQL in production; H2 (PostgreSQL-compatible mode) for local dev
   datasource:
     url: ${DB_URL:jdbc:h2:mem:openfednow;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1}
@@ -37,6 +51,12 @@ openfednow:
   admin:
     username: ${ADMIN_USERNAME:admin}
     password: ${ADMIN_PASSWORD:changeme}
+
+  # Kafka event bus — optional, coexists with the RabbitMQ maintenance-window queue.
+  # Set KAFKA_ENABLED=true and KAFKA_BOOTSTRAP_SERVERS=<host:port> to activate.
+  kafka:
+    enabled: ${KAFKA_ENABLED:false}
+    topic: ${KAFKA_TOPIC:openfednow.payment.events}
 
   # Core banking adapter to use: sandbox | fiserv | fis | jackhenry
   # Default is 'sandbox' for local development. Set CORE_ADAPTER=fiserv (etc.)

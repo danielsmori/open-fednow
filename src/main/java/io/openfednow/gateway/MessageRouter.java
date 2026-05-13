@@ -4,6 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.openfednow.acl.core.CoreBankingAdapter;
 import io.openfednow.acl.core.SyncAsyncBridge;
+import io.openfednow.events.PaymentEvent;
+import io.openfednow.events.PaymentEvent.EventType;
+import io.openfednow.events.PaymentEventPublisher;
 import io.openfednow.iso20022.Pacs002Message;
 import io.openfednow.iso20022.Pacs008Message;
 import io.openfednow.processing.idempotency.IdempotencyService;
@@ -17,6 +20,7 @@ import org.slf4j.MDC;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 
@@ -49,6 +53,7 @@ public class MessageRouter {
     private final ObjectMapper objectMapper;
     private final ShadowLedger shadowLedger;
     private final SagaOrchestrator sagaOrchestrator;
+    private final PaymentEventPublisher eventPublisher;
 
     public MessageRouter(FedNowClient fedNowClient,
                          CoreBankingAdapter coreBankingAdapter,
@@ -57,7 +62,8 @@ public class MessageRouter {
                          SyncAsyncBridge syncAsyncBridge,
                          ObjectMapper objectMapper,
                          ShadowLedger shadowLedger,
-                         SagaOrchestrator sagaOrchestrator) {
+                         SagaOrchestrator sagaOrchestrator,
+                         PaymentEventPublisher eventPublisher) {
         this.fedNowClient = fedNowClient;
         this.coreBankingAdapter = coreBankingAdapter;
         this.idempotencyService = idempotencyService;
@@ -66,6 +72,7 @@ public class MessageRouter {
         this.objectMapper = objectMapper;
         this.shadowLedger = shadowLedger;
         this.sagaOrchestrator = sagaOrchestrator;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -125,6 +132,7 @@ public class MessageRouter {
                     .transactionStatus(Pacs002Message.TransactionStatus.ACSP)
                     .creationDateTime(OffsetDateTime.now())
                     .build();
+            eventPublisher.publish(event(message, EventType.INBOUND_QUEUED_FOR_BRIDGE, null));
         } else {
             // Step 3 online — submit with sync/async bridge
             response = syncAsyncBridge.submitWithTimeout(message, coreBankingAdapter);
@@ -142,9 +150,12 @@ public class MessageRouter {
                     sagaOrchestrator.advance(saga, PaymentSaga.SagaState.COMPLETED);
                 }
                 // ACSP: remain at CORE_SUBMITTED; reconciliation advances to COMPLETED
+                eventPublisher.publish(event(message, EventType.INBOUND_CREDIT_APPLIED, null));
             } else {
                 // RJCT: core declined the transfer — no credit applied, compensate saga
                 sagaOrchestrator.compensate(saga.getSagaId(), response.getRejectReasonCode());
+                eventPublisher.publish(event(message, EventType.INBOUND_PAYMENT_REJECTED,
+                        response.getRejectReasonCode()));
             }
         }
 
@@ -158,6 +169,17 @@ public class MessageRouter {
     }
 
     // ── Internal helpers ───────────────────────────────────────────────────────
+
+    private PaymentEvent event(Pacs008Message message, EventType type, String rejectReasonCode) {
+        return new PaymentEvent(
+                type,
+                message.getTransactionId(),
+                message.getEndToEndId(),
+                message.getInterbankSettlementAmount(),
+                message.getInterbankSettlementCurrency(),
+                rejectReasonCode,
+                Instant.now());
+    }
 
     private String serializeMessage(Pacs008Message message) {
         try {
@@ -212,6 +234,7 @@ public class MessageRouter {
                     message.getEndToEndId(), message.getTransactionId(),
                     "AM04", "Insufficient funds in debtor Shadow Ledger balance");
             idempotencyService.recordOutcome(message.getEndToEndId(), insufficientFunds);
+            eventPublisher.publish(event(message, EventType.OUTBOUND_PAYMENT_REJECTED, "AM04"));
             return ResponseEntity.ok(insufficientFunds);
         }
 
@@ -245,11 +268,16 @@ public class MessageRouter {
             log.info("FedNow rejected outbound payment, compensating sagaId={} reason={}",
                     saga.getSagaId(), response.getRejectReasonCode());
             sagaOrchestrator.compensate(saga.getSagaId(), response.getRejectReasonCode());
+            eventPublisher.publish(event(message, EventType.OUTBOUND_PAYMENT_REJECTED,
+                    response.getRejectReasonCode()));
         } else if (response.getTransactionStatus() == Pacs002Message.TransactionStatus.ACSC) {
             sagaOrchestrator.advance(saga, PaymentSaga.SagaState.FEDNOW_CONFIRMED);
             sagaOrchestrator.advance(saga, PaymentSaga.SagaState.COMPLETED);
+            eventPublisher.publish(event(message, EventType.OUTBOUND_PAYMENT_COMPLETED, null));
+        } else {
+            // ACSP: leave at CORE_SUBMITTED — reconciliation advances to COMPLETED
+            eventPublisher.publish(event(message, EventType.OUTBOUND_PAYMENT_PENDING, null));
         }
-        // ACSP: leave at CORE_SUBMITTED — reconciliation advances to COMPLETED
 
         log.info("Outbound credit transfer status={} rejectCode={}",
                 response.getTransactionStatus(), response.getRejectReasonCode());
