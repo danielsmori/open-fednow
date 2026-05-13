@@ -61,6 +61,19 @@
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
+        <!-- Spring Security — API-key / Basic-auth protection for admin endpoints -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!-- Spring Security Test — @WithMockUser and SecurityMockMvcConfigurers in tests -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Spring AMQP — async message queuing for maintenance window bridge (Layer 4) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

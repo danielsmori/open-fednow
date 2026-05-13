@@ -33,6 +33,11 @@ spring:
     show-sql: false
 
 openfednow:
+  # Admin endpoint credentials (reference implementation — integrate with institution IAM in production)
+  admin:
+    username: ${ADMIN_USERNAME:admin}
+    password: ${ADMIN_PASSWORD:changeme}
+
   # Core banking adapter to use: sandbox | fiserv | fis | jackhenry
   # Default is 'sandbox' for local development. Set CORE_ADAPTER=fiserv (etc.)
   # to target a real vendor integration.
