@@ -16,7 +16,13 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class FedNowClientConfig {
 
-    @Bean
+    /**
+     * Creates the HTTP FedNow client as the named bean {@code httpFedNowClient}.
+     * The explicit name lets {@link SandboxFedNowClient} use
+     * {@code @ConditionalOnMissingBean(name = "httpFedNowClient")} so that the sandbox
+     * implementation is active only when no real endpoint is configured.
+     */
+    @Bean(name = "httpFedNowClient")
     public FedNowClient fedNowClient(
             @Value("${openfednow.gateway.fednow-endpoint}") String endpoint,
             @Value("${openfednow.gateway.response-timeout-seconds}") int timeoutSeconds) {

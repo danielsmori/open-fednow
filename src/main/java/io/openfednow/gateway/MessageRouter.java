@@ -170,25 +170,92 @@ public class MessageRouter {
 
     /**
      * Routes an outbound pacs.008 credit transfer to the FedNow Service.
-     * Populates MDC with the ISO 20022 identifiers from the message so that
-     * all log lines emitted during this request carry the payment context.
      *
-     * @param message pacs.008.001.08 message assembled by the ACL
-     * @return pacs.002 status report returned by FedNow
+     * <p>Processing order:
+     * <ol>
+     *   <li>Idempotency check — return cached pacs.002 if this endToEndId was already sent</li>
+     *   <li>Sufficient-funds check — return RJCT AM04 immediately if the Shadow Ledger
+     *       balance cannot cover the amount (fail fast, no saga created)</li>
+     *   <li>Initiate saga</li>
+     *   <li>Apply debit (reserve funds) in the Shadow Ledger → advance saga to FUNDS_RESERVED</li>
+     *   <li>Submit to FedNow via {@link FedNowClient}</li>
+     *   <li>On ACSC: advance saga to COMPLETED</li>
+     *   <li>On RJCT: compensate saga — reverses the debit via Shadow Ledger</li>
+     *   <li>On ACSP: leave saga at CORE_SUBMITTED — reconciliation advances to COMPLETED</li>
+     *   <li>Record outcome for idempotency</li>
+     * </ol>
+     *
+     * @param message pacs.008.001.08 assembled by the ACL
+     * @return pacs.002 status report returned by FedNow (or synthetic RJCT on infrastructure error)
      */
     public ResponseEntity<Pacs002Message> routeOutbound(Pacs008Message message) {
         MDC.put(CorrelationFilter.MDC_END_TO_END_ID, message.getEndToEndId());
         MDC.put(CorrelationFilter.MDC_TRANSACTION_ID, message.getTransactionId());
 
-        log.info("Routing outbound credit transfer amount={} currency={}",
+        log.info("Outbound credit transfer received amount={} currency={}",
                 message.getInterbankSettlementAmount(),
                 message.getInterbankSettlementCurrency());
 
-        Pacs002Message response = fedNowClient.submitCreditTransfer(message);
+        // Step 1 — idempotency check
+        Optional<Pacs002Message> cached = idempotencyService.checkDuplicate(message.getEndToEndId());
+        if (cached.isPresent()) {
+            log.info("Duplicate outbound payment suppressed e2e={}", message.getEndToEndId());
+            return ResponseEntity.ok(cached.get());
+        }
 
-        log.info("FedNow response status={} rejectCode={}",
-                response.getTransactionStatus(),
-                response.getRejectReasonCode());
+        // Step 2 — sufficient-funds check (fail fast before saga is created)
+        java.math.BigDecimal available = shadowLedger.getAvailableBalance(message.getDebtorAccountNumber());
+        if (available.compareTo(message.getInterbankSettlementAmount()) < 0) {
+            log.info("Outbound payment rejected: insufficient funds account={} available={} requested={}",
+                    message.getDebtorAccountNumber(), available, message.getInterbankSettlementAmount());
+            Pacs002Message insufficientFunds = Pacs002Message.rejected(
+                    message.getEndToEndId(), message.getTransactionId(),
+                    "AM04", "Insufficient funds in debtor Shadow Ledger balance");
+            idempotencyService.recordOutcome(message.getEndToEndId(), insufficientFunds);
+            return ResponseEntity.ok(insufficientFunds);
+        }
+
+        // Step 3 — initiate saga
+        PaymentSaga saga = sagaOrchestrator.initiate(message);
+
+        // Step 4 — reserve funds: debit debtor account in Shadow Ledger
+        shadowLedger.applyDebit(
+                message.getDebtorAccountNumber(),
+                message.getInterbankSettlementAmount(),
+                message.getTransactionId());
+        sagaOrchestrator.advance(saga, PaymentSaga.SagaState.FUNDS_RESERVED);
+
+        // Step 5 — submit to FedNow
+        Pacs002Message response;
+        try {
+            response = fedNowClient.submitCreditTransfer(message);
+            sagaOrchestrator.advance(saga, PaymentSaga.SagaState.CORE_SUBMITTED);
+        } catch (Exception e) {
+            log.error("FedNow submission failed, compensating sagaId={}", saga.getSagaId(), e);
+            sagaOrchestrator.compensate(saga.getSagaId(), "NARR");
+            response = Pacs002Message.rejected(
+                    message.getEndToEndId(), message.getTransactionId(),
+                    "NARR", "FedNow submission error — debit reversed");
+            idempotencyService.recordOutcome(message.getEndToEndId(), response);
+            return ResponseEntity.ok(response);
+        }
+
+        // Step 6 — handle FedNow response
+        if (response.getTransactionStatus() == Pacs002Message.TransactionStatus.RJCT) {
+            log.info("FedNow rejected outbound payment, compensating sagaId={} reason={}",
+                    saga.getSagaId(), response.getRejectReasonCode());
+            sagaOrchestrator.compensate(saga.getSagaId(), response.getRejectReasonCode());
+        } else if (response.getTransactionStatus() == Pacs002Message.TransactionStatus.ACSC) {
+            sagaOrchestrator.advance(saga, PaymentSaga.SagaState.FEDNOW_CONFIRMED);
+            sagaOrchestrator.advance(saga, PaymentSaga.SagaState.COMPLETED);
+        }
+        // ACSP: leave at CORE_SUBMITTED — reconciliation advances to COMPLETED
+
+        log.info("Outbound credit transfer status={} rejectCode={}",
+                response.getTransactionStatus(), response.getRejectReasonCode());
+
+        // Step 7 — record outcome for idempotency
+        idempotencyService.recordOutcome(message.getEndToEndId(), response);
 
         return ResponseEntity.ok(response);
     }
