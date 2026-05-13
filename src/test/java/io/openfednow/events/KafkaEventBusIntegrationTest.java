@@ -21,7 +21,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.KafkaContainer;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.utility.DockerImageName;
 
 import java.math.BigDecimal;
@@ -39,12 +39,16 @@ import static org.mockito.Mockito.when;
  * Integration tests for the Kafka event bus.
  *
  * <p>Verifies that {@link MessageRouter} publishes {@link PaymentEvent}s to Kafka
- * when {@code openfednow.kafka.enabled=true}. The test spins up a real Kafka broker
- * via Testcontainers alongside the standard Redis, RabbitMQ, and PostgreSQL containers
- * from {@link AbstractInfrastructureIntegrationTest}.
+ * when {@code openfednow.kafka.enabled=true}. Extends
+ * {@link AbstractInfrastructureIntegrationTest} to inherit the Redis, RabbitMQ, and
+ * PostgreSQL containers, and adds its own Kafka container via a {@code @Container}
+ * static field.
  *
- * <p>A raw Kafka consumer is used to verify message delivery — no {@code @KafkaListener}
- * or Spring consumer lifecycle is involved so the assertion is direct and straightforward.
+ * <p>{@code @Testcontainers(disabledWithoutDocker = true)} is inherited from the
+ * parent class: all tests in this class are skipped when Docker is unavailable.
+ *
+ * <p>A raw Kafka consumer is used to verify message delivery — no
+ * {@code @KafkaListener} lifecycle complexity involved.
  *
  * <p>Scenarios:
  * <ul>
@@ -55,16 +59,12 @@ import static org.mockito.Mockito.when;
  *   <li>Event is keyed by transactionId for partition affinity</li>
  * </ul>
  */
-@Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class KafkaEventBusIntegrationTest extends AbstractInfrastructureIntegrationTest {
 
+    @Container
     static final KafkaContainer KAFKA =
             new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0"));
-
-    static {
-        KAFKA.start();
-    }
 
     @DynamicPropertySource
     static void kafkaProperties(DynamicPropertyRegistry registry) {
@@ -236,8 +236,7 @@ class KafkaEventBusIntegrationTest extends AbstractInfrastructureIntegrationTest
     }
 
     /**
-     * Polls Kafka until records arrive or 15 seconds elapse. Uses multiple short
-     * polls to handle the latency between message publish and consumer availability.
+     * Polls Kafka until records arrive or 15 seconds elapse.
      */
     private List<ConsumerRecord<String, String>> poll() {
         List<ConsumerRecord<String, String>> result = new ArrayList<>();

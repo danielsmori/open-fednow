@@ -1,6 +1,6 @@
 package io.openfednow.events;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -12,9 +12,13 @@ import org.springframework.stereotype.Component;
  *
  * <p>Replaced by {@link KafkaPaymentEventPublisher} when
  * {@code openfednow.kafka.enabled=true}.
+ *
+ * <p>Uses {@code @ConditionalOnProperty} rather than {@code @ConditionalOnMissingBean} to
+ * avoid bean-ordering ambiguity during component scan: the condition is evaluated purely
+ * from the property value and is deterministic regardless of scan order.
  */
 @Component
-@ConditionalOnMissingBean(PaymentEventPublisher.class)
+@ConditionalOnProperty(name = "openfednow.kafka.enabled", havingValue = "false", matchIfMissing = true)
 public class NoOpPaymentEventPublisher implements PaymentEventPublisher {
 
     @Override

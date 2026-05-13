@@ -6,58 +6,57 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.RabbitMQContainer;
+import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 /**
  * Base class for infrastructure integration tests.
  *
- * <p>Starts Redis, RabbitMQ, and PostgreSQL containers once for the entire
- * test suite (containers are {@code static} and shared across subclasses).
- * Each subclass gets a fully configured Spring context pointed at the
- * running containers via {@link DynamicPropertySource}.
+ * <p>Declares Redis, RabbitMQ, and PostgreSQL containers as {@code @Container} static
+ * fields so that the Testcontainers JUnit 5 extension manages their lifecycle:
+ * containers are started once before the first test class that references them and
+ * shared across all subclasses (because the fields are {@code static}).
  *
- * <p>Subclasses should be annotated with {@code @SpringBootTest} and focus
- * their tests on a single infrastructure concern (Redis, RabbitMQ, or
- * PostgreSQL). All three containers must be available for the Spring context
- * to start cleanly regardless of which concern is under test.
+ * <p>{@code @Testcontainers(disabledWithoutDocker = true)} causes the entire test
+ * class to be <em>skipped</em> (rather than failing) when the Docker daemon is not
+ * available. This prevents cascading {@code NoClassDefFoundError} errors in local
+ * environments where Docker is not running.
+ *
+ * <p>Each subclass should be annotated with {@code @SpringBootTest} and focus its
+ * tests on a single infrastructure concern. All three containers must be available
+ * for the Spring context to start cleanly, regardless of which concern is under test.
  *
  * <h2>Container images</h2>
- * Images are pinned to the same major versions used in {@code docker-compose.yml}
- * and the GitHub Actions CI service definitions:
+ * Pinned to the same major versions used in {@code docker-compose.yml} and the
+ * GitHub Actions CI service definitions:
  * <ul>
  *   <li>Redis 7 (Alpine)</li>
  *   <li>RabbitMQ 3 with management plugin</li>
  *   <li>PostgreSQL 16 (Alpine)</li>
  * </ul>
  */
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 public abstract class AbstractInfrastructureIntegrationTest {
 
+    @Container
     @SuppressWarnings("resource")
     static final GenericContainer<?> REDIS =
             new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
                     .withExposedPorts(6379);
 
+    @Container
     static final RabbitMQContainer RABBITMQ =
             new RabbitMQContainer(DockerImageName.parse("rabbitmq:3-management"));
 
+    @Container
     @SuppressWarnings("resource")
     static final PostgreSQLContainer<?> POSTGRES =
             new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"))
                     .withDatabaseName("openfednow")
                     .withUsername("openfednow")
                     .withPassword("openfednow");
-
-    static {
-        // Start all containers before any Spring context is created.
-        // Testcontainers reuses running containers within the same JVM,
-        // so the cost is paid once per test-suite execution.
-        REDIS.start();
-        RABBITMQ.start();
-        POSTGRES.start();
-    }
 
     @DynamicPropertySource
     static void overrideProperties(DynamicPropertyRegistry registry) {
