@@ -7,7 +7,10 @@ import io.openfednow.acl.core.SyncAsyncBridge;
 import io.openfednow.iso20022.Pacs002Message;
 import io.openfednow.iso20022.Pacs008Message;
 import io.openfednow.processing.idempotency.IdempotencyService;
+import io.openfednow.processing.saga.PaymentSaga;
+import io.openfednow.processing.saga.SagaOrchestrator;
 import io.openfednow.shadowledger.AvailabilityBridge;
+import io.openfednow.shadowledger.ShadowLedger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -44,19 +47,25 @@ public class MessageRouter {
     private final AvailabilityBridge availabilityBridge;
     private final SyncAsyncBridge syncAsyncBridge;
     private final ObjectMapper objectMapper;
+    private final ShadowLedger shadowLedger;
+    private final SagaOrchestrator sagaOrchestrator;
 
     public MessageRouter(FedNowClient fedNowClient,
                          CoreBankingAdapter coreBankingAdapter,
                          IdempotencyService idempotencyService,
                          AvailabilityBridge availabilityBridge,
                          SyncAsyncBridge syncAsyncBridge,
-                         ObjectMapper objectMapper) {
+                         ObjectMapper objectMapper,
+                         ShadowLedger shadowLedger,
+                         SagaOrchestrator sagaOrchestrator) {
         this.fedNowClient = fedNowClient;
         this.coreBankingAdapter = coreBankingAdapter;
         this.idempotencyService = idempotencyService;
         this.availabilityBridge = availabilityBridge;
         this.syncAsyncBridge = syncAsyncBridge;
         this.objectMapper = objectMapper;
+        this.shadowLedger = shadowLedger;
+        this.sagaOrchestrator = sagaOrchestrator;
     }
 
     /**
@@ -92,11 +101,22 @@ public class MessageRouter {
             return ResponseEntity.ok(cached.get());
         }
 
+        // Step 2 — initiate saga (durable record of this payment's lifecycle)
+        PaymentSaga saga = sagaOrchestrator.initiate(message);
+
         Pacs002Message response;
 
-        // Step 2 — bridge mode: core offline, queue for replay
+        // Step 3 — bridge mode: core offline, queue for replay
         if (availabilityBridge.isInBridgeMode()) {
             log.info("Bridge mode active — queuing inbound payment e2e={}", message.getEndToEndId());
+            // Apply provisional credit: funds arrive regardless of core availability.
+            // The reconciliation pass will confirm core_confirmed when the core comes back.
+            shadowLedger.applyCredit(
+                    message.getCreditorAccountNumber(),
+                    message.getInterbankSettlementAmount(),
+                    message.getTransactionId());
+            sagaOrchestrator.advance(saga, PaymentSaga.SagaState.FUNDS_RESERVED);
+
             String payload = serializeMessage(message);
             availabilityBridge.queueForCoreProcessing(message.getEndToEndId(), payload);
             response = Pacs002Message.builder()
@@ -106,8 +126,26 @@ public class MessageRouter {
                     .creationDateTime(OffsetDateTime.now())
                     .build();
         } else {
-            // Step 3 — online mode: submit with sync/async bridge
+            // Step 3 online — submit with sync/async bridge
             response = syncAsyncBridge.submitWithTimeout(message, coreBankingAdapter);
+
+            if (response.getTransactionStatus() != Pacs002Message.TransactionStatus.RJCT) {
+                // ACSC or ACSP: credit applied to shadow ledger
+                shadowLedger.applyCredit(
+                        message.getCreditorAccountNumber(),
+                        message.getInterbankSettlementAmount(),
+                        message.getTransactionId());
+                sagaOrchestrator.advance(saga, PaymentSaga.SagaState.FUNDS_RESERVED);
+                sagaOrchestrator.advance(saga, PaymentSaga.SagaState.CORE_SUBMITTED);
+                if (response.getTransactionStatus() == Pacs002Message.TransactionStatus.ACSC) {
+                    sagaOrchestrator.advance(saga, PaymentSaga.SagaState.FEDNOW_CONFIRMED);
+                    sagaOrchestrator.advance(saga, PaymentSaga.SagaState.COMPLETED);
+                }
+                // ACSP: remain at CORE_SUBMITTED; reconciliation advances to COMPLETED
+            } else {
+                // RJCT: core declined the transfer — no credit applied, compensate saga
+                sagaOrchestrator.compensate(saga.getSagaId(), response.getRejectReasonCode());
+            }
         }
 
         log.info("Inbound credit transfer status={} rejectCode={}",
