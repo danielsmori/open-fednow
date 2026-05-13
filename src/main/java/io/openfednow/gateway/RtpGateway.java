@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -62,10 +63,13 @@ public class RtpGateway {
 
     private final MessageRouter messageRouter;
     private final CertificateManager certificateManager;
+    private final RtpXmlParser rtpXmlParser;
 
-    public RtpGateway(MessageRouter messageRouter, CertificateManager certificateManager) {
+    public RtpGateway(MessageRouter messageRouter, CertificateManager certificateManager,
+                      RtpXmlParser rtpXmlParser) {
         this.messageRouter = messageRouter;
         this.certificateManager = certificateManager;
+        this.rtpXmlParser = rtpXmlParser;
     }
 
     /**
@@ -85,15 +89,32 @@ public class RtpGateway {
      * @param message the ISO 20022 pacs.008.001.08 credit transfer message
      * @return pacs.002 payment status report confirming acceptance or rejection
      */
-    @PostMapping("/receive")
+    /**
+     * Accepts an inbound RTP pacs.008 message as either:
+     * <ul>
+     *   <li>{@code application/xml} — canonical ISO 20022 XML envelope (RTP production format),
+     *       parsed by {@link RtpXmlParser} into the internal domain model</li>
+     *   <li>{@code application/json} — JSON pacs.008 (for compatibility testing / sandbox use)</li>
+     * </ul>
+     *
+     * <p>After parsing, the {@link Pacs008Message} is routed through the same
+     * {@link MessageRouter} used by the FedNow gateway — Layers 2–4 are rail-agnostic.
+     *
+     * <p><strong>Reference mode:</strong> TCH certificate validation is not yet implemented
+     * (requires TCH participation credentials). The XML parser handles the message structure
+     * but does not validate against the full ISO 20022 XSD schema.
+     */
+    @PostMapping(value = "/receive",
+                 consumes = {MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE})
     @Operation(
-        summary = "Receive inbound credit transfer (RTP) — stub",
+        summary = "Receive inbound credit transfer (RTP) — reference mode",
         description = """
-            Stub — not implemented. Accepts an inbound pacs.008.001.08 FI-to-FI credit \
-            transfer from the RTP® network. Would validate the TCH PKI client certificate, \
-            parse the RTP ISO 20022 XML envelope, and route to the same MessageRouter \
-            used by the FedNow gateway. Layers 2–4 are rail-agnostic: no changes downstream \
-            of this gateway are required for RTP support."""
+            Accepts an inbound pacs.008.001.08 FI-to-FI credit transfer from the RTP® network. \
+            Accepts application/xml (canonical ISO 20022 envelope, parsed by RtpXmlParser) or \
+            application/json (for sandbox/compatibility testing). \
+            TCH PKI certificate validation is not yet implemented — requires TCH participation \
+            credentials. Layers 2–4 are rail-agnostic: no changes downstream of this gateway \
+            are required for RTP support."""
     )
     @ApiResponses({
         @ApiResponse(
@@ -102,19 +123,30 @@ public class RtpGateway {
             content = @Content(mediaType = "application/json",
                                schema = @Schema(implementation = Pacs002Message.class))),
         @ApiResponse(responseCode = "400",
-            description = "Malformed or schema-invalid ISO 20022 pacs.008 message"),
+            description = "Malformed or schema-invalid ISO 20022 pacs.008 XML/JSON"),
         @ApiResponse(responseCode = "401",
-            description = "Client certificate absent or not issued by TCH PKI"),
-        @ApiResponse(responseCode = "501",
-            description = "Not implemented — RTP connectivity is a documented stub")
+            description = "Client certificate absent or not issued by TCH PKI")
     })
-    public ResponseEntity<Pacs002Message> receiveTransfer(@RequestBody Pacs008Message message) {
+    public ResponseEntity<Pacs002Message> receiveTransfer(
+            @RequestBody String rawBody,
+            @RequestHeader(value = "Content-Type", defaultValue = "application/json") String contentType) {
         // TODO: validate TCH client certificate
         //   certificateManager.validateTchClientCertificate();
 
-        // TODO: parse RTP XML envelope into Pacs008Message
-        //   (RTP uses canonical ISO 20022 XML; this endpoint currently receives the same
-        //    JSON model as FedNow for stub purposes)
+        Pacs008Message message;
+        if (contentType.contains(MediaType.APPLICATION_XML_VALUE)) {
+            // RTP production path: parse canonical ISO 20022 XML envelope
+            message = rtpXmlParser.parse(rawBody);
+        } else {
+            // Sandbox/compatibility path: JSON pacs.008 (same model as FedNow)
+            try {
+                message = new com.fasterxml.jackson.databind.ObjectMapper()
+                        .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule())
+                        .readValue(rawBody, Pacs008Message.class);
+            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                return ResponseEntity.badRequest().build();
+            }
+        }
 
         // From this point the processing is identical to FedNowGateway — rail-agnostic:
         return messageRouter.routeInbound(message);
