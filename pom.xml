@@ -199,6 +199,19 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!--
+                      Integration tests (tagged "integration") require Docker for Testcontainers.
+                      They are excluded from the default "mvn test" run so that CI stays fast
+                      and reliable without Docker image pull overhead.
+                      To run integration tests locally: mvn test -Dgroups=integration
+                    -->
+                    <excludedGroups>integration</excludedGroups>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
                     <!-- Lombok must be on the annotation processor path so its

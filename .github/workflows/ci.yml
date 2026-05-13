@@ -11,27 +11,6 @@ jobs:
     name: Build & Test
     runs-on: ubuntu-latest
 
-    services:
-      redis:
-        image: redis:7
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      rabbitmq:
-        image: rabbitmq:3-management
-        ports:
-          - 5672:5672
-        options: >-
-          --health-cmd "rabbitmq-diagnostics ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,10 +26,9 @@ jobs:
         run: mvn -B clean compile --no-transfer-progress
 
       - name: Run tests
-        # Unit tests run without infrastructure dependencies.
-        # Integration tests (infrastructure package) use Testcontainers to start
-        # their own Redis, RabbitMQ, and PostgreSQL containers — Docker is
-        # available by default on ubuntu-latest runners.
+        # Runs the unit test suite. Integration tests (tagged "integration") require
+        # Testcontainers / Docker and are excluded by the Maven Surefire configuration
+        # in pom.xml. Run them locally with: mvn test -Dgroups=integration
         run: mvn -B test --no-transfer-progress
 
       - name: Upload test results

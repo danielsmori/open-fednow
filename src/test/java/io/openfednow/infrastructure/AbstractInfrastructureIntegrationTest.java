@@ -1,5 +1,6 @@
 package io.openfednow.infrastructure;
 
+import org.junit.jupiter.api.Tag;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -36,6 +37,7 @@ import org.testcontainers.utility.DockerImageName;
  *   <li>PostgreSQL 16 (Alpine)</li>
  * </ul>
  */
+@Tag("integration")
 @Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 public abstract class AbstractInfrastructureIntegrationTest {
