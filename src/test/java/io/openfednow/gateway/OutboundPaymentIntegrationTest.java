@@ -59,9 +59,8 @@ class OutboundPaymentIntegrationTest extends AbstractInfrastructureIntegrationTe
         jdbc.update("DELETE FROM saga_state");
         jdbc.update("DELETE FROM idempotency_keys");
 
-        // Seed debtor account with known balance
-        redis.opsForValue().set("balance:" + DEBTOR_ACCOUNT,
-                String.valueOf(ShadowLedger.dollarsToCents(INITIAL_BALANCE)));
+        // Seed debtor account with known balance ($1000.00 = 100000 cents)
+        redis.opsForValue().set("balance:" + DEBTOR_ACCOUNT, "100000");
     }
 
     // ── Successful send ───────────────────────────────────────────────────────
