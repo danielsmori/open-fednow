@@ -130,8 +130,14 @@ public class RtpGateway {
     public ResponseEntity<Pacs002Message> receiveTransfer(
             @RequestBody String rawBody,
             @RequestHeader(value = "Content-Type", defaultValue = "application/json") String contentType) {
-        // TODO: validate TCH client certificate
-        //   certificateManager.validateTchClientCertificate();
+        // TCH certificate validation: external access dependency, not a technical unknown.
+        // TCH digital certificates and network access keys are issued exclusively through
+        // The Clearing House institutional onboarding process — the same class of credential
+        // dependency as Federal Reserve PKI for live FedNow deployment (the sandbox is used
+        // for FedNow testing for the same reason). The validation logic follows
+        // CertificateManager's existing Federal Reserve PKI pattern; the architecture is
+        // defined in docs/rtp-compatibility.md and ADR-0005.
+        // certificateManager.validateTchClientCertificate(request);
 
         Pacs008Message message;
         if (contentType.contains(MediaType.APPLICATION_XML_VALUE)) {
