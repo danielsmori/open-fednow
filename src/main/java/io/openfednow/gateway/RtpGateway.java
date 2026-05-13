@@ -8,56 +8,50 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Layer 1 — API Gateway &amp; Security (RTP rail)
+ * Layer 1 — API Gateway &amp; Security (RTP rail) — reference mode.
  *
- * <p><strong>Stub — not implemented.</strong> This class documents the architectural intent
- * for RTP® network connectivity. See
- * <a href="../../../../../../../../docs/adr/0005-dual-rail-architecture-fednow-rtp.md">ADR-0005</a>
- * and
- * <a href="../../../../../../../../docs/rtp-compatibility.md">rtp-compatibility.md</a>
- * for the design rationale.
+ * <p><strong>Reference mode.</strong> Inbound RTP XML parsing and shared pipeline routing
+ * are implemented. The following remain pending institutional onboarding with
+ * The Clearing House (TCH):
+ * <ul>
+ *   <li>TCH certificate validation — requires TCH participation credentials
+ *       (external access dependency; see rtp-compatibility.md)</li>
+ *   <li>Live TCH dedicated network transport — RTP uses a private network, not public TLS</li>
+ *   <li>RTP outbound XML serialization and response envelope handling</li>
+ *   <li>Live RTP certification and settlement validation</li>
+ * </ul>
  *
  * <p>The Clearing House's RTP® network and the Federal Reserve's FedNow Service both
  * use ISO 20022 as their message standard. Layers 2–4 of this framework are intentionally
  * rail-agnostic: they operate on parsed {@link Pacs008Message} objects and have no
  * knowledge of which rail delivered the message.
  *
- * <p>This gateway would handle RTP-specific Layer 1 responsibilities:
- * <ul>
- *   <li>TLS mutual authentication using TCH (The Clearing House) certificates</li>
- *   <li>ISO 20022 XML envelope parsing (RTP uses canonical XML; FedNow uses JSON)</li>
- *   <li>Rate limiting on inbound and outbound paths per TCH participation rules</li>
- *   <li>Fraud pre-screening before forwarding to Layer 2</li>
- * </ul>
+ * <p>Inbound path (reference mode): ISO 20022 XML is parsed by {@link RtpXmlParser} into
+ * a {@link Pacs008Message}, then routed through the same {@link MessageRouter} that handles
+ * FedNow messages — no changes to Layers 2–4 are required for RTP support.
  *
- * <p>Once parsed, the resulting {@link Pacs008Message} is routed through the same
- * {@link MessageRouter} that handles FedNow messages — no changes to Layers 2–4 required.
- *
- * <p>What is not implemented:
- * <ul>
- *   <li>TCH certificate validation — requires TCH participation credentials</li>
- *   <li>RTP XML envelope parsing — the canonical ISO 20022 XML format differs from
- *       FedNow's JSON envelope</li>
- *   <li>TCH dedicated network connection — RTP uses a private network, not public TLS</li>
- *   <li>{@link MessageRouter} source-rail tracking — the router must record inbound
- *       source to dispatch {@link Pacs002Message} responses back to the correct rail</li>
- * </ul>
+ * <p>See
+ * <a href="../../../../../../../../docs/adr/0005-dual-rail-architecture-fednow-rtp.md">ADR-0005</a>
+ * and
+ * <a href="../../../../../../../../docs/rtp-compatibility.md">rtp-compatibility.md</a>
+ * for the design rationale and full status.
  */
 @RestController
 @RequestMapping("/rtp")
 @Tag(
-    name = "RTP Gateway (Stub)",
+    name = "RTP Gateway (Reference Mode)",
     description = """
-        Stub — not implemented. Documents the architectural intent for RTP® network \
-        connectivity via The Clearing House (TCH). Both FedNow and RTP use ISO 20022 \
-        message types (pacs.008, pacs.002); only the transport envelope and certificate \
-        authority differ. Layers 2–4 are rail-agnostic and require no changes for RTP \
-        support. See docs/rtp-compatibility.md and ADR-0005 for details."""
+        Reference-mode RTP® gateway. Inbound XML parsing and shared Layers 2–4 pipeline \
+        routing are implemented. Live TCH connectivity, certificate validation, outbound \
+        RTP XML serialization, and RTP network certification remain subject to institutional \
+        onboarding with The Clearing House. \
+        See docs/rtp-compatibility.md and ADR-0005."""
 )
 public class RtpGateway {
 
@@ -73,48 +67,35 @@ public class RtpGateway {
     }
 
     /**
-     * Receives an inbound FI-to-FI credit transfer (pacs.008) from the RTP network.
+     * Accepts an inbound RTP pacs.008 message in reference mode.
      *
-     * <p><strong>Stub — not implemented.</strong> A complete implementation would:
-     * <ol>
-     *   <li>Validate the TCH client certificate via {@link CertificateManager} (TCH PKI,
-     *       not Federal Reserve PKI)</li>
-     *   <li>Parse the RTP ISO 20022 XML envelope into a {@link Pacs008Message} (RTP uses
-     *       canonical XML; FedNow uses a JSON wrapper)</li>
-     *   <li>Route to {@link MessageRouter#routeInbound(Pacs008Message)} — identical to
-     *       the FedNow path from this point forward</li>
-     *   <li>Return the {@link Pacs002Message} response in RTP's canonical XML envelope</li>
-     * </ol>
-     *
-     * @param message the ISO 20022 pacs.008.001.08 credit transfer message
-     * @return pacs.002 payment status report confirming acceptance or rejection
-     */
-    /**
-     * Accepts an inbound RTP pacs.008 message as either:
+     * <p>Accepts:
      * <ul>
      *   <li>{@code application/xml} — canonical ISO 20022 XML envelope (RTP production format),
      *       parsed by {@link RtpXmlParser} into the internal domain model</li>
-     *   <li>{@code application/json} — JSON pacs.008 (for compatibility testing / sandbox use)</li>
+     *   <li>{@code application/json} — JSON pacs.008 (for sandbox / compatibility testing)</li>
      * </ul>
      *
      * <p>After parsing, the {@link Pacs008Message} is routed through the same
      * {@link MessageRouter} used by the FedNow gateway — Layers 2–4 are rail-agnostic.
      *
-     * <p><strong>Reference mode:</strong> TCH certificate validation is not yet implemented
-     * (requires TCH participation credentials). The XML parser handles the message structure
-     * but does not validate against the full ISO 20022 XSD schema.
+     * <p><strong>Reference mode:</strong> TCH certificate validation is not yet implemented.
+     * This is an external access dependency — TCH digital certificates require institutional
+     * onboarding, not a technical unknown. The validation architecture is defined in
+     * rtp-compatibility.md and follows the same pattern as Federal Reserve PKI in
+     * {@link FedNowGateway}.
      */
     @PostMapping(value = "/receive",
                  consumes = {MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE})
     @Operation(
         summary = "Receive inbound credit transfer (RTP) — reference mode",
         description = """
-            Accepts an inbound pacs.008.001.08 FI-to-FI credit transfer from the RTP® network. \
+            Accepts an inbound pacs.008.001.08 FI-to-FI credit transfer. \
             Accepts application/xml (canonical ISO 20022 envelope, parsed by RtpXmlParser) or \
             application/json (for sandbox/compatibility testing). \
-            TCH PKI certificate validation is not yet implemented — requires TCH participation \
-            credentials. Layers 2–4 are rail-agnostic: no changes downstream of this gateway \
-            are required for RTP support."""
+            Routing through Layers 2–4 is fully implemented and rail-agnostic. \
+            TCH PKI certificate validation requires TCH participation credentials \
+            (external access dependency — see rtp-compatibility.md)."""
     )
     @ApiResponses({
         @ApiResponse(
@@ -159,57 +140,54 @@ public class RtpGateway {
     }
 
     /**
-     * Initiates an outbound FI-to-FI credit transfer to the RTP network.
+     * RTP outbound credit transfer — pending RTP-specific Layer 1 implementation.
      *
-     * <p><strong>Stub — not implemented.</strong> A complete implementation would
-     * format the {@link Pacs008Message} into the RTP canonical XML envelope and
-     * submit it to the TCH network connection.
-     *
-     * @param message the ISO 20022 pacs.008.001.08 credit transfer message
-     * @return pacs.002 payment status report from RTP
+     * <p>Returns HTTP 501. RTP outbound XML serialization to the canonical ISO 20022 envelope
+     * and TCH dedicated network transport are not yet implemented. The shared outbound
+     * processing pipeline in Layers 2–4 is fully implemented and rail-agnostic; only the
+     * RTP-specific serialization and TCH transport at Layer 1 remain pending.
      */
     @PostMapping("/send")
     @Operation(
-        summary = "Submit outbound credit transfer (RTP) — stub",
+        summary = "Submit outbound credit transfer (RTP) — pending",
         description = """
-            Stub — not implemented. Would submit a pacs.008.001.08 credit transfer to the \
-            RTP® network via The Clearing House's dedicated network connection. The inbound \
-            routing path (Layers 2–4) is fully rail-agnostic; only the outbound serialization \
-            to RTP XML and the TCH network transport are RTP-specific."""
+            Not yet implemented. Returns HTTP 501. \
+            RTP outbound XML serialization to the canonical ISO 20022 envelope and TCH \
+            dedicated network transport remain pending institutional onboarding with \
+            The Clearing House. \
+            The shared outbound processing pipeline in Layers 2–4 is fully implemented \
+            and rail-agnostic."""
     )
     @ApiResponses({
-        @ApiResponse(
-            responseCode = "200",
-            description = "RTP network response received — inspect transactionStatus",
-            content = @Content(mediaType = "application/json",
-                               schema = @Schema(implementation = Pacs002Message.class))),
-        @ApiResponse(responseCode = "400",
-            description = "Malformed or schema-invalid ISO 20022 pacs.008 message"),
         @ApiResponse(responseCode = "501",
-            description = "Not implemented — RTP connectivity is a documented stub")
+            description = "Not yet implemented — RTP outbound serialization and TCH transport pending"),
+        @ApiResponse(responseCode = "400",
+            description = "Malformed or schema-invalid ISO 20022 pacs.008 message")
     })
     public ResponseEntity<Pacs002Message> sendTransfer(@RequestBody Pacs008Message message) {
-        // TODO: serialize Pacs008Message to RTP canonical XML envelope
-        // TODO: submit to TCH dedicated network connection
-        return messageRouter.routeOutbound(message);
+        // RTP outbound serialization to canonical XML envelope and TCH network transport
+        // are not yet implemented. Returns 501 until complete.
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
     }
 
     /**
-     * Health check endpoint for RTP connectivity monitoring.
+     * Health check for the RTP gateway.
      */
     @GetMapping("/health")
     @Operation(
-        summary = "RTP gateway health check (stub)",
+        summary = "RTP gateway health check",
         description = """
-            Returns the stub status of the RTP gateway. In a full implementation, this \
-            would also report TCH network connectivity and certificate validity. \
+            Returns the current status of the RTP gateway. \
+            Inbound XML parsing is enabled; TCH network connectivity and certificate \
+            validation are not configured. \
             See /fednow/health for the operational FedNow gateway status."""
     )
-    @ApiResponse(responseCode = "200", description = "RTP gateway stub is reachable",
+    @ApiResponse(responseCode = "200", description = "RTP gateway is reachable",
         content = @Content(mediaType = "text/plain",
                            schema = @Schema(type = "string",
-                               example = "OpenFedNow RTP Gateway — stub (not connected to TCH network)")))
+                               example = "OpenFedNow RTP Gateway — reference mode: XML parsing enabled; TCH connectivity not configured")))
     public ResponseEntity<String> health() {
-        return ResponseEntity.ok("OpenFedNow RTP Gateway — stub (not connected to TCH network)");
+        return ResponseEntity.ok(
+                "OpenFedNow RTP Gateway — reference mode: XML parsing enabled; TCH connectivity not configured");
     }
 }

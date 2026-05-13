@@ -7,11 +7,17 @@ import io.openfednow.iso20022.Pacs008Message;
  * Outbound client for submitting ISO 20022 pacs.008 credit transfers to the
  * Federal Reserve FedNow Service and receiving pacs.002 status reports in return.
  *
- * <p>In production this is backed by {@link HttpFedNowClient}, which makes a
- * real HTTPS call to the configured {@code openfednow.gateway.fednow-endpoint}.
- * In integration tests a WireMock server stands in for FedNow, and
- * {@code HttpFedNowClient} is pointed at the WireMock base URL instead — no
- * special test double or Spring profile required.
+ * <p>{@link HttpFedNowClient} provides HTTP transport to a configured endpoint
+ * and is activated when {@code FEDNOW_ENDPOINT} is set. In integration tests,
+ * a WireMock server stands in for the FedNow simulator endpoint — no special
+ * Spring profile is required. Live FedNow connectivity additionally requires
+ * Federal Reserve PKI client certificates, mutual TLS, and message signing
+ * per the FedNow Technical Specifications; those are institution-provided
+ * credentials, not framework components.
+ *
+ * <p>When {@code FEDNOW_ENDPOINT} is not set, {@link SandboxFedNowClient}
+ * is active by default and returns synthetic in-memory responses suitable
+ * for local development and testing.
  */
 public interface FedNowClient {
 

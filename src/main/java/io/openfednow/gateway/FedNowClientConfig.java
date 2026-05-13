@@ -1,6 +1,7 @@
 package io.openfednow.gateway;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -18,11 +19,14 @@ public class FedNowClientConfig {
 
     /**
      * Creates the HTTP FedNow client as the named bean {@code httpFedNowClient}.
-     * The explicit name lets {@link SandboxFedNowClient} use
-     * {@code @ConditionalOnMissingBean(name = "httpFedNowClient")} so that the sandbox
-     * implementation is active only when no real endpoint is configured.
+     *
+     * <p>Only activated when {@code openfednow.gateway.fednow-endpoint} is set
+     * (i.e., the {@code FEDNOW_ENDPOINT} environment variable is provided). When the
+     * property is absent, this bean is not created and {@link SandboxFedNowClient}
+     * activates instead via {@code @ConditionalOnMissingBean(name = "httpFedNowClient")}.
      */
     @Bean(name = "httpFedNowClient")
+    @ConditionalOnProperty(name = "openfednow.gateway.fednow-endpoint", matchIfMissing = false)
     public FedNowClient fedNowClient(
             @Value("${openfednow.gateway.fednow-endpoint}") String endpoint,
             @Value("${openfednow.gateway.response-timeout-seconds}") int timeoutSeconds) {

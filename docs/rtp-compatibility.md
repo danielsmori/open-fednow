@@ -1,14 +1,26 @@
 # RTP Compatibility
 
-The Clearing House's RTP® network and the Federal Reserve's FedNow Service are both ISO 20022 instant payment rails operating in the United States. This document explains why the OpenFedNow framework architecture is rail-agnostic — and what would actually need to change to connect to RTP instead of, or in addition to, FedNow.
-
-**Important:** RTP connectivity is not implemented. This document describes architectural intent, not working code. The claim is that the framework was designed so that adding RTP requires changing only Layer 1. Layers 2–4 are already rail-agnostic.
+The Clearing House's RTP® network and the Federal Reserve's FedNow Service are both ISO 20022 instant payment rails operating in the United States. This document describes the current implementation status of RTP support in the OpenFedNow framework and what remains pending institutional onboarding with The Clearing House.
 
 ---
 
-## The four incompatibilities are identical
+## Current Status
 
-The problem this framework was built to solve applies equally to RTP:
+**Implemented:**
+- `RtpXmlParser` — parses canonical ISO 20022 pacs.008.001.08 XML with XXE protection
+- `RtpGateway.receiveTransfer()` — accepts `application/xml` (production format) and `application/json` (sandbox/compatibility); routes inbound messages through the shared Layers 2–4 pipeline
+
+**Pending institutional onboarding with The Clearing House:**
+- **TCH certificate validation** — requires TCH digital certificates and network access keys, available only through TCH participation agreements. This is an external access dependency, not a technical unknown — the validation architecture follows the same pattern as Federal Reserve PKI in `FedNowGateway` and is defined in `CertificateManager`.
+- **Live TCH dedicated network transport** — RTP uses a private network, not public TLS
+- **RTP outbound XML serialization** — serializing `Pacs002Message` responses to the canonical RTP XML envelope
+- **Live RTP certification and settlement validation**
+
+---
+
+## The four incompatibilities are materially similar
+
+The problem this framework was built to solve applies to both FedNow and RTP in materially similar ways:
 
 | Incompatibility | FedNow | RTP |
 |---|---|---|
@@ -17,7 +29,7 @@ The problem this framework was built to solve applies equally to RTP:
 | Protocol | Legacy proprietary APIs vs. ISO 20022 | Legacy proprietary APIs vs. ISO 20022 |
 | Concurrency | Legacy not designed for simultaneous load | Legacy not designed for simultaneous load |
 
-The Shadow Ledger, the SyncAsyncBridge, the Saga orchestration, and the idempotency layer all exist because of these four incompatibilities. Since the incompatibilities are identical, the components that resolve them are identical.
+The Shadow Ledger, the SyncAsyncBridge, the Saga orchestration, and the idempotency layer all exist because of these incompatibilities. Because the incompatibilities are materially similar across both rails, the components that resolve them are fully shared.
 
 ---
 
@@ -57,10 +69,10 @@ The gateway layer is the extensibility point. `FedNowGateway.java` handles FedNo
 - Parses the FedNow JSON envelope into `Pacs008Message`
 - Returns `Pacs002Message` in the FedNow JSON format
 
-An `RtpGateway.java` (stubbed in `io.openfednow.gateway`) would handle RTP-specific connectivity:
-- Validate TCH certificates
-- Parse the RTP XML envelope into the same `Pacs008Message`
-- Return `Pacs002Message` in RTP XML format
+`RtpGateway.java` (reference mode, `io.openfednow.gateway`) handles the RTP inbound path:
+- **Implemented:** Parses the RTP canonical ISO 20022 XML envelope via `RtpXmlParser` into `Pacs008Message`
+- **Pending:** TCH certificate validation (institutional onboarding required)
+- **Pending:** RTP outbound XML serialization and TCH network transport
 
 Both gateways feed into the same `MessageRouter`, which routes to the same layers regardless of source. The `Pacs008Message` that `MessageRouter.routeInbound()` receives does not carry a "which rail" field — it doesn't need one, because the processing is identical.
 
@@ -77,17 +89,6 @@ RTP Network     ──→  RtpGateway     ──┘
 ```
 
 The `MessageRouter` and everything downstream sees no difference. The only operational distinction is that `Pacs002Message` responses must be returned to the correct rail — the router would need to track the inbound source and dispatch accordingly. This is a small addition to `MessageRouter`, not a new pipeline.
-
----
-
-## What is not implemented
-
-- `RtpGateway.java` exists as a documented stub. It does not make real connections to The Clearing House's network.
-- The RTP XML envelope parser is not implemented.
-- TCH certificate validation is not implemented.
-- The `MessageRouter` does not yet track inbound rail source.
-
-See [ADR-0005](adr/0005-dual-rail-architecture-fednow-rtp.md) for the architectural decision record.
 
 ---
 

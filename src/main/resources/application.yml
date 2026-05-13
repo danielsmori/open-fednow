@@ -76,8 +76,10 @@ openfednow:
     simulate-latency-ms: ${SANDBOX_LATENCY_MS:0}
 
   # FedNow gateway settings
+  # fednow-endpoint is intentionally absent by default so that SandboxFedNowClient
+  # activates for local development. Set FEDNOW_ENDPOINT to enable HttpFedNowClient
+  # (live connectivity also requires Fed PKI certificates, mTLS, and message signing).
   gateway:
-    fednow-endpoint: ${FEDNOW_ENDPOINT:https://connect.fednow.org}
     response-timeout-seconds: 18   # must be < FedNow's 20-second window
 
   # Shadow Ledger settings

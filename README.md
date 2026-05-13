@@ -607,24 +607,25 @@ The framework is a reference architecture, not a production-ready product. See [
 
 ## Roadmap
 
-**Phase 1 — Foundation & Fiserv Adapter (Months 1–9)**
-- Five-layer framework foundation
+**Phase 1 — Foundation Established (Complete)**
+- Five-layer architecture: Shadow Ledger, SyncAsyncBridge, Saga orchestration, idempotency, reconciliation
+- ISO 20022 message models; RTP inbound XML parser (pacs.008 with XXE protection)
+- MockVendorAdapter + CoreBankingAdapterContractTest; dual content-type RTP gateway (reference mode)
+- Full test suite; CI pipeline; Docker / docker-compose deployment
+
+**Phase 2 — Fiserv Adapter (Months 9–18)**
 - Fiserv DNA / Precision adapter (42% of U.S. banks, 31% of credit unions)
 - Pilot validation with community bank partners
-- Full test suite and deployment documentation
-
-**Phase 2 — FIS Adapter & Open Publication (Months 10–18)**
-- FIS IBS / Horizon adapter
-- RTP gateway connectivity (The Clearing House TCH network, XML envelope, TCH certificate validation)
-- Public open-source release with documentation
 - Reference architecture whitepaper
 
-**Phase 3 — Jack Henry Adapter & Standards Contribution (Months 19–24)**
+**Phase 3 — FIS, Jack Henry, and RTP Connectivity (Months 19–30)**
+- FIS IBS / Horizon adapter
 - Jack Henry SilverLake / Symitar adapter
 - Big Three combined: >70% of U.S. banks covered
+- Live RTP gateway connectivity — TCH network transport, TCH certificate validation, outbound XML serialization
 - Submission to U.S. Faster Payments Council as reference integration pattern
 
-**Phase 4 — IBM z/OS Path & Knowledge Transfer (Month 25+)**
+**Phase 4 — IBM z/OS Path (Month 31+)**
 - IBM z/OS mainframe adapter for large institutions
 - Technical assistance program for community bank engineering teams
 

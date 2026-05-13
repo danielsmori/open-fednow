@@ -42,7 +42,7 @@ RTP Network     ──→  RtpGateway     ──┘
 
 Both gateways parse their respective message envelopes and deliver the same `Pacs008Message` to `MessageRouter.routeInbound()`. The `MessageRouter` and everything downstream — `CoreBankingAdapter`, `ShadowLedger`, `SagaOrchestrator`, `IdempotencyService` — have no knowledge of which rail the message arrived on.
 
-`RtpGateway.java` is stubbed in `io.openfednow.gateway`. The stub documents the architectural intent without implementing the TCH network connectivity (which requires The Clearing House participation, a dedicated network connection, and TCH-issued certificates that cannot be obtained in open-source development).
+`RtpGateway.java` in `io.openfednow.gateway` is in reference mode: inbound ISO 20022 XML parsing (`RtpXmlParser`) and shared pipeline routing through `MessageRouter` are implemented. The following remain pending institutional onboarding with The Clearing House: TCH certificate validation, live TCH dedicated network transport, RTP outbound XML serialization, and live RTP certification. These are external access dependencies requiring TCH participation credentials — the same class of constraint as Federal Reserve PKI for live FedNow connectivity — not technical unknowns. See [rtp-compatibility.md](../rtp-compatibility.md).
 
 ## Alternatives Considered
 
@@ -74,13 +74,13 @@ This approach would preserve dual-rail flexibility while allowing per-rail behav
 
 **Negative:**
 - `RtpGateway` needs to track the inbound source rail to ensure that `Pacs002Message` responses are returned to the correct rail. This is a small addition to `MessageRouter` — the router must record which gateway received the inbound message and dispatch the response back to the same gateway. Not architecturally complex, but it is a deliberate gap in the current implementation.
-- The TCH certificate validation and RTP XML envelope parsing are not implemented. These require The Clearing House participation credentials that are outside the scope of open-source development.
+- Live TCH certificate validation and dedicated network transport are not yet configured. These require The Clearing House participation credentials and a private-network connection — external access dependencies, not technical unknowns. The inbound parsing path is implemented and validated; the remaining items are Layer 1 connectivity gaps.
 - Dual-rail operation with a single Shadow Ledger requires that the Shadow Ledger's balance accounting is correct regardless of rail source. This is straightforward (the Shadow Ledger is account-centric, not rail-centric) but must be verified when `RtpGateway` is fully implemented.
 
 ## Related
 
 - `FedNowGateway.java` — FedNow-specific Layer 1 implementation (the model for `RtpGateway`)
-- `RtpGateway.java` — RTP stub (documents architectural intent)
+- `RtpGateway.java` — RTP reference-mode gateway (inbound XML parsing implemented; TCH connectivity pending)
 - `MessageRouter.java` — routes parsed `Pacs008Message` to Layers 2–4 regardless of source rail
-- [rtp-compatibility.md](../rtp-compatibility.md) — operational guide: what works today vs. what is stubbed
+- [rtp-compatibility.md](../rtp-compatibility.md) — operational guide: what is implemented vs. what is pending institutional onboarding
 - [ADR-0001](0001-optimistic-locking-shadow-ledger-debits.md) — Shadow Ledger concurrency guarantees that apply to both rails

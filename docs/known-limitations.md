@@ -71,11 +71,14 @@ A production deployment requires implementing the vendor-specific HTTP or MQ int
 
 ---
 
-### 8. FedNowClient is a stub
+### 8. Live FedNow connectivity requires institution-provided credentials
 
-`FedNowClient` exists as a Spring component but does not make real HTTP calls to FedNow's API. All methods return synthetic responses (mocked ACSC). A production deployment requires implementing FedNow's actual API protocol (mTLS, message signing, FedNow-specific headers and schema validation).
+`FedNowClient` is an interface with two implementations:
 
-`SandboxFedNowClient` provides a sandbox implementation of the same interface and is used in the outbound payment pipeline for local development and testing. It is not a replacement for the production FedNow API client.
+- **`SandboxFedNowClient`** — active by default (when `FEDNOW_ENDPOINT` is not set). Returns synthetic in-memory responses for local development and testing.
+- **`HttpFedNowClient`** — activated when `FEDNOW_ENDPOINT` is set. Provides HTTP transport to a configured endpoint (e.g., FedNow simulator or sandbox). Live FedNow production additionally requires Federal Reserve PKI client certificates, mutual TLS, and message signing per the FedNow Technical Specifications. These are institution-provided credentials and are outside the scope of the framework.
+
+The `FedNowClientConfig` bean is conditional: `HttpFedNowClient` is only created when `openfednow.gateway.fednow-endpoint` is present. When that property is absent, `SandboxFedNowClient` activates via `@ConditionalOnMissingBean`. This means `mvn spring-boot:run` without any environment variables uses the sandbox client throughout.
 
 ---
 
