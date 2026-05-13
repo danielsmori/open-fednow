@@ -74,7 +74,7 @@ The gateway layer is the extensibility point. `FedNowGateway.java` handles FedNo
 - **Pending:** TCH certificate validation (institutional onboarding required)
 - **Pending:** RTP outbound XML serialization and TCH network transport
 
-Both gateways feed into the same `MessageRouter`, which routes to the same layers regardless of source. The `Pacs008Message` that `MessageRouter.routeInbound()` receives does not carry a "which rail" field — it doesn't need one, because the processing is identical.
+Both gateways feed into the same `MessageRouter`, which routes to the same layers regardless of source. The `Pacs008Message` that `MessageRouter.routeInbound()` receives does not carry a "which rail" field — it doesn't need one, because the message follows the same rail-agnostic shared pipeline.
 
 ---
 

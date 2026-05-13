@@ -21,10 +21,10 @@ import static org.mockito.Mockito.*;
 /**
  * Unit tests for {@link RtpGateway}.
  *
- * <p>The RTP gateway is a documented stub: TCH certificate validation is not yet
- * implemented, but the routing contract — that inbound messages are forwarded to
- * {@link MessageRouter} and the response is returned unmodified — is fully testable
- * and must hold.
+ * <p>The RTP gateway operates in reference mode: inbound ISO 20022 XML parsing and
+ * shared-pipeline routing are implemented. TCH certificate validation and live TCH
+ * network transport are pending institutional onboarding with The Clearing House
+ * (external access dependencies, not technical unknowns).
  *
  * <p>No Spring context is loaded. {@link MessageRouter} and
  * {@link CertificateManager} are mocked directly; {@link RtpXmlParser} is used
@@ -35,7 +35,7 @@ import static org.mockito.Mockito.*;
  *
  * <h2>Coverage</h2>
  * <ul>
- *   <li>/rtp/health — returns 200 with the stub status message</li>
+ *   <li>/rtp/health — returns 200 with reference-mode status message</li>
  *   <li>/rtp/receive (JSON) — routes through {@link MessageRouter#routeInbound} for ACSC</li>
  *   <li>/rtp/receive (JSON) — propagates RJCT response unmodified</li>
  *   <li>/rtp/receive (JSON) — does not invoke {@link CertificateManager}</li>
@@ -66,13 +66,13 @@ class RtpGatewayTest {
     }
 
     @Test
-    void healthBodyIdentifiesGatewayAsRtpStub() {
+    void healthBodyIdentifiesGatewayInReferenceMode() {
         ResponseEntity<String> response = gateway.health();
 
         assertThat(response.getBody())
-                .as("Health response should identify the gateway and its stub status")
+                .as("Health response should identify the gateway as RTP in reference mode")
                 .contains("RTP Gateway")
-                .contains("stub");
+                .contains("reference mode");
     }
 
     // --- receiveTransfer delegates to MessageRouter ---
@@ -112,8 +112,8 @@ class RtpGatewayTest {
 
     @Test
     void receiveTransfer_doesNotInvokeCertificateManager() throws Exception {
-        // TCH certificate validation is a TODO stub — the gateway must not call
-        // the FedNow PKI validation path in place of TCH validation.
+        // TCH certificate validation is pending institutional onboarding — the gateway
+        // must not call the FedNow PKI validation path in place of TCH validation.
         when(messageRouter.routeInbound(any())).thenReturn(
                 ResponseEntity.ok(Pacs002Message.accepted("E2E-RTP-003", "TXN-RTP-003")));
 

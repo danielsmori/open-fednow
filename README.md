@@ -34,7 +34,7 @@
 | RTP XML parser — pacs.008 XML with XXE protection, dual content-type | ✅ Implemented |
 | Optional Kafka event bus — `PaymentEventPublisher`, 6 event types | ✅ Implemented (disabled by default; no Kafka required) |
 | Fiserv / FIS / Jack Henry adapters | 🔲 Interface defined, implementation pending |
-| Real FedNow connectivity (mTLS, message signing) | 🔲 Stub only |
+| Live FedNow connectivity (Fed PKI, mTLS, message signing) | 🔲 Credential/certification-dependent; simulator-compatible HTTP client implemented |
 | RTP gateway connectivity (TCH network, TCH certificates) | 🔲 XML parsing done; TCH network connectivity pending |
 
 See [docs/known-limitations.md](docs/known-limitations.md) for the full gap analysis.
@@ -607,7 +607,7 @@ The framework is a reference architecture, not a production-ready product. See [
 
 ## Roadmap
 
-**Phase 1 — Foundation Established (Complete)**
+**Phase 1 — Core Framework Foundation Established**
 - Five-layer architecture: Shadow Ledger, SyncAsyncBridge, Saga orchestration, idempotency, reconciliation
 - ISO 20022 message models; RTP inbound XML parser (pacs.008 with XXE protection)
 - MockVendorAdapter + CoreBankingAdapterContractTest; dual content-type RTP gateway (reference mode)
@@ -618,14 +618,14 @@ The framework is a reference architecture, not a production-ready product. See [
 - Pilot validation with community bank partners
 - Reference architecture whitepaper
 
-**Phase 3 — FIS, Jack Henry, and RTP Connectivity (Months 19–30)**
+**Phase 3 — FIS + Jack Henry Adapters & RTP Gateway (Months 19–30)**
 - FIS IBS / Horizon adapter
 - Jack Henry SilverLake / Symitar adapter
 - Big Three combined: >70% of U.S. banks covered
 - Live RTP gateway connectivity — TCH network transport, TCH certificate validation, outbound XML serialization
 - Submission to U.S. Faster Payments Council as reference integration pattern
 
-**Phase 4 — IBM z/OS Path (Month 31+)**
+**Phase 4 — IBM z/OS Path & Knowledge Transfer (Month 31+)**
 - IBM z/OS mainframe adapter for large institutions
 - Technical assistance program for community bank engineering teams
 

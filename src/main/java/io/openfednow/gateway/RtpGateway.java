@@ -135,7 +135,7 @@ public class RtpGateway {
             }
         }
 
-        // From this point the processing is identical to FedNowGateway — rail-agnostic:
+        // From this point the message follows the same rail-agnostic shared pipeline used by FedNowGateway:
         return messageRouter.routeInbound(message);
     }
 
@@ -149,14 +149,16 @@ public class RtpGateway {
      */
     @PostMapping("/send")
     @Operation(
-        summary = "Submit outbound credit transfer (RTP) — pending",
+        summary = "Submit outbound credit transfer (RTP) — pending institutional onboarding",
         description = """
-            Not yet implemented. Returns HTTP 501. \
+            Returns HTTP 501. RTP inbound XML parsing and shared-pipeline routing are \
+            implemented in reference mode (see /rtp/receive). \
             RTP outbound XML serialization to the canonical ISO 20022 envelope and TCH \
             dedicated network transport remain pending institutional onboarding with \
             The Clearing House. \
             The shared outbound processing pipeline in Layers 2–4 is fully implemented \
-            and rail-agnostic."""
+            and rail-agnostic — only the RTP-specific Layer 1 serialization and TCH \
+            transport are pending."""
     )
     @ApiResponses({
         @ApiResponse(responseCode = "501",
