@@ -20,18 +20,22 @@
 | Five-layer architecture skeleton | ✅ Implemented |
 | ISO 20022 message models (pacs.008, pacs.002, pacs.004, camt.056/029) | ✅ Implemented |
 | Sandbox core adapter (all scenarios: ACSC, RJCT, ACSP, timeout) | ✅ Implemented |
+| MockVendorAdapter — in-memory balance ledger, configurable failure modes | ✅ Implemented; `CoreBankingAdapterContractTest` enforces adapter contract |
 | Shadow Ledger — Redis-backed, WATCH/MULTI/EXEC optimistic locking | ✅ Implemented + tested |
+| Shadow Ledger wired into HTTP payment endpoint (inbound + outbound) | ✅ Implemented |
 | 24/7 Bridge Mode — queues payments during core maintenance window | ✅ Implemented + tested |
 | Reconciliation — replay and sync after core returns online | ✅ Implemented + tested |
 | Saga orchestration — compensation on core rejection | ✅ Implemented + tested |
 | Idempotency — Redis + PostgreSQL dual-write, 48h window | ✅ Implemented + tested |
 | Concurrent overdraft prevention under load | ✅ Tested (race-condition suite) |
+| Send-side (outbound) payment flow | ✅ Implemented + tested |
+| Admin auth — HTTP Basic on `/admin/*` (admin / changeme) | ✅ Implemented |
 | Dual-rail architecture (FedNow + RTP) | ✅ ISO 20022 foundation; Layer 1 varies, Layers 2–4 rail-agnostic |
+| RTP XML parser — pacs.008 XML with XXE protection, dual content-type | ✅ Implemented |
+| Optional Kafka event bus — `PaymentEventPublisher`, 6 event types | ✅ Implemented (disabled by default; no Kafka required) |
 | Fiserv / FIS / Jack Henry adapters | 🔲 Interface defined, implementation pending |
-| Shadow Ledger wired into HTTP payment endpoint | 🔲 Tested in isolation, not yet in the request path |
 | Real FedNow connectivity (mTLS, message signing) | 🔲 Stub only |
-| RTP gateway connectivity (TCH network, XML envelope) | 🔲 Stub — see docs/rtp-compatibility.md |
-| Send-side (outbound) payment flow | 🔲 Not yet implemented |
+| RTP gateway connectivity (TCH network, TCH certificates) | 🔲 XML parsing done; TCH network connectivity pending |
 
 See [docs/known-limitations.md](docs/known-limitations.md) for the full gap analysis.
 
@@ -126,8 +130,8 @@ Three adapter implementations make the complete framework available to thousands
 ```bash
 git clone https://github.com/danielsmori/open-fednow
 cd open-fednow
-docker-compose up -d    # Redis + RabbitMQ
-mvn spring-boot:run     # → http://localhost:8080
+docker-compose up -d redis rabbitmq    # Redis + RabbitMQ (Kafka is optional)
+mvn spring-boot:run                    # → http://localhost:8080
 ```
 
 Once the app is running (look for `Started OpenFedNowApplication` in the console), verify it's up:
@@ -219,7 +223,7 @@ curl -s -X POST http://localhost:8080/fednow/receive \
 No restart needed — reconcile against the same running instance:
 
 ```bash
-curl -s -X POST http://localhost:8080/admin/reconcile
+curl -s -u admin:changeme -X POST http://localhost:8080/admin/reconcile
 ```
 
 ```json
@@ -400,7 +404,7 @@ The core never saw this request. FedNow has no idea the core was offline.
 ```
 
 ```bash
-$ curl -s -X POST http://localhost:8080/admin/reconcile
+$ curl -s -u admin:changeme -X POST http://localhost:8080/admin/reconcile
 ```
 
 ```json
@@ -532,16 +536,22 @@ openfednow/
 ├── src/main/java/io/openfednow/
 │   ├── gateway/              # Layer 1 — API Gateway & Security
 │   │   ├── FedNowGateway.java
-│   │   ├── RtpGateway.java       # Stub — architectural intent only (see ADR-0005)
+│   │   ├── RtpGateway.java       # XML + JSON; TCH network connectivity pending
+│   │   ├── RtpXmlParser.java     # pacs.008 XML parser with XXE protection
 │   │   ├── CertificateManager.java
 │   │   ├── MessageRouter.java
-│   │   └── AdminController.java  # /admin/reconcile
+│   │   ├── FedNowClient.java     # Interface
+│   │   ├── HttpFedNowClient.java # Production stub (mTLS not yet wired)
+│   │   ├── SandboxFedNowClient.java  # Sandbox/dev implementation
+│   │   └── AdminController.java  # /admin/reconcile (HTTP Basic: admin/changeme)
 │   ├── acl/                  # Layer 2 — Anti-Corruption Layer
 │   │   ├── core/
-│   │   │   ├── CoreBankingAdapter.java      # Abstract interface
+│   │   │   ├── CoreBankingAdapter.java      # Interface (4 methods)
 │   │   │   ├── MessageTranslator.java
 │   │   │   └── SyncAsyncBridge.java
 │   │   └── adapters/
+│   │       ├── SandboxAdapter.java          # Functional — scenario routing by prefix
+│   │       ├── MockVendorAdapter.java        # Functional — in-memory ledger, configurable failures
 │   │       ├── FiservAdapter.java           # Stub — interface only, // TODO bodies
 │   │       ├── FisAdapter.java              # Stub — interface only, // TODO bodies
 │   │       └── JackHenryAdapter.java        # Stub — interface only, // TODO bodies
@@ -555,6 +565,12 @@ openfednow/
 │   │   ├── ShadowLedger.java
 │   │   ├── AvailabilityBridge.java
 │   │   └── ReconciliationService.java
+│   ├── events/               # Optional Kafka event bus
+│   │   ├── PaymentEvent.java             # Record; 6-value EventType enum
+│   │   ├── PaymentEventPublisher.java    # Interface — fire-and-forget
+│   │   ├── NoOpPaymentEventPublisher.java    # Default (kafka.enabled=false)
+│   │   ├── KafkaPaymentEventPublisher.java   # Active when kafka.enabled=true
+│   │   └── KafkaConfig.java                  # Topic declaration
 │   └── iso20022/             # ISO 20022 message models
 │       ├── Pacs008Message.java
 │       └── Pacs002Message.java
@@ -582,10 +598,9 @@ openfednow/
 
 The framework is a reference architecture, not a production-ready product. See [docs/known-limitations.md](docs/known-limitations.md) for the full list. Key items:
 
-- **Vendor adapters are stubs.** `FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` define the contract but do not make real vendor API calls. Only `SandboxAdapter` is functional.
-- **Shadow Ledger not wired into the HTTP flow.** `ShadowLedger.applyDebit()` / `applyCredit()` are fully implemented and tested in isolation; they are not yet called from the payment endpoint.
+- **Vendor adapters are stubs.** `FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` define the contract but do not make real vendor API calls. `SandboxAdapter` and `MockVendorAdapter` are functional; `CoreBankingAdapterContractTest` defines the behavioral requirements all future adapters must satisfy.
 - **Single-instance.** The `WATCH`/`MULTI`/`EXEC` optimistic locking is safe for one pod. Multi-pod deployments require a distributed lock per account or consistent-hash routing.
-- **No authentication on `/admin/*`.** Production deployments must place admin endpoints behind network-level or application-level access controls.
+- **Admin auth uses defaults.** `/admin/*` requires HTTP Basic (admin / changeme). Change the password before any non-local deployment.
 - **Post-reconciliation reversals are customer-visible.** If the core rejects a provisionally accepted transaction, a pacs.004 return goes back to FedNow. The sender's institution sees a credit followed by a return.
 
 ---

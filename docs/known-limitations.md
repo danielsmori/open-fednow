@@ -61,25 +61,13 @@ These are features that are not yet built. They are explicitly tracked as future
 
 ### 5. Vendor adapters are skeleton implementations
 
-`FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` exist and implement the `CoreBankingAdapter` interface, but all methods contain `// TODO` stubs. None of them make real calls to vendor APIs. The `SandboxAdapter` is the only functional adapter.
+`FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` exist and implement the `CoreBankingAdapter` interface, but all methods contain `// TODO` stubs. None of them make real calls to vendor APIs.
+
+`MockVendorAdapter` is a functional reference implementation — it provides a full in-memory balance ledger and configurable failure modes (timeout simulation, core availability toggle), and is activated via `openfednow.adapter=mock`. It is suitable for development and contract-testing, but is not a substitute for a real vendor integration.
+
+`CoreBankingAdapterContractTest` is an abstract test class that all adapters (including future Fiserv/FIS/Jack Henry implementations) must extend and pass. It defines the behavioral contract that any adapter must satisfy before it can be used in production.
 
 A production deployment requires implementing the vendor-specific HTTP or MQ integration in the appropriate adapter. The adapter interface (`CoreBankingAdapter`) is the only contract point — the rest of the framework does not need to change.
-
----
-
-### 6. Shadow Ledger debit/credit not wired into the HTTP payment endpoint
-
-The `ShadowLedger.applyDebit()` and `applyCredit()` methods are fully implemented and tested at the service layer (`ShadowLedgerConcurrencyTest`, `ShadowLedgerIntegrationTest`). However, `MessageRouter.routeInbound()` does not call them — the HTTP payment endpoint does not update the Shadow Ledger balance or write to `shadow_ledger_transaction_log`.
-
-**Practical effect:** In the local Quick Start demo, the reconciliation endpoint returns `transactionsReplayed: 0` because there are no unconfirmed ledger entries. The reconciliation path is correctly exercised in `BridgeModeIntegrationTest` and `ReconciliationServiceIntegrationTest` via direct service calls.
-
-Wiring this requires calling `shadowLedger.applyCredit()` for inbound payments in bridge mode, and `shadowLedger.applyDebit()` for outbound payments (fund reservations). This is the next implementation milestone.
-
----
-
-### 7. Send-side (outbound) payment flow is not implemented
-
-The framework handles the receive side: an inbound pacs.008 from FedNow arrives, the institution processes it, and a pacs.002 is returned. The send side — where the institution initiates a FedNow credit transfer to another institution — is not implemented. `MessageRouter.routeOutbound()` exists as a method but has no complete pipeline.
 
 ---
 
@@ -87,17 +75,23 @@ The framework handles the receive side: an inbound pacs.008 from FedNow arrives,
 
 `FedNowClient` exists as a Spring component but does not make real HTTP calls to FedNow's API. All methods return synthetic responses (mocked ACSC). A production deployment requires implementing FedNow's actual API protocol (mTLS, message signing, FedNow-specific headers and schema validation).
 
+`SandboxFedNowClient` provides a sandbox implementation of the same interface and is used in the outbound payment pipeline for local development and testing. It is not a replacement for the production FedNow API client.
+
 ---
 
-### 9. RtpGateway is a documented stub
+### 9. RtpGateway: XML parsing implemented, TCH connectivity pending
 
-`RtpGateway` exists in `io.openfednow.gateway` and documents the architectural intent for RTP® network connectivity, but it is not connected to The Clearing House's network. Specifically:
+`RtpGateway` exists in `io.openfednow.gateway` and documents the architectural intent for RTP® network connectivity.
 
+**Implemented:**
+- `RtpXmlParser` parses canonical ISO 20022 pacs.008.001.08 XML with XXE protection.
+- `RtpGateway` now accepts both `application/xml` (parsed by `RtpXmlParser`) and `application/json`.
+
+**Not yet implemented:**
 - **TCH certificate validation** is not implemented. `CertificateManager` currently handles Federal Reserve PKI only; TCH uses a separate certificate authority.
-- **RTP XML envelope parsing** is not implemented. RTP uses the canonical ISO 20022 XML envelope; FedNow uses a JSON wrapper. The endpoint currently accepts the same JSON model as FedNow for stub purposes.
 - **TCH network transport** requires a dedicated private-network connection that cannot be obtained outside of The Clearing House participation.
 
-Layers 2–4 require **no changes** for RTP support — they are intentionally rail-agnostic and operate on parsed `Pacs008Message` objects regardless of source rail. Only the Layer 1 gateway implementation is pending. See [ADR-0005](adr/0005-dual-rail-architecture-fednow-rtp.md) and [rtp-compatibility.md](rtp-compatibility.md).
+Layers 2–4 require **no changes** for RTP support — they are intentionally rail-agnostic and operate on parsed `Pacs008Message` objects regardless of source rail. Only the remaining Layer 1 gateway items are pending. See [ADR-0005](adr/0005-dual-rail-architecture-fednow-rtp.md) and [rtp-compatibility.md](rtp-compatibility.md).
 
 ---
 
@@ -107,9 +101,9 @@ The ISO 20022 message classes `Camt056Message` (payment cancellation request) an
 
 ---
 
-### 11. No authentication on admin endpoints
+### Kafka event bus (optional, available)
 
-`POST /admin/reconcile` is open to any caller. In production, admin endpoints must be protected by network-level access controls (VPN, bastion host) or application-level authentication (OAuth2, client certificates). The Javadoc on `AdminController` notes this. It is not implemented in the framework itself because the appropriate mechanism varies by institution.
+An optional Kafka event bus is available via the `PaymentEventPublisher` interface. When Kafka is configured, `KafkaPaymentEventPublisher` is activated; otherwise `NoOpPaymentEventPublisher` is used by default. Six event types are published: `INBOUND_CREDIT_APPLIED`, `INBOUND_PAYMENT_REJECTED`, `INBOUND_QUEUED_FOR_BRIDGE`, `OUTBOUND_PAYMENT_COMPLETED`, `OUTBOUND_PAYMENT_REJECTED`, and `OUTBOUND_PAYMENT_PENDING`. No Kafka dependency is required to run the framework.
 
 ---
 
