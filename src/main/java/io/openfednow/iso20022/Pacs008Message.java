@@ -1,6 +1,12 @@
 package io.openfednow.iso20022;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -31,43 +37,65 @@ import java.time.OffsetDateTime;
         "The primary payment message used by FedNow for real-time credit transfers between financial institutions.")
 public class Pacs008Message {
 
+    @NotBlank
+    @Size(max = 35)
     @Schema(description = "Unique identifier for this message instance.", example = "MSG-20240115-001", maxLength = 35)
     private String messageId;
 
+    @NotNull
     @Schema(description = "ISO 8601 creation timestamp of the message.")
     private OffsetDateTime creationDateTime;
 
+    @Min(1)
     @Schema(description = "Number of individual transactions in this message. FedNow always submits exactly 1.", example = "1")
     private int numberOfTransactions;
 
+    @NotBlank
+    @Size(max = 35)
     @Schema(description = "End-to-end identification assigned by the originating party and carried unchanged through FedNow. " +
             "Used as the deduplication key by IdempotencyService.", example = "E2E-20240115-001", maxLength = 35)
     private String endToEndId;
 
+    @NotBlank
+    @Size(max = 35)
     @Schema(description = "Transaction identification assigned by the instructing agent.", example = "TXN-20240115-001", maxLength = 35)
     private String transactionId;
 
+    @NotNull
+    @DecimalMin(value = "0.01")
     @Schema(description = "Interbank settlement amount in USD. Must be greater than zero.", example = "1000.00")
     private BigDecimal interbankSettlementAmount;
 
+    @NotBlank
+    @Size(min = 3, max = 3)
     @Schema(description = "Interbank settlement currency. FedNow only supports USD.", example = "USD")
     private String interbankSettlementCurrency;
 
+    @NotBlank
+    @Pattern(regexp = "\\d{9}", message = "must be a 9-digit ABA routing number")
     @Schema(description = "ABA routing number of the debtor's (sending) financial institution.", example = "021000021", minLength = 9, maxLength = 9)
     private String debtorAgentRoutingNumber;
 
+    @NotBlank
+    @Pattern(regexp = "\\d{9}", message = "must be a 9-digit ABA routing number")
     @Schema(description = "ABA routing number of the creditor's (receiving) financial institution.", example = "026009593", minLength = 9, maxLength = 9)
     private String creditorAgentRoutingNumber;
 
+    @NotBlank
+    @Size(max = 34)
     @Schema(description = "Debtor account number at the sending institution.", example = "123456789", maxLength = 34)
     private String debtorAccountNumber;
 
+    @NotBlank
+    @Size(max = 34)
     @Schema(description = "Creditor account number at the receiving institution.", example = "987654321", maxLength = 34)
     private String creditorAccountNumber;
 
+    @NotBlank
     @Schema(description = "Name of the debtor (payer).", example = "Alice Smith")
     private String debtorName;
 
+    @NotBlank
     @Schema(description = "Name of the creditor (payee).", example = "Bob Jones")
     private String creditorName;
 

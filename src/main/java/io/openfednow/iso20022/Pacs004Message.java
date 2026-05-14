@@ -1,5 +1,10 @@
 package io.openfednow.iso20022;
 
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -51,36 +56,53 @@ import java.util.UUID;
 public class Pacs004Message {
 
     /** Message identification — unique identifier for this return message. */
+    @NotBlank
+    @Size(max = 35)
     private String messageId;
 
     /** Creation date and time of this return message. */
+    @NotNull
     private OffsetDateTime creationDateTime;
 
     /**
      * Return identification — unique ID assigned by the returning institution
      * for this specific return transaction.
      */
+    @NotBlank
+    @Size(max = 35)
     private String returnId;
 
     /** Message ID of the original pacs.008 that is being returned. */
+    @NotBlank
+    @Size(max = 35)
     private String originalMessageId;
 
     /** End-to-end identification carried through from the original pacs.008. */
+    @NotBlank
+    @Size(max = 35)
     private String originalEndToEndId;
 
     /** Transaction identification from the original pacs.008. */
+    @NotBlank
+    @Size(max = 35)
     private String originalTransactionId;
 
     /** Amount being returned, equal to the original interbank settlement amount. */
+    @NotNull
+    @DecimalMin(value = "0.01")
     private BigDecimal returnedAmount;
 
     /** Currency of the returned amount (FedNow: always "USD"). */
+    @NotBlank
+    @Size(min = 3, max = 3)
     private String returnedAmountCurrency;
 
     /**
      * ISO 20022 return reason code explaining why the funds are being returned.
      * Common codes: AC04, AM04, FOCR, DUPL, NARR.
      */
+    @NotBlank
+    @Size(max = 4)
     private String returnReasonCode;
 
     /**
@@ -94,6 +116,8 @@ public class Pacs004Message {
      * This is the <em>original creditor agent</em> from the pacs.008 — the
      * institution that received the funds and is now sending them back.
      */
+    @NotBlank
+    @Pattern(regexp = "\\d{9}", message = "must be a 9-digit ABA routing number")
     private String returningAgentRoutingNumber;
 
     /**
@@ -101,6 +125,8 @@ public class Pacs004Message {
      * This is the <em>original debtor agent</em> from the pacs.008 — the
      * institution that originally sent the funds.
      */
+    @NotBlank
+    @Pattern(regexp = "\\d{9}", message = "must be a 9-digit ABA routing number")
     private String receivingAgentRoutingNumber;
 
     /**

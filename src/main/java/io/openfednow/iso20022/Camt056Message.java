@@ -1,6 +1,10 @@
 package io.openfednow.iso20022;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -47,38 +51,55 @@ import java.util.UUID;
         "FedNow responds with a camt.029 Resolution of Investigation.")
 public class Camt056Message {
 
+    @NotBlank
+    @Size(max = 35)
     @Schema(description = "Unique identifier for this cancellation request message.",
             example = "CNCL-20240115-001", maxLength = 35)
     private String messageId;
 
+    @NotNull
     @Schema(description = "ISO 8601 creation timestamp of this cancellation request.")
     private OffsetDateTime creationDateTime;
 
+    @NotBlank
+    @Size(max = 35)
     @Schema(description = "Case identification assigned by the requesting institution. " +
             "Carried unchanged into the camt.029 response so the case can be correlated.",
             example = "CASE-20240115-001", maxLength = 35)
     private String caseId;
 
+    @NotBlank
+    @Size(max = 35)
     @Schema(description = "MessageId of the original pacs.008 being cancelled.",
             example = "MSG-20240115-001", maxLength = 35)
     private String originalMessageId;
 
+    @NotBlank
+    @Size(max = 35)
     @Schema(description = "EndToEndId from the original pacs.008.",
             example = "E2E-20240115-001", maxLength = 35)
     private String originalEndToEndId;
 
+    @NotBlank
+    @Size(max = 35)
     @Schema(description = "TransactionId from the original pacs.008.",
             example = "TXN-20240115-001", maxLength = 35)
     private String originalTransactionId;
 
+    @NotNull
+    @DecimalMin(value = "0.01")
     @Schema(description = "Interbank settlement amount from the original pacs.008, " +
             "included for verification by FedNow.", example = "1000.00")
     private BigDecimal originalInterbankSettlementAmount;
 
+    @NotBlank
+    @Size(min = 3, max = 3)
     @Schema(description = "Currency of the original settlement amount. FedNow only supports USD.",
             example = "USD")
     private String originalInterbankSettlementCurrency;
 
+    @NotBlank
+    @Size(max = 4)
     @Schema(description = "ISO 20022 reason code for the cancellation request " +
             "(DUPL, FRAUD, CUST, UPAY, or NARR).",
             example = "DUPL", maxLength = 4)

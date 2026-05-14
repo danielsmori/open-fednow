@@ -3,6 +3,7 @@ package io.openfednow.gateway;
 import io.openfednow.iso20022.Pacs002Message;
 import io.openfednow.iso20022.Pacs008Message;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -79,7 +80,7 @@ public class FedNowGateway {
         @ApiResponse(responseCode = "500",
             description = "Internal processing error")
     })
-    public ResponseEntity<Pacs002Message> receiveTransfer(@RequestBody Pacs008Message message) {
+    public ResponseEntity<Pacs002Message> receiveTransfer(@Valid @RequestBody Pacs008Message message) {
         certificateManager.validateClientCertificate();
         return messageRouter.routeInbound(message);
     }
@@ -111,7 +112,7 @@ public class FedNowGateway {
         @ApiResponse(responseCode = "500",
             description = "Internal processing error")
     })
-    public ResponseEntity<Pacs002Message> sendTransfer(@RequestBody Pacs008Message message) {
+    public ResponseEntity<Pacs002Message> sendTransfer(@Valid @RequestBody Pacs008Message message) {
         return messageRouter.routeOutbound(message);
     }
 
