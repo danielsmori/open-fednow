@@ -106,7 +106,7 @@ These incompatibilities cannot be resolved by adding API endpoints. They require
 
 OpenFedNow is a five-layer middleware framework that resolves each of these incompatibilities through proven architectural patterns, validated at national scale during Brazil's PIX instant payment deployment.
 
-The framework is designed around a key insight: **approximately 85% of the integration architecture is identical across all financial institutions**. Only the Core Banking Adapter — roughly 15% of the total engineering scope — varies per core banking vendor. This means that building adapters for the three dominant U.S. platforms covers the majority of the market without duplicating the underlying work.
+The framework is designed around a key insight: **approximately 87% of the integration architecture is shared across all financial institutions**. Only the Core Banking Adapter — approximately 13% of the total engineering scope — varies per core banking vendor. This means that building adapters for the three dominant U.S. platforms covers the majority of the market without duplicating the underlying work.
 
 ### Core Banking Platform Coverage
 
