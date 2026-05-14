@@ -1,15 +1,15 @@
-# OpenFedNow — Legacy-to-FedNow Integration Framework
+# OpenFedNow — Legacy Core to U.S. Instant Payment Rails
 
-**Open-source middleware for connecting legacy core banking systems to the Federal Reserve's FedNow real-time payment network.**
+**Open-source middleware connecting legacy core banking systems to U.S. instant payment rails — FedNow and RTP — through a reusable, rail-agnostic core framework.**
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Status](https://img.shields.io/badge/Status-Early%20Development-yellow)]()
+[![Status](https://img.shields.io/badge/Status-Sandbox%20%2F%20Reference%20Implementation-blue)]()
 [![Java](https://img.shields.io/badge/Java-17%2B-orange)]()
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-green)]()
 
 73% of U.S. financial institutions can't connect to FedNow because their core banking systems — Fiserv, FIS, Jack Henry — were built for batch processing, not 24/7 real-time settlement. This framework bridges the gap without touching the core.
 
-> **Early development.** The architecture, Shadow Ledger, reconciliation, saga, and idempotency layers are implemented and tested. Vendor adapters (Fiserv, FIS, Jack Henry) are stubbed. See [docs/known-limitations.md](docs/known-limitations.md) for the full gap list before drawing any conclusions.
+> **Sandbox / reference implementation.** The reusable core framework — Shadow Ledger, SyncAsyncBridge, Saga orchestration, idempotency, reconciliation, and RTP inbound XML parsing — is implemented and tested. Production vendor adapters and live rail connectivity remain credential-, certification-, and institution-dependent. See [docs/known-limitations.md](docs/known-limitations.md) and the [Production Boundaries](#production-boundaries) section for the full gap analysis.
 
 ---
 
@@ -17,25 +17,26 @@
 
 | Component | Status |
 |-----------|--------|
-| Five-layer architecture skeleton | ✅ Implemented |
+| Five-layer architecture | ✅ Implemented |
 | ISO 20022 message models (pacs.008, pacs.002, pacs.004, camt.056/029) | ✅ Implemented |
-| Sandbox core adapter (all scenarios: ACSC, RJCT, ACSP, timeout) | ✅ Implemented |
+| SandboxAdapter — all scenarios: ACSC, RJCT, ACSP, timeout | ✅ Implemented |
 | MockVendorAdapter — in-memory balance ledger, configurable failure modes | ✅ Implemented; `CoreBankingAdapterContractTest` enforces adapter contract |
+| `CoreBankingAdapter` contract | ✅ Implemented |
 | Shadow Ledger — Redis-backed, WATCH/MULTI/EXEC optimistic locking | ✅ Implemented + tested |
-| Shadow Ledger wired into HTTP payment endpoint (inbound + outbound) | ✅ Implemented |
+| Shadow Ledger endpoint wiring (inbound + outbound) | ✅ Implemented in sandbox/reference mode |
 | 24/7 Bridge Mode — queues payments during core maintenance window | ✅ Implemented + tested |
 | Reconciliation — replay and sync after core returns online | ✅ Implemented + tested |
 | Saga orchestration — compensation on core rejection | ✅ Implemented + tested |
 | Idempotency — Redis + PostgreSQL dual-write, 48h window | ✅ Implemented + tested |
 | Concurrent overdraft prevention under load | ✅ Tested (race-condition suite) |
-| Send-side (outbound) payment flow | ✅ Implemented + tested |
-| Admin auth — HTTP Basic on `/admin/*` (admin / changeme) | ✅ Implemented |
+| Send-side (outbound) payment flow | ✅ Implemented in sandbox/reference mode |
+| Admin auth — HTTP Basic on `/admin/*` | ✅ Implemented as reference configuration |
 | Dual-rail architecture (FedNow + RTP) | ✅ ISO 20022 foundation; Layer 1 varies, Layers 2–4 rail-agnostic |
-| RTP XML parser — pacs.008 XML with XXE protection, dual content-type | ✅ Implemented |
+| RTP XML parser — pacs.008 XML with XXE protection, dual content-type | ✅ Implemented in reference mode |
 | Optional Kafka event bus — `PaymentEventPublisher`, 6 event types | ✅ Implemented (disabled by default; no Kafka required) |
-| Fiserv / FIS / Jack Henry adapters | 🔲 Interface defined, implementation pending |
+| Vendor adapters (Fiserv, FIS, Jack Henry) | 🔲 Skeletons present; implementation pending vendor access, credentials, and agreements |
 | Live FedNow connectivity (Fed PKI, mTLS, message signing) | 🔲 Credential/certification-dependent; simulator-compatible HTTP client implemented |
-| RTP gateway connectivity (TCH network, TCH certificates) | 🔲 XML parsing done; TCH network connectivity pending |
+| RTP live connectivity (TCH network, TCH certificates, RTP outbound XML) | 🔲 TCH onboarding/certification-dependent; inbound XML parsing implemented in reference mode |
 
 See [docs/known-limitations.md](docs/known-limitations.md) for the full gap analysis.
 
@@ -46,7 +47,7 @@ See [docs/known-limitations.md](docs/known-limitations.md) for the full gap anal
 ```mermaid
 flowchart TD
     FN([FedNow Service\npacs.008 — 20s window])
-    RTP([RTP Network — TCH\npacs.008 — stub])
+    RTP([RTP Network — TCH\npacs.008 XML — reference mode])
 
     FN  --> GW["Layer 1 — API Gateway\nFedNowGateway · RtpGateway\nISO 20022 parsing · idempotency · correlation IDs"]
     RTP --> GW
@@ -74,8 +75,8 @@ flowchart TD
 
 | Document | What it answers |
 |----------|-----------------|
-| [docs/known-limitations.md](docs/known-limitations.md) | What is and isn't production-ready |
-| [docs/rtp-compatibility.md](docs/rtp-compatibility.md) | How RTP fits in — what's rail-agnostic, what's stubbed |
+| [docs/known-limitations.md](docs/known-limitations.md) | Current implementation boundaries, credential-dependent live connectivity, and production-readiness gaps |
+| [docs/rtp-compatibility.md](docs/rtp-compatibility.md) | RTP reference-mode support: XML parsing implemented; TCH connectivity pending institutional onboarding |
 | [docs/adr/0005-dual-rail-architecture-fednow-rtp.md](docs/adr/0005-dual-rail-architecture-fednow-rtp.md) | Decision: keep Layers 2–4 rail-agnostic |
 | [docs/adr/0004-eventual-consistency-shadow-ledger-and-core.md](docs/adr/0004-eventual-consistency-shadow-ledger-and-core.md) | Why eventual consistency, why not 2PC |
 | [docs/shadow-ledger.md](docs/shadow-ledger.md) | How the Shadow Ledger works, failure modes |
@@ -104,9 +105,9 @@ These incompatibilities cannot be resolved by adding API endpoints. They require
 
 ## The Solution
 
-OpenFedNow is a five-layer middleware framework that resolves each of these incompatibilities through proven architectural patterns, validated at national scale during Brazil's PIX instant payment deployment.
+OpenFedNow is a five-layer middleware framework that resolves each of these incompatibilities through architectural patterns drawn from production-scale instant payment integration experience.
 
-The framework is designed around a key insight: **approximately 87% of the integration architecture is shared across all financial institutions**. Only the Core Banking Adapter — approximately 13% of the total engineering scope — varies per core banking vendor. This means that building adapters for the three dominant U.S. platforms covers the majority of the market without duplicating the underlying work.
+The framework is designed around a key insight: based on a count of production Java source lines in `src/main/java` (excluding tests, documentation, and generated files), **approximately 87% of the integration architecture is shared across all financial institutions**. Only the Core Banking Adapter — approximately 13% of the total engineering scope — varies per core banking vendor. This means that building adapters for the three dominant U.S. platforms covers the majority of the market without duplicating the underlying work.
 
 ### Core Banking Platform Coverage
 
@@ -451,13 +452,13 @@ The framework is structured as five independent layers. Each layer addresses a s
 ```
 ┌───────────────────────────┐   ┌───────────────────────────┐
 │  FedNow Service           │   │  RTP Network — TCH        │
-│  Federal Reserve          │   │  (stub — see ADR-0005)    │
-│  ISO 20022 JSON / HTTPS   │   │  ISO 20022 XML / private  │
+│  Federal Reserve          │   │  reference mode; live TCH │
+│  ISO 20022 JSON / HTTPS   │   │  connectivity pending     │
 └─────────────┬─────────────┘   └─────────────┬─────────────┘
               │                               │
 ┌─────────────▼───────────────────────────────▼─────────────┐
 │         LAYER 1 — API Gateway & Security  ★ rail varies   │
-│  FedNowGateway · RtpGateway (stub)                         │
+│  FedNowGateway · RtpGateway (reference mode)               │
 │  TLS mutual auth · PKI certificates · Rate limiting        │
 │  Fraud pre-screening · pacs.008 / pacs.002 routing         │
 └────────────────────────┬───────────────────────────────────┘
@@ -492,7 +493,7 @@ The framework is structured as five independent layers. Each layer addresses a s
 ### Layer Descriptions
 
 **Layer 1 — API Gateway & Security**
-The only layer that varies between payment rails. `FedNowGateway` handles FedNow-specific connectivity: Federal Reserve PKI certificates, JSON envelope parsing, and REST/HTTPS transport. `RtpGateway` (stubbed) extends the same pattern for RTP: TCH certificates and ISO 20022 XML envelope. Both gateways deliver the same `Pacs008Message` to `MessageRouter` — Layers 2–4 have no knowledge of which rail the message arrived on. Also handles rate limiting and fraud pre-screening on all inbound and outbound paths.
+The only layer that varies between payment rails. `FedNowGateway` handles FedNow-specific connectivity: Federal Reserve PKI certificates, JSON envelope parsing, and REST/HTTPS transport. `RtpGateway` operates in reference mode: it accepts RTP ISO 20022 XML via `RtpXmlParser` and routes parsed messages through the same rail-agnostic shared pipeline used by FedNow. Live TCH connectivity — certificates, private-network transport, outbound XML serialization, and certification — remains pending institutional onboarding. Both gateways deliver the same `Pacs008Message` to `MessageRouter` — Layers 2–4 have no knowledge of which rail the message arrived on. Also handles rate limiting and fraud pre-screening on all inbound and outbound paths.
 
 **Layer 2 — Anti-Corruption Layer / Core Banking Adapter**
 The architectural core of the framework. Translates between the modern ISO 20022 world (REST APIs, JSON, UTF-8) and the proprietary world of each core banking vendor (vendor-specific APIs, proprietary formats). Also manages the synchronous-to-asynchronous bridge: FedNow requires synchronous sub-20-second responses, but legacy core processing is inherently asynchronous. This layer decouples the two models. The vendor-specific adapter is the only component that varies between institutions (~13% of total scope).
@@ -521,11 +522,11 @@ FedNow uses the ISO 20022 international messaging standard — the same standard
 
 ## Architectural Background
 
-The five-layer architecture in this framework was developed and validated during the production integration of Brazil's PIX national instant payment system at Santander Brazil (2020–2021). PIX launched on November 16, 2020 under Central Bank of Brazil mandate, with the national network reaching 175 million registered users and a single-day record of 313.3 million transactions across all participating institutions.
+The five-layer architecture reflects a production-informed methodology based on experience with Santander Brazil's PIX integration (2020–2021). PIX launched on November 16, 2020 under Central Bank of Brazil mandate, with the national network reaching 175 million registered users and a single-day record of 313.3 million transactions across all participating institutions.
 
-The core architectural problem — connecting legacy batch-processing mainframe systems to a 24/7 real-time payment network under ISO 20022 — is structurally identical to the FedNow challenge. The Anti-Corruption Layer design, Shadow Ledger pattern, and Saga orchestration approach were each developed and validated in that production environment.
+The core architectural problem — connecting legacy batch-processing systems to a 24/7 real-time payment network under ISO 20022 — represents the same class of legacy-to-real-time integration challenge across PIX, FedNow, and RTP, though each rail has its own network, certification, message-envelope, and regulatory requirements. The methodology underlying the Anti-Corruption Layer, Shadow Ledger, and Saga orchestration approach was applied in a production-scale instant-payment environment and is adapted here to U.S.-specific rails, vendors, credentials, and certification requirements.
 
-The Santander PIX platform is proprietary to Santander Brazil. This framework is a new, independent implementation — built from the ground up for the U.S. context, applying the proven methodology to the FedNow environment with Fiserv, FIS, and Jack Henry adapters replacing the original mainframe adapters.
+The Santander PIX platform is proprietary to Santander Brazil. OpenFedNow is a new, independent implementation built from the ground up for the U.S. FedNow/RTP context, with Fiserv, FIS, and Jack Henry adapters replacing the original mainframe adapters.
 
 ---
 
@@ -541,7 +542,7 @@ openfednow/
 │   │   ├── CertificateManager.java
 │   │   ├── MessageRouter.java
 │   │   ├── FedNowClient.java     # Interface
-│   │   ├── HttpFedNowClient.java # Production stub (mTLS not yet wired)
+│   │   ├── HttpFedNowClient.java # Simulator/reference HTTP client; live FedNow requires Fed PKI, mTLS, JWS signing, and certification
 │   │   ├── SandboxFedNowClient.java  # Sandbox/dev implementation
 │   │   └── AdminController.java  # /admin/reconcile (HTTP Basic: admin/changeme)
 │   ├── acl/                  # Layer 2 — Anti-Corruption Layer
@@ -552,9 +553,9 @@ openfednow/
 │   │   └── adapters/
 │   │       ├── SandboxAdapter.java          # Functional — scenario routing by prefix
 │   │       ├── MockVendorAdapter.java        # Functional — in-memory ledger, configurable failures
-│   │       ├── FiservAdapter.java           # Stub — interface only, // TODO bodies
-│   │       ├── FisAdapter.java              # Stub — interface only, // TODO bodies
-│   │       └── JackHenryAdapter.java        # Stub — interface only, // TODO bodies
+│   │       ├── FiservAdapter.java           # Skeleton — contract defined; implementation pending vendor access
+│   │       ├── FisAdapter.java              # Skeleton — contract defined; implementation pending vendor access
+│   │       └── JackHenryAdapter.java        # Skeleton — contract defined; implementation pending vendor access
 │   ├── processing/           # Layer 3 — Real-Time Processing Engine
 │   │   ├── saga/
 │   │   │   ├── PaymentSaga.java
@@ -594,13 +595,23 @@ openfednow/
 
 ---
 
+## Production Boundaries
+
+OpenFedNow is a working sandbox/reference implementation of the reusable core framework. It is not a production-ready banking product. The following items remain outside the current public implementation and require institutional access:
+
+- **Production vendor adapters** — `FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` are skeletons that define the contract; implementation requires institution-provided vendor API documentation, credentials, testing environments, and participation agreements. `SandboxAdapter` and `MockVendorAdapter` are functional; `CoreBankingAdapterContractTest` enforces the behavioral contract all adapters must satisfy.
+- **Live FedNow connectivity** — requires Federal Reserve PKI client certificates, mutual TLS, JWS message signing, and FedNow certification. `HttpFedNowClient` provides simulator-compatible HTTP transport; `SandboxFedNowClient` is the default for local development.
+- **Live RTP connectivity** — requires TCH institutional participation, TCH certificates, private-network transport, RTP outbound XML serialization, and RTP certification. Inbound XML parsing is implemented in reference mode via `RtpXmlParser`.
+- **Institution-specific configuration** — account mapping, IAM integration, reconciliation policies, compliance controls, and operational validation are institution-dependent and not included in this framework.
+
+---
+
 ## Known Limitations
 
-The framework is a reference architecture, not a production-ready product. See [docs/known-limitations.md](docs/known-limitations.md) for the full list. Key items:
+See [docs/known-limitations.md](docs/known-limitations.md) for the full analysis. Key architectural boundaries:
 
-- **Vendor adapters are stubs.** `FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` define the contract but do not make real vendor API calls. `SandboxAdapter` and `MockVendorAdapter` are functional; `CoreBankingAdapterContractTest` defines the behavioral requirements all future adapters must satisfy.
-- **Single-instance.** The `WATCH`/`MULTI`/`EXEC` optimistic locking is safe for one pod. Multi-pod deployments require a distributed lock per account or consistent-hash routing.
-- **Admin auth uses defaults.** `/admin/*` requires HTTP Basic (admin / changeme). Change the password before any non-local deployment.
+- **Single-instance Shadow Ledger.** The `WATCH`/`MULTI`/`EXEC` optimistic locking is safe for one pod. Multi-pod deployments require a distributed lock per account or consistent-hash routing.
+- **Admin credentials are reference defaults.** `/admin/*` requires HTTP Basic (`admin` / `changeme`). Override via `ADMIN_USERNAME` and `ADMIN_PASSWORD` before any non-local deployment.
 - **Post-reconciliation reversals are customer-visible.** If the core rejects a provisionally accepted transaction, a pacs.004 return goes back to FedNow. The sender's institution sees a credit followed by a return.
 
 ---
