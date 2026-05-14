@@ -7,7 +7,7 @@
 [![Java](https://img.shields.io/badge/Java-17%2B-orange)]()
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-green)]()
 
-73% of U.S. financial institutions can't connect to FedNow because their core banking systems — Fiserv, FIS, Jack Henry — were built for batch processing, not 24/7 real-time settlement. This framework bridges the gap without touching the core.
+73% of U.S. financial institutions cite legacy core banking systems as a moderate-to-severe obstacle to FedNow participation because their core systems — Fiserv, FIS, Jack Henry — were built for batch processing, not 24/7 real-time settlement. This framework bridges the gap without touching the core.
 
 > **Sandbox / reference implementation.** The reusable core framework — Shadow Ledger, SyncAsyncBridge, Saga orchestration, idempotency, reconciliation, and RTP inbound XML parsing — is implemented and tested. Production vendor adapters and live rail connectivity remain credential-, certification-, and institution-dependent. See [docs/known-limitations.md](docs/known-limitations.md) and the [Production Boundaries](#production-boundaries) section for the full gap analysis.
 
