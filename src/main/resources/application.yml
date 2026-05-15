@@ -86,6 +86,18 @@ openfednow:
     token-path: ${FISERV_TOKEN_PATH:/fts-apim/oauth2/v2}
     token-expiry-buffer-seconds: ${FISERV_TOKEN_BUFFER_SECONDS:60}
 
+  # FIS Code Connect adapter — only active when openfednow.adapter=fis.
+  # Credentials (consumer key and secret) are issued by the FIS Code Connect
+  # portal (codeconnect.fisglobal.com). The institution ID (feId) is the
+  # FIS-assigned identifier for the financial institution.
+  adapter-fis:
+    base-url: ${FIS_BASE_URL:}
+    consumer-key: ${FIS_CONSUMER_KEY:}
+    consumer-secret: ${FIS_CONSUMER_SECRET:}
+    institution-id: ${FIS_INSTITUTION_ID:}
+    token-path: ${FIS_TOKEN_PATH:/oauth2/v1/token}
+    token-expiry-buffer-seconds: ${FIS_TOKEN_BUFFER_SECONDS:60}
+
   # FedNow gateway settings
   # fednow-endpoint is intentionally absent by default so that SandboxFedNowClient
   # activates for local development. Set FEDNOW_ENDPOINT to enable HttpFedNowClient
