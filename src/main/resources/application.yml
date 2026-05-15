@@ -75,6 +75,17 @@ openfednow:
     # Useful for stress-testing the 20-second FedNow SLA locally.
     simulate-latency-ms: ${SANDBOX_LATENCY_MS:0}
 
+  # Fiserv Communicator Open adapter — only active when openfednow.adapter=fiserv.
+  # Credentials are issued by Fiserv and require a signed integration agreement.
+  # Set FISERV_BASE_URL to the Fiserv Communicator Open base URL for your environment.
+  adapter-fiserv:
+    base-url: ${FISERV_BASE_URL:}
+    client-id: ${FISERV_CLIENT_ID:}
+    client-secret: ${FISERV_CLIENT_SECRET:}
+    api-key: ${FISERV_API_KEY:}
+    token-path: ${FISERV_TOKEN_PATH:/fts-apim/oauth2/v2}
+    token-expiry-buffer-seconds: ${FISERV_TOKEN_BUFFER_SECONDS:60}
+
   # FedNow gateway settings
   # fednow-endpoint is intentionally absent by default so that SandboxFedNowClient
   # activates for local development. Set FEDNOW_ENDPOINT to enable HttpFedNowClient
