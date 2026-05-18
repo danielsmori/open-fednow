@@ -115,12 +115,11 @@ openfednow:
   # FedNow / RTP gateway settings
   # fednow-endpoint is intentionally absent by default so that SandboxFedNowClient
   # activates for local development. Set FEDNOW_ENDPOINT to enable HttpFedNowClient.
-  # rtp-endpoint is likewise absent by default so that SandboxRtpClient activates.
-  # Set RTP_ENDPOINT to enable HttpRtpClient for live or simulator TCH connectivity.
+  # rtp-endpoint is likewise intentionally absent by default so that SandboxRtpClient
+  # activates for local development. Set RTP_ENDPOINT to enable HttpRtpClient.
   # Live connectivity for both rails requires institution-provided PKI credentials.
   gateway:
     response-timeout-seconds: 18   # must be < FedNow's / TCH's 20-second window
-    rtp-endpoint: ${RTP_ENDPOINT:}  # absent → SandboxRtpClient; present → HttpRtpClient
 
   # Shadow Ledger settings
   shadow-ledger:

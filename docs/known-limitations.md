@@ -61,7 +61,7 @@ These are features that are not yet built. They are explicitly tracked as future
 
 ### 5. No remaining implementation gaps for the three primary vendors
 
-`FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` are all fully implemented. Each uses OAuth 2.0 client credentials, maps vendor-specific rejection codes to ISO 20022 reason codes, and is covered by WireMock integration tests.
+`FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` are implemented and tested in reference mode. Production use is credential-, endpoint-, and certification-dependent. Each uses OAuth 2.0 and maps vendor rejection codes to ISO 20022.
 
 | Adapter | Protocol | Auth | Tests |
 |---------|----------|------|-------|
@@ -71,7 +71,7 @@ These are features that are not yet built. They are explicitly tracked as future
 
 `MockVendorAdapter` is a functional reference implementation — it provides a full in-memory balance ledger and configurable failure modes (timeout simulation, core availability toggle), and is activated via `openfednow.adapter=mock`. It is suitable for development and contract-testing, but is not a substitute for a real vendor integration.
 
-`CoreBankingAdapterContractTest` is an abstract test class that all adapters must extend and pass. It defines the behavioral contract that any adapter must satisfy before it can be used in production.
+`CoreBankingAdapterContractTest` defines the shared behavioral contract. `SandboxAdapterContractTest`, `MockVendorAdapterContractTest`, and `JackHenryAdapterContractTest` extend it. Fiserv and FIS are covered by dedicated WireMock integration tests.
 
 **Production deployment note:** Each adapter requires institution-specific credentials (OAuth client ID, client secret, and base URL) obtained from the respective vendor. The `JackHenryAdapter` additionally requires an institution routing ID (9-digit ABA number) used as `InstRtId` in the jXchange SOAP header. The adapter interface (`CoreBankingAdapter`) is the only contract point — the rest of the framework does not need to change.
 

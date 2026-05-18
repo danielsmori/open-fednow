@@ -250,7 +250,7 @@ public class JackHenrySoapClient {
         );
     }
 
-    String buildPingEnvelope() {
+    public String buildPingEnvelope() {
         // Ping does not include a jXchangeHdr_CType header per the jXchange spec.
         return """
                 <?xml version="1.0" encoding="UTF-8"?>

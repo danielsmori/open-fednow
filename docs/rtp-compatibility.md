@@ -13,7 +13,7 @@ The Clearing House's RTP® network and the Federal Reserve's FedNow Service are 
 - `RtpGateway.sendTransfer()` — accepts outbound pacs.008, delegates to `RtpClient` for XML serialization and TCH submission
 - `RtpClient` interface with two implementations: `SandboxRtpClient` (active by default) and `HttpRtpClient` (activated by `RTP_ENDPOINT`)
 - `RtpClientConfig` — `@ConditionalOnProperty` bean configuration matching the `HttpFedNowClient` / `FEDNOW_ENDPOINT` pattern
-- **TCH certificate validation** — `CertificateManager.validateTchClientCertificate()` is implemented and called on every inbound and outbound RTP request. In sandbox mode (no `TCH_TRUSTSTORE_PATH` configured) it is a no-op, exactly as Federal Reserve PKI validation works in sandbox mode for FedNow.
+- **TCH certificate-validation hook** — `CertificateManager.validateTchClientCertificate()` is invoked on every RTP gateway path. In sandbox mode (no `TCH_TRUSTSTORE_PATH`) it is a no-op. Production enforcement requires institution-provided TCH certificates, truststore configuration, and TLS termination.
 
 **Pending institutional onboarding with The Clearing House:**
 - **Live TCH dedicated network transport** — RTP uses a private network, not public TLS. `HttpRtpClient` is ready; the endpoint URL and PKI credentials are institution-provided.

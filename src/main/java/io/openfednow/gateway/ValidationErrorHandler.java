@@ -48,4 +48,12 @@ public class ValidationErrorHandler {
         problem.setProperty("fieldErrors", fieldErrors);
         return problem;
     }
+
+    @ExceptionHandler(RtpXmlParser.RtpXmlParseException.class)
+    public ProblemDetail handleRtpXmlParseException(RtpXmlParser.RtpXmlParseException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                "RTP XML envelope could not be parsed: " + ex.getMessage());
+        return problem;
+    }
 }

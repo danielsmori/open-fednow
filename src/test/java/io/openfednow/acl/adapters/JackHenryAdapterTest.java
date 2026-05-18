@@ -44,6 +44,7 @@ class JackHenryAdapterTest {
             .build();
 
     private JackHenryAdapter adapter;
+    private JackHenrySoapClient soapClient;
 
     @BeforeEach
     void setUp() {
@@ -69,7 +70,7 @@ class JackHenryAdapterTest {
         JackHenryTokenManager tokenManager = new JackHenryTokenManager(
                 tokenRestClient, "/oauth2/token",
                 "test-client-id", "test-client-secret", 60);
-        JackHenrySoapClient soapClient = new JackHenrySoapClient(
+        soapClient = new JackHenrySoapClient(
                 apiRestClient, tokenManager, "021000021");
         adapter = new JackHenryAdapter(soapClient);
 
@@ -275,6 +276,20 @@ class JackHenryAdapterTest {
                 .willReturn(aResponse().withStatus(503)));
 
         assertThat(adapter.isCoreSystemAvailable()).isFalse();
+    }
+
+    /**
+     * Verifies that {@link JackHenrySoapClient#buildPingEnvelope} produces a structurally
+     * valid SOAP envelope with exactly one {@code <s:Body>} open and one {@code </s:Body>}
+     * close, and contains the {@code <jx:PingRqst/>} element.
+     * The method is package-private — accessible because this test is in the same package.
+     */
+    @Test
+    void buildPingEnvelope_containsSingleBodyAndPingRqst() {
+        String envelope = soapClient.buildPingEnvelope();
+        assertThat(envelope).contains("<jx:PingRqst/>");
+        assertThat(envelope).containsOnlyOnce("<s:Body>");
+        assertThat(envelope).containsOnlyOnce("</s:Body>");
     }
 
     @Test
