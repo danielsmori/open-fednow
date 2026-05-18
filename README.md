@@ -34,7 +34,8 @@
 | Dual-rail architecture (FedNow + RTP) | ✅ ISO 20022 foundation; Layer 1 varies, Layers 2–4 rail-agnostic |
 | RTP XML parser — pacs.008 XML with XXE protection, dual content-type | ✅ Implemented in reference mode |
 | Optional Kafka event bus — `PaymentEventPublisher`, 6 event types | ✅ Implemented (disabled by default; no Kafka required) |
-| Vendor adapters (Fiserv, FIS, Jack Henry) | 🔲 Skeletons present; implementation pending vendor access, credentials, and agreements |
+| Vendor adapters — Fiserv (DNA, Precision) and FIS (Horizon, IBS) | ✅ Implemented — OAuth 2.0 auth, vendor error codes → ISO 20022, WireMock integration tests |
+| Vendor adapter — Jack Henry (SilverLake, Symitar, CIF 20/20) | 🔲 Skeleton present; implementation pending vendor access and credentials |
 | Live FedNow connectivity (Fed PKI, mTLS, message signing) | 🔲 Credential/certification-dependent; simulator-compatible HTTP client implemented |
 | RTP live connectivity (TCH network, TCH certificates, RTP outbound XML) | 🔲 TCH onboarding/certification-dependent; inbound XML parsing implemented in reference mode |
 
