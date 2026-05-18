@@ -553,8 +553,8 @@ openfednow/
 │   │   └── adapters/
 │   │       ├── SandboxAdapter.java          # Functional — scenario routing by prefix
 │   │       ├── MockVendorAdapter.java        # Functional — in-memory ledger, configurable failures
-│   │       ├── FiservAdapter.java           # Skeleton — contract defined; implementation pending vendor access
-│   │       ├── FisAdapter.java              # Skeleton — contract defined; implementation pending vendor access
+│   │       ├── FiservAdapter.java           # Implemented — OAuth 2.0, ISO 20022 code mapping, WireMock tests
+│   │       ├── FisAdapter.java              # Implemented — OAuth 2.0, ISO 20022 code mapping, WireMock tests
 │   │       └── JackHenryAdapter.java        # Skeleton — contract defined; implementation pending vendor access
 │   ├── processing/           # Layer 3 — Real-Time Processing Engine
 │   │   ├── saga/
@@ -599,7 +599,7 @@ openfednow/
 
 OpenFedNow is a working sandbox/reference implementation of the reusable core framework. It is not a production-ready banking product. The following items remain outside the current public implementation and require institutional access:
 
-- **Production vendor adapters** — `FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` are skeletons that define the contract; implementation requires institution-provided vendor API documentation, credentials, testing environments, and participation agreements. `SandboxAdapter` and `MockVendorAdapter` are functional; `CoreBankingAdapterContractTest` enforces the behavioral contract all adapters must satisfy.
+- **Production vendor adapters** — `FiservAdapter` and `FisAdapter` are implemented with OAuth 2.0 authentication, vendor error code → ISO 20022 mapping, and WireMock integration tests. `JackHenryAdapter` is a skeleton pending vendor API access. `SandboxAdapter` and `MockVendorAdapter` are functional; `CoreBankingAdapterContractTest` enforces the behavioral contract all adapters must satisfy.
 - **Live FedNow connectivity** — requires Federal Reserve PKI client certificates, mutual TLS, JWS message signing, and FedNow certification. `HttpFedNowClient` provides simulator-compatible HTTP transport; `SandboxFedNowClient` is the default for local development.
 - **Live RTP connectivity** — requires TCH institutional participation, TCH certificates, private-network transport, RTP outbound XML serialization, and RTP certification. Inbound XML parsing is implemented in reference mode via `RtpXmlParser`.
 - **Institution-specific configuration** — account mapping, IAM integration, reconciliation policies, compliance controls, and operational validation are institution-dependent and not included in this framework.
@@ -624,15 +624,14 @@ See [docs/known-limitations.md](docs/known-limitations.md) for the full analysis
 - MockVendorAdapter + CoreBankingAdapterContractTest; dual content-type RTP gateway (reference mode)
 - Full test suite; CI pipeline; Docker / docker-compose deployment
 
-**Phase 2 — Fiserv Adapter (Months 9–18)**
-- Fiserv DNA / Precision adapter (42% of U.S. banks, 31% of credit unions)
-- Pilot validation with community bank partners
-- Reference architecture whitepaper
-
-**Phase 3 — FIS + Jack Henry Adapters & RTP Gateway (Months 19–30)**
-- FIS IBS / Horizon adapter
-- Jack Henry SilverLake / Symitar adapter
+**Phase 2 — Fiserv + FIS Adapters ✅ Complete**
+- Fiserv DNA adapter (42% of U.S. banks, 31% of credit unions) — implemented
+- FIS Horizon / IBS adapter (9% of U.S. banks) — implemented
 - Big Three combined: >70% of U.S. banks covered
+
+**Phase 3 — Jack Henry Adapter & RTP Gateway (Months 19–30)**
+- Jack Henry SilverLake / Symitar adapter
+- Big Three complete
 - Live RTP gateway connectivity — TCH network transport, TCH certificate validation, outbound XML serialization
 - Submission to U.S. Faster Payments Council as reference integration pattern
 

@@ -18,9 +18,9 @@ This means building adapters for Fiserv, Jack Henry, and FIS makes the full fram
 
 | Vendor | Platforms | Market Share | Status |
 |--------|-----------|-------------|--------|
-| Fiserv | DNA, Precision, Premier, Cleartouch | 42% banks, 31% CUs | In Development (Phase 1) |
-| FIS | Horizon, IBS | 9% banks | Planned (Phase 2) |
-| Jack Henry | SilverLake, Symitar, CIF 20/20 | 21% banks, 12% CUs | Planned (Phase 3) |
+| Fiserv | DNA, Precision, Premier, Cleartouch | 42% banks, 31% CUs | Implemented |
+| FIS | Horizon, IBS | 9% banks | Implemented |
+| Jack Henry | SilverLake, Symitar, CIF 20/20 | 21% banks, 12% CUs | Planned |
 
 ## Vendor-Specific Implementation Notes
 
@@ -39,11 +39,11 @@ Additional Fiserv implementation considerations:
 
 ### FIS
 
-FIS Horizon and IBS use proprietary REST APIs distinct from Fiserv's. Field naming conventions differ significantly from ISO 20022. FIS adapters are planned for Phase 2.
+FIS Horizon and IBS use proprietary REST APIs distinct from Fiserv's. Field naming conventions differ significantly from ISO 20022 — amounts are decimal strings rather than fixed-point cent integers, credentials use HTTP Basic auth, and the institution ID is passed as a `feId` header. The FIS adapter is implemented in `FisAdapter.java`.
 
 ### Jack Henry
 
-Jack Henry SilverLake (banks) and Symitar (credit unions) use different APIs despite being the same vendor. The adapter layer will require two concrete implementations under the Jack Henry umbrella. Planned for Phase 3.
+Jack Henry SilverLake (banks) and Symitar (credit unions) use different APIs despite being the same vendor. The adapter layer will require two concrete implementations under the Jack Henry umbrella. The skeleton is in `JackHenryAdapter.java`; implementation pending vendor API access.
 
 ## Sync-to-Async Bridge
 
