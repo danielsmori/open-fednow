@@ -32,7 +32,7 @@
 | Send-side (outbound) payment flow | ✅ Implemented in sandbox/reference mode |
 | Admin auth — HTTP Basic on `/admin/*` | ✅ Implemented as reference configuration |
 | Dual-rail architecture (FedNow + RTP) | ✅ ISO 20022 foundation; Layer 1 varies, Layers 2–4 rail-agnostic |
-| RTP Layer 1 — inbound XML, outbound XML, TCH cert validation, sandbox + HTTP client | ✅ Fully implemented; symmetric with FedNow Layer 1 |
+| RTP Layer 1 — inbound XML, outbound XML, TCH cert validation hook, sandbox + HTTP client | ✅ Implemented and tested in reference mode; symmetric with FedNow Layer 1 |
 | Optional Kafka event bus — `PaymentEventPublisher`, 6 event types | ✅ Implemented (disabled by default; no Kafka required) |
 | Vendor adapters (Fiserv, FIS, Jack Henry) | ✅ All three implemented (OAuth 2.0, ISO 20022 code mapping, WireMock tests); Fiserv + FIS via REST/JSON, Jack Henry via jXchange SOAP |
 | Live FedNow connectivity (Fed PKI, mTLS, message signing) | 🔲 Credential/certification-dependent; simulator-compatible HTTP client implemented |
@@ -493,7 +493,7 @@ The framework is structured as five independent layers. Each layer addresses a s
 ### Layer Descriptions
 
 **Layer 1 — API Gateway & Security**
-The only layer that varies between payment rails. `FedNowGateway` handles FedNow-specific connectivity: Federal Reserve PKI certificates, JSON envelope parsing, and REST/HTTPS transport. `RtpGateway` is fully symmetric with `FedNowGateway`: it accepts RTP ISO 20022 XML via `RtpXmlParser`, validates TCH certificates via `CertificateManager`, and routes parsed messages through the same rail-agnostic pipeline. Outbound transfers are handled by `RtpClient` (XML serialization via `RtpXmlSerializer`, HTTP via `HttpRtpClient` when `RTP_ENDPOINT` is set). Live TCH connectivity requires institution-provided PKI credentials and private-network transport — the same class of dependency as Fed PKI for FedNow. Both gateways deliver the same `Pacs008Message` to `MessageRouter` — Layers 2–4 have no knowledge of which rail the message arrived on. Also handles rate limiting and fraud pre-screening on all inbound and outbound paths.
+The only layer that varies between payment rails. `FedNowGateway` handles FedNow-specific connectivity: Federal Reserve PKI certificates, JSON envelope parsing, and REST/HTTPS transport. `RtpGateway` is implemented in reference mode and is symmetric with `FedNowGateway`: it accepts RTP ISO 20022 XML via `RtpXmlParser`, invokes the TCH certificate-validation hook via `CertificateManager`, and routes parsed messages through the same rail-agnostic pipeline. Outbound transfers are handled by `RtpClient` (XML serialization via `RtpXmlSerializer`, HTTP via `HttpRtpClient` when `RTP_ENDPOINT` is set). Live TCH connectivity requires institution-provided PKI credentials and private-network transport — the same class of dependency as Fed PKI for FedNow. Both gateways deliver the same `Pacs008Message` to `MessageRouter` — Layers 2–4 have no knowledge of which rail the message arrived on. Also handles rate limiting and fraud pre-screening on all inbound and outbound paths.
 
 **Layer 2 — Anti-Corruption Layer / Core Banking Adapter**
 The architectural core of the framework. Translates between the modern ISO 20022 world (REST APIs, JSON, UTF-8) and the proprietary world of each core banking vendor (vendor-specific APIs, proprietary formats). Also manages the synchronous-to-asynchronous bridge: FedNow requires synchronous sub-20-second responses, but legacy core processing is inherently asynchronous. This layer decouples the two models. The vendor-specific adapter is the only component that varies between institutions (~13% of total scope).
@@ -601,7 +601,7 @@ OpenFedNow is a working sandbox/reference implementation of the reusable core fr
 
 - **Production vendor adapters** — `FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` are all implemented with OAuth 2.0 authentication, vendor error code → ISO 20022 mapping, and WireMock integration tests. Each requires institution-specific credentials (OAuth client ID/secret, base URL) from the respective vendor. `SandboxAdapter` and `MockVendorAdapter` are functional; `CoreBankingAdapterContractTest` enforces the behavioral contract all adapters must satisfy.
 - **Live FedNow connectivity** — requires Federal Reserve PKI client certificates, mutual TLS, JWS message signing, and FedNow certification. `HttpFedNowClient` provides simulator-compatible HTTP transport; `SandboxFedNowClient` is the default for local development.
-- **Live RTP connectivity** — requires TCH institutional participation, TCH PKI certificates, and private-network transport. `HttpRtpClient`, `RtpXmlSerializer`, and TCH certificate validation are fully implemented; the endpoint URL and certificates are institution-provided.
+- **Live RTP connectivity** — requires TCH institutional participation, TCH PKI certificates, and private-network transport. `HttpRtpClient`, `RtpXmlSerializer`, and the TCH certificate-validation hook are implemented in reference mode; the endpoint URL and certificates are institution-provided.
 - **Institution-specific configuration** — account mapping, IAM integration, reconciliation policies, compliance controls, and operational validation are institution-dependent and not included in this framework.
 
 ---
@@ -634,7 +634,7 @@ See [docs/known-limitations.md](docs/known-limitations.md) for the full analysis
 - Big Three complete: Fiserv + FIS + Jack Henry adapters cover >70% of U.S. banks and credit unions
 
 **Phase 3b — RTP Layer 1 ✅ Complete**
-- Full Layer 1 symmetric with FedNow: `RtpXmlSerializer`, `HttpRtpClient`, `SandboxRtpClient`, `RtpClientConfig`, TCH certificate validation hook
+- Layer 1 implemented in reference mode, symmetric with FedNow: `RtpXmlSerializer`, `HttpRtpClient`, `SandboxRtpClient`, `RtpClientConfig`, TCH certificate-validation hook
 - `RtpGateway` inbound XML and outbound send paths fully wired; 305 tests passing
 - Submission to U.S. Faster Payments Council as reference integration pattern
 

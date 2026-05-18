@@ -95,9 +95,9 @@ The `FedNowClientConfig` bean is conditional: `HttpFedNowClient` is only created
 - **`SandboxRtpClient`** — active by default (when `RTP_ENDPOINT` is not set). Returns synthetic in-memory responses for local development and testing.
 - **`HttpRtpClient`** — activated when `RTP_ENDPOINT` is set. Serializes pacs.008 to canonical ISO 20022 XML via `RtpXmlSerializer` and POSTs to the configured TCH endpoint. Live RTP production additionally requires TCH PKI client certificates, a dedicated private-network connection to the TCH RTP® network, and institutional participation. These are institution-provided credentials and are outside the scope of the framework.
 
-`RtpClientConfig` is conditional: `HttpRtpClient` is only created when `openfednow.gateway.rtp-endpoint` is present. When absent, `SandboxRtpClient` activates via `@ConditionalOnMissingBean`. TCH certificate validation is called on every request via `CertificateManager.validateTchClientCertificate()`; in sandbox mode (no `TCH_TRUSTSTORE_PATH`) it is a no-op.
+`RtpClientConfig` is conditional: `HttpRtpClient` is only created when `openfednow.gateway.rtp-endpoint` is present. When absent, `SandboxRtpClient` activates via `@ConditionalOnMissingBean`. The TCH certificate-validation hook is invoked on every request via `CertificateManager.validateTchClientCertificate()`; in sandbox mode (no `TCH_TRUSTSTORE_PATH`) it is a no-op.
 
-Layer 1 (inbound XML parsing, outbound XML serialization, certificate validation hook, conditional HTTP transport) is fully implemented and symmetric with the FedNow rail. Layers 2–4 require no changes — they are rail-agnostic. See [rtp-compatibility.md](rtp-compatibility.md) and [ADR-0005](adr/0005-dual-rail-architecture-fednow-rtp.md).
+Layer 1 (inbound XML parsing, outbound XML serialization, certificate-validation hook, conditional HTTP transport) is implemented and tested in reference mode and is symmetric with the FedNow rail at the framework level. Layers 2–4 require no changes — they are rail-agnostic. See [rtp-compatibility.md](rtp-compatibility.md) and [ADR-0005](adr/0005-dual-rail-architecture-fednow-rtp.md).
 
 ---
 
