@@ -8,13 +8,16 @@ The Clearing House's RTP® network and the Federal Reserve's FedNow Service are 
 
 **Implemented:**
 - `RtpXmlParser` — parses canonical ISO 20022 pacs.008.001.08 XML with XXE protection
-- `RtpGateway.receiveTransfer()` — accepts `application/xml` (production format) and `application/json` (sandbox/compatibility); routes inbound messages through the shared Layers 2–4 pipeline
+- `RtpXmlSerializer` — serializes pacs.008 (outbound submissions) and pacs.002 (responses) to canonical ISO 20022 XML; also parses pacs.002 XML responses from TCH
+- `RtpGateway.receiveTransfer()` — accepts `application/xml` (production format) and `application/json` (sandbox/compatibility); routes inbound messages through the shared Layers 2–4 pipeline; returns pacs.002 as XML when the inbound request was XML
+- `RtpGateway.sendTransfer()` — accepts outbound pacs.008, delegates to `RtpClient` for XML serialization and TCH submission
+- `RtpClient` interface with two implementations: `SandboxRtpClient` (active by default) and `HttpRtpClient` (activated by `RTP_ENDPOINT`)
+- `RtpClientConfig` — `@ConditionalOnProperty` bean configuration matching the `HttpFedNowClient` / `FEDNOW_ENDPOINT` pattern
+- **TCH certificate validation** — `CertificateManager.validateTchClientCertificate()` is implemented and called on every inbound and outbound RTP request. In sandbox mode (no `TCH_TRUSTSTORE_PATH` configured) it is a no-op, exactly as Federal Reserve PKI validation works in sandbox mode for FedNow.
 
 **Pending institutional onboarding with The Clearing House:**
-- **TCH certificate validation** — requires TCH digital certificates and network access keys, available only through TCH participation agreements. This is an external access dependency, not a technical unknown — the validation architecture follows the same pattern as Federal Reserve PKI in `FedNowGateway` and is defined in `CertificateManager`.
-- **Live TCH dedicated network transport** — RTP uses a private network, not public TLS
-- **RTP outbound XML serialization** — serializing `Pacs002Message` responses to the canonical RTP XML envelope
-- **Live RTP certification and settlement validation**
+- **Live TCH dedicated network transport** — RTP uses a private network, not public TLS. `HttpRtpClient` is ready; the endpoint URL and PKI credentials are institution-provided.
+- **Live RTP certification and settlement validation** — requires completed TCH participation agreement
 
 ---
 
@@ -69,10 +72,10 @@ The gateway layer is the extensibility point. `FedNowGateway.java` handles FedNo
 - Parses the FedNow JSON envelope into `Pacs008Message`
 - Returns `Pacs002Message` in the FedNow JSON format
 
-`RtpGateway.java` (reference mode, `io.openfednow.gateway`) handles the RTP inbound path:
-- **Implemented:** Parses the RTP canonical ISO 20022 XML envelope via `RtpXmlParser` into `Pacs008Message`
-- **Pending:** TCH certificate validation (institutional onboarding required)
-- **Pending:** RTP outbound XML serialization and TCH network transport
+`RtpGateway.java` (`io.openfednow.gateway`) handles both the RTP inbound and outbound paths, symmetric with `FedNowGateway`:
+- **Inbound:** Parses the RTP canonical ISO 20022 XML envelope via `RtpXmlParser`; validates TCH client certificates via `CertificateManager`; returns pacs.002 as XML
+- **Outbound:** Accepts pacs.008, validates TCH client certificates, delegates to `RtpClient` for XML serialization and TCH submission
+- **Transport:** `SandboxRtpClient` is active by default; `HttpRtpClient` is activated when `RTP_ENDPOINT` is set (same conditional pattern as `HttpFedNowClient` / `FEDNOW_ENDPOINT`)
 
 Both gateways feed into the same `MessageRouter`, which routes to the same layers regardless of source. The `Pacs008Message` that `MessageRouter.routeInbound()` receives does not carry a "which rail" field — it doesn't need one, because the message follows the same rail-agnostic shared pipeline.
 

@@ -112,12 +112,15 @@ openfednow:
     token-path: ${JH_TOKEN_PATH:/oauth2/token}
     token-expiry-buffer-seconds: ${JH_TOKEN_BUFFER_SECONDS:60}
 
-  # FedNow gateway settings
+  # FedNow / RTP gateway settings
   # fednow-endpoint is intentionally absent by default so that SandboxFedNowClient
-  # activates for local development. Set FEDNOW_ENDPOINT to enable HttpFedNowClient
-  # (live connectivity also requires Fed PKI certificates, mTLS, and message signing).
+  # activates for local development. Set FEDNOW_ENDPOINT to enable HttpFedNowClient.
+  # rtp-endpoint is likewise absent by default so that SandboxRtpClient activates.
+  # Set RTP_ENDPOINT to enable HttpRtpClient for live or simulator TCH connectivity.
+  # Live connectivity for both rails requires institution-provided PKI credentials.
   gateway:
-    response-timeout-seconds: 18   # must be < FedNow's 20-second window
+    response-timeout-seconds: 18   # must be < FedNow's / TCH's 20-second window
+    rtp-endpoint: ${RTP_ENDPOINT:}  # absent → SandboxRtpClient; present → HttpRtpClient
 
   # Shadow Ledger settings
   shadow-ledger:
@@ -125,10 +128,15 @@ openfednow:
     reconciliation-poll-interval-seconds: 30
 
   # TLS / Certificate settings
+  # Fed PKI (FedNow rail) and TCH PKI (RTP rail) use separate certificate authorities.
+  # Both follow the same lifecycle: skip in dev/sandbox (no truststore configured),
+  # enforce via TLS termination layer (Kubernetes Ingress / Istio) in production.
   tls:
     keystore-path: ${TLS_KEYSTORE_PATH:}
     keystore-password: ${TLS_KEYSTORE_PASSWORD:}
     fed-truststore-path: ${FED_TRUSTSTORE_PATH:}
+    tch-truststore-path: ${TCH_TRUSTSTORE_PATH:}
+    tch-truststore-password: ${TCH_TRUSTSTORE_PASSWORD:}
 
 management:
   endpoints:

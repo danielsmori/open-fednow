@@ -88,19 +88,16 @@ The `FedNowClientConfig` bean is conditional: `HttpFedNowClient` is only created
 
 ---
 
-### 9. RtpGateway: XML parsing implemented, TCH connectivity pending
+### 9. Live RTP connectivity requires institution-provided credentials
 
-`RtpGateway` exists in `io.openfednow.gateway` and documents the architectural intent for RTP® network connectivity.
+`RtpClient` is an interface with two implementations, symmetric with `FedNowClient`:
 
-**Implemented:**
-- `RtpXmlParser` parses canonical ISO 20022 pacs.008.001.08 XML with XXE protection.
-- `RtpGateway` now accepts both `application/xml` (parsed by `RtpXmlParser`) and `application/json`.
+- **`SandboxRtpClient`** — active by default (when `RTP_ENDPOINT` is not set). Returns synthetic in-memory responses for local development and testing.
+- **`HttpRtpClient`** — activated when `RTP_ENDPOINT` is set. Serializes pacs.008 to canonical ISO 20022 XML via `RtpXmlSerializer` and POSTs to the configured TCH endpoint. Live RTP production additionally requires TCH PKI client certificates, a dedicated private-network connection to the TCH RTP® network, and institutional participation. These are institution-provided credentials and are outside the scope of the framework.
 
-**Not yet implemented:**
-- **TCH certificate validation** is not implemented. `CertificateManager` currently handles Federal Reserve PKI only; TCH uses a separate certificate authority.
-- **TCH network transport** requires a dedicated private-network connection that cannot be obtained outside of The Clearing House participation.
+`RtpClientConfig` is conditional: `HttpRtpClient` is only created when `openfednow.gateway.rtp-endpoint` is present. When absent, `SandboxRtpClient` activates via `@ConditionalOnMissingBean`. TCH certificate validation is called on every request via `CertificateManager.validateTchClientCertificate()`; in sandbox mode (no `TCH_TRUSTSTORE_PATH`) it is a no-op.
 
-Layers 2–4 require **no changes** for RTP support — they are intentionally rail-agnostic and operate on parsed `Pacs008Message` objects regardless of source rail. Only the remaining Layer 1 gateway items are pending. See [ADR-0005](adr/0005-dual-rail-architecture-fednow-rtp.md) and [rtp-compatibility.md](rtp-compatibility.md).
+Layer 1 (inbound XML parsing, outbound XML serialization, certificate validation hook, conditional HTTP transport) is fully implemented and symmetric with the FedNow rail. Layers 2–4 require no changes — they are rail-agnostic. See [rtp-compatibility.md](rtp-compatibility.md) and [ADR-0005](adr/0005-dual-rail-architecture-fednow-rtp.md).
 
 ---
 
