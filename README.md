@@ -47,7 +47,7 @@ See [docs/known-limitations.md](docs/known-limitations.md) for the full gap anal
 ```mermaid
 flowchart TD
     FN([FedNow Service\npacs.008 — 20s window])
-    RTP([RTP Network — TCH\npacs.008 XML — reference mode])
+    RTP([RTP Network — TCH\npacs.008 XML — full Layer 1])
 
     FN  --> GW["Layer 1 — API Gateway\nFedNowGateway · RtpGateway\nISO 20022 parsing · idempotency · correlation IDs"]
     RTP --> GW
@@ -452,13 +452,13 @@ The framework is structured as five independent layers. Each layer addresses a s
 ```
 ┌───────────────────────────┐   ┌───────────────────────────┐
 │  FedNow Service           │   │  RTP Network — TCH        │
-│  Federal Reserve          │   │  reference mode; live TCH │
-│  ISO 20022 JSON / HTTPS   │   │  connectivity pending     │
+│  Federal Reserve          │   │  ISO 20022 XML; live TCH  │
+│  ISO 20022 JSON / HTTPS   │   │  credentials pending      │
 └─────────────┬─────────────┘   └─────────────┬─────────────┘
               │                               │
 ┌─────────────▼───────────────────────────────▼─────────────┐
 │         LAYER 1 — API Gateway & Security  ★ rail varies   │
-│  FedNowGateway · RtpGateway (reference mode)               │
+│  FedNowGateway · RtpGateway (symmetric; full Layer 1)       │
 │  TLS mutual auth · PKI certificates · Rate limiting        │
 │  Fraud pre-screening · pacs.008 / pacs.002 routing         │
 └────────────────────────┬───────────────────────────────────┘
@@ -537,14 +537,14 @@ openfednow/
 ├── src/main/java/io/openfednow/
 │   ├── gateway/              # Layer 1 — API Gateway & Security
 │   │   ├── FedNowGateway.java
-│   │   ├── RtpGateway.java       # XML + JSON; TCH network connectivity pending
-│   │   ├── RtpXmlParser.java     # pacs.008 XML parser with XXE protection
-│   │   ├── CertificateManager.java
+│   │   ├── FedNowGateway.java · RtpGateway.java             # Dual-rail Layer 1 (symmetric)
+│   │   ├── RtpXmlParser.java · RtpXmlSerializer.java       # pacs.008/pacs.002 XML, XXE-protected
+│   │   ├── RtpClient.java · HttpRtpClient.java · SandboxRtpClient.java · RtpClientConfig.java
+│   │   ├── FedNowClient.java · HttpFedNowClient.java · SandboxFedNowClient.java · FedNowClientConfig.java
+│   │   ├── CertificateManager.java   # Fed PKI + TCH PKI validation (no-op in sandbox)
 │   │   ├── MessageRouter.java
-│   │   ├── FedNowClient.java     # Interface
-│   │   ├── HttpFedNowClient.java # Simulator/reference HTTP client; live FedNow requires Fed PKI, mTLS, JWS signing, and certification
-│   │   ├── SandboxFedNowClient.java  # Sandbox/dev implementation
-│   │   └── AdminController.java  # /admin/reconcile (HTTP Basic: admin/changeme)
+│   │   ├── FedNowGatewayValidation.java  # ISO 20022 field validation + structured error handler
+│   │   └── AdminController.java     # /admin/reconcile (HTTP Basic: admin/changeme)
 │   ├── acl/                  # Layer 2 — Anti-Corruption Layer
 │   │   ├── core/
 │   │   │   ├── CoreBankingAdapter.java      # Interface (4 methods)

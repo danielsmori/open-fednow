@@ -66,7 +66,7 @@ The key architectural insight is that these incompatibilities are *independent* 
 
 ## Layer 1 — API Gateway & Security
 
-**Responsibility:** All communication with the Federal Reserve's FedNow Service.
+**Responsibility:** All communication with FedNow (Federal Reserve) and RTP (The Clearing House).
 
 **What it does:**
 - Establishes and maintains TLS mutual authentication using Federal Reserve PKI certificates
@@ -77,7 +77,7 @@ The key architectural insight is that these incompatibilities are *independent* 
 
 **Why a dedicated layer:** The Federal Reserve's connectivity requirements are independent of core banking vendor. Isolating them here means the gateway never needs to change when adapters change, and vice versa.
 
-**Key classes:** `FedNowGateway.java`, `CertificateManager.java`, `MessageRouter.java`
+**Key classes:** `FedNowGateway.java`, `RtpGateway.java`, `CertificateManager.java`, `MessageRouter.java`
 
 ---
 
@@ -205,7 +205,7 @@ A production OpenFedNow deployment spans three distinct network zones:
 ┌───────────────────────────▼────────────────────────────────────────┐
 │              OPENSHIFT / KUBERNETES CLUSTER                         │
 │                                                                     │
-│  Layer 1: Spring Boot API Gateway (Fed PKI TLS)                    │
+│  Layer 1: Spring Boot API Gateway (Fed PKI + TCH PKI TLS)          │
 │  Layer 2: ACL Adapters (per-vendor containers)                     │
 │  Layer 3: Temporal.io Saga workers · Kafka brokers                 │
 │  Layer 4: Shadow Ledger service · Reconciliation service           │
