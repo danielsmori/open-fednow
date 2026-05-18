@@ -76,7 +76,7 @@ flowchart TD
 | Document | What it answers |
 |----------|-----------------|
 | [docs/known-limitations.md](docs/known-limitations.md) | Current implementation boundaries, credential-dependent live connectivity, and production-readiness gaps |
-| [docs/rtp-compatibility.md](docs/rtp-compatibility.md) | RTP Layer 1 status: full implementation symmetric with FedNow; TCH live connectivity pending institutional credentials |
+| [docs/rtp-compatibility.md](docs/rtp-compatibility.md) | RTP Layer 1 status: implemented and tested in reference mode, symmetric with FedNow at the framework level; TCH live connectivity pending institutional credentials |
 | [docs/adr/0005-dual-rail-architecture-fednow-rtp.md](docs/adr/0005-dual-rail-architecture-fednow-rtp.md) | Decision: keep Layers 2–4 rail-agnostic |
 | [docs/adr/0004-eventual-consistency-shadow-ledger-and-core.md](docs/adr/0004-eventual-consistency-shadow-ledger-and-core.md) | Why eventual consistency, why not 2PC |
 | [docs/shadow-ledger.md](docs/shadow-ledger.md) | How the Shadow Ledger works, failure modes |
@@ -631,7 +631,7 @@ See [docs/known-limitations.md](docs/known-limitations.md) for the full analysis
 
 **Phase 3 — Jack Henry Adapter ✅ Complete**
 - Jack Henry SilverLake / Symitar adapter (jXchange SOAP) — implemented
-- Big Three complete: Fiserv + FIS + Jack Henry adapters cover >70% of U.S. banks and credit unions
+- Big Three reference adapters complete: Fiserv + FIS + Jack Henry collectively serve over 70% of U.S. banks according to KC Fed data; credit union coverage varies by vendor and remains institution-specific
 
 **Phase 3b — RTP Layer 1 ✅ Complete**
 - Layer 1 implemented in reference mode, symmetric with FedNow: `RtpXmlSerializer`, `HttpRtpClient`, `SandboxRtpClient`, `RtpClientConfig`, TCH certificate-validation hook
