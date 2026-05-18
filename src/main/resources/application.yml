@@ -98,6 +98,20 @@ openfednow:
     token-path: ${FIS_TOKEN_PATH:/oauth2/v1/token}
     token-expiry-buffer-seconds: ${FIS_TOKEN_BUFFER_SECONDS:60}
 
+  # Jack Henry jXchange adapter — only active when openfednow.adapter=jackhenry.
+  # Credentials (client ID and secret) are issued by Jack Henry after completing
+  # the OAuth 2.0 migration process (vendorqa@jackhenry.com). The institution
+  # routing ID is the 9-digit ABA routing number used as InstRtId in jXchangeHdr.
+  # Base URL is the jXchange Service Gateway endpoint for the institution's
+  # environment (e.g. https://jx.jackhenry.com or the institution-specific DMZ URL).
+  adapter-jackhenry:
+    base-url: ${JH_BASE_URL:}
+    client-id: ${JH_CLIENT_ID:}
+    client-secret: ${JH_CLIENT_SECRET:}
+    institution-routing-id: ${JH_ROUTING_ID:}
+    token-path: ${JH_TOKEN_PATH:/oauth2/token}
+    token-expiry-buffer-seconds: ${JH_TOKEN_BUFFER_SECONDS:60}
+
   # FedNow gateway settings
   # fednow-endpoint is intentionally absent by default so that SandboxFedNowClient
   # activates for local development. Set FEDNOW_ENDPOINT to enable HttpFedNowClient

@@ -34,7 +34,7 @@
 | Dual-rail architecture (FedNow + RTP) | ✅ ISO 20022 foundation; Layer 1 varies, Layers 2–4 rail-agnostic |
 | RTP XML parser — pacs.008 XML with XXE protection, dual content-type | ✅ Implemented in reference mode |
 | Optional Kafka event bus — `PaymentEventPublisher`, 6 event types | ✅ Implemented (disabled by default; no Kafka required) |
-| Vendor adapters (Fiserv, FIS, Jack Henry) | ✅ Fiserv + FIS implemented (OAuth 2.0, ISO 20022 code mapping, WireMock tests); 🔲 Jack Henry pending vendor access |
+| Vendor adapters (Fiserv, FIS, Jack Henry) | ✅ All three implemented (OAuth 2.0, ISO 20022 code mapping, WireMock tests); Fiserv + FIS via REST/JSON, Jack Henry via jXchange SOAP |
 | Live FedNow connectivity (Fed PKI, mTLS, message signing) | 🔲 Credential/certification-dependent; simulator-compatible HTTP client implemented |
 | RTP live connectivity (TCH network, TCH certificates, RTP outbound XML) | 🔲 TCH onboarding/certification-dependent; inbound XML parsing implemented in reference mode |
 
@@ -555,7 +555,7 @@ openfednow/
 │   │       ├── MockVendorAdapter.java        # Functional — in-memory ledger, configurable failures
 │   │       ├── FiservAdapter.java           # Implemented — OAuth 2.0, ISO 20022 code mapping, WireMock tests
 │   │       ├── FisAdapter.java              # Implemented — OAuth 2.0, ISO 20022 code mapping, WireMock tests
-│   │       └── JackHenryAdapter.java        # Skeleton — contract defined; implementation pending vendor access
+│   │       └── JackHenryAdapter.java        # Implemented — jXchange SOAP, OAuth 2.0, ISO 20022 code mapping, WireMock tests
 │   ├── processing/           # Layer 3 — Real-Time Processing Engine
 │   │   ├── saga/
 │   │   │   ├── PaymentSaga.java
@@ -599,7 +599,7 @@ openfednow/
 
 OpenFedNow is a working sandbox/reference implementation of the reusable core framework. It is not a production-ready banking product. The following items remain outside the current public implementation and require institutional access:
 
-- **Production vendor adapters** — `FiservAdapter` and `FisAdapter` are implemented with OAuth 2.0 authentication, vendor error code → ISO 20022 mapping, and WireMock integration tests. `JackHenryAdapter` is a skeleton pending vendor API access. `SandboxAdapter` and `MockVendorAdapter` are functional; `CoreBankingAdapterContractTest` enforces the behavioral contract all adapters must satisfy.
+- **Production vendor adapters** — `FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` are all implemented with OAuth 2.0 authentication, vendor error code → ISO 20022 mapping, and WireMock integration tests. Each requires institution-specific credentials (OAuth client ID/secret, base URL) from the respective vendor. `SandboxAdapter` and `MockVendorAdapter` are functional; `CoreBankingAdapterContractTest` enforces the behavioral contract all adapters must satisfy.
 - **Live FedNow connectivity** — requires Federal Reserve PKI client certificates, mutual TLS, JWS message signing, and FedNow certification. `HttpFedNowClient` provides simulator-compatible HTTP transport; `SandboxFedNowClient` is the default for local development.
 - **Live RTP connectivity** — requires TCH institutional participation, TCH certificates, private-network transport, RTP outbound XML serialization, and RTP certification. Inbound XML parsing is implemented in reference mode via `RtpXmlParser`.
 - **Institution-specific configuration** — account mapping, IAM integration, reconciliation policies, compliance controls, and operational validation are institution-dependent and not included in this framework.
@@ -629,9 +629,11 @@ See [docs/known-limitations.md](docs/known-limitations.md) for the full analysis
 - FIS Horizon / IBS adapter (9% of U.S. banks) — implemented
 - Big Three combined: >70% of U.S. banks covered
 
-**Phase 3 — Jack Henry Adapter & RTP Gateway (Months 19–30)**
-- Jack Henry SilverLake / Symitar adapter
-- Big Three complete
+**Phase 3 — Jack Henry Adapter ✅ Complete**
+- Jack Henry SilverLake / Symitar adapter (jXchange SOAP) — implemented
+- Big Three complete: Fiserv + FIS + Jack Henry adapters cover >70% of U.S. banks and credit unions
+
+**Phase 3b — RTP Gateway (Months 19–30)**
 - Live RTP gateway connectivity — TCH network transport, TCH certificate validation, outbound XML serialization
 - Submission to U.S. Faster Payments Council as reference integration pattern
 

@@ -15,7 +15,7 @@ The vendor-specific adapters are the most impactful area for contribution. Each 
 | `FiservAdapter` | DNA (REST) | Implemented | #1 |
 | `FiservAdapter` | Precision / Premier (SOAP) | Planned | #2 |
 | `FisAdapter` | Horizon / IBS | Implemented | Phase 2 |
-| `JackHenryAdapter` | SilverLake / Symitar | Planned | Phase 3 |
+| `JackHenryAdapter` | SilverLake / Symitar (jXchange SOAP) | Implemented | Phase 3 |
 
 If you have access to a Fiserv, FIS, or Jack Henry sandbox environment, your contribution here has direct real-world impact.
 

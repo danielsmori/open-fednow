@@ -1,53 +1,138 @@
 package io.openfednow.acl.adapters;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.openfednow.acl.adapters.jackhenry.JackHenrySoapClient;
+import io.openfednow.acl.adapters.jackhenry.JackHenryTokenManager;
 import io.openfednow.acl.core.CoreBankingAdapter;
 import io.openfednow.acl.core.CoreBankingResponse;
 import io.openfednow.iso20022.Pacs008Message;
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
 
 /**
  * Layer 2 — Jack Henry Core Banking Adapter
  *
- * <p>Implements the CoreBankingAdapter interface for Jack Henry core banking
- * platforms, including SilverLake, Symitar, and CIF 20/20.
+ * <p>Connects OpenFedNow to Jack Henry core banking platforms (SilverLake, Symitar,
+ * CIF 20/20) via the jXchange SOAP Service Gateway. Jack Henry platforms serve
+ * approximately 21% of U.S. banks and 12% of U.S. credit unions.
  *
- * <p>Jack Henry platforms serve approximately 21% of U.S. banks and 12% of
- * U.S. credit unions (Phase 3 of the OpenFedNow roadmap).
+ * <h2>Key differences from the Fiserv and FIS adapters</h2>
+ * <ul>
+ *   <li><b>Protocol:</b> SOAP/XML over HTTPS ({@code text/xml}). Fiserv and FIS
+ *       use REST/JSON.</li>
+ *   <li><b>Authentication:</b> OAuth 2.0 client credentials with HTTP Basic auth
+ *       header. The jXchange platform migrated from legacy WS-Security
+ *       username/password authentication to OAuth 2.0 in May 2025.</li>
+ *   <li><b>Request headers:</b> Every request (except {@code Ping}) includes a
+ *       {@code jXchangeHdr_CType} SOAP header with audit identity, consumer
+ *       identity, and correlation IDs.</li>
+ *   <li><b>Amount format:</b> Plain decimal strings ({@code "1000.50"}), same as FIS.</li>
+ *   <li><b>Error codes:</b> Numeric (e.g. {@code "3050"}) returned in SOAP fault
+ *       {@code ErrRec/ErrCode} elements, mapped by
+ *       {@link io.openfednow.acl.adapters.jackhenry.JackHenryReasonCodeMapper}.</li>
+ * </ul>
  *
- * <p><strong>Status: Planned (Phase 3)</strong>
+ * <h2>Circuit breaker</h2>
+ * <p>All three methods are protected by the {@code corebanking} circuit breaker
+ * configured in {@code application.yml}. Fallback behaviour is identical to
+ * {@link FiservAdapter}: TIMEOUT for transactions, exception for balance,
+ * false for availability.
  *
- * <p>All three methods are protected by the {@code corebanking} circuit breaker.
- * See {@link FiservAdapter} for fallback semantics.
+ * <h2>Configuration (application.yml)</h2>
+ * <pre>
+ * openfednow:
+ *   adapter: jackhenry          # activates this bean
+ *   adapter-jackhenry:
+ *     base-url: ${JH_BASE_URL}
+ *     client-id: ${JH_CLIENT_ID}
+ *     client-secret: ${JH_CLIENT_SECRET}
+ *     institution-routing-id: ${JH_ROUTING_ID}
+ * </pre>
  *
- * @see CoreBankingAdapter
+ * @see JackHenrySoapClient
+ * @see JackHenryTokenManager
+ * @see <a href="https://jackhenry.dev/open-enterprise-api-docs/enterprise-soap-api/">
+ *      Jack Henry jXchange SOAP API</a>
  */
 @Component("jackHenryAdapter")
 @ConditionalOnProperty(name = "openfednow.adapter", havingValue = "jackhenry")
 public class JackHenryAdapter implements CoreBankingAdapter {
 
+    @Value("${openfednow.adapter-jackhenry.base-url:}")
+    private String baseUrl;
+
+    @Value("${openfednow.adapter-jackhenry.client-id:}")
+    private String clientId;
+
+    @Value("${openfednow.adapter-jackhenry.client-secret:}")
+    private String clientSecret;
+
+    @Value("${openfednow.adapter-jackhenry.institution-routing-id:}")
+    private String institutionRoutingId;
+
+    @Value("${openfednow.adapter-jackhenry.token-path:/oauth2/token}")
+    private String tokenPath;
+
+    @Value("${openfednow.adapter-jackhenry.token-expiry-buffer-seconds:60}")
+    private long tokenExpiryBufferSeconds;
+
+    private JackHenrySoapClient soapClient;
+
+    /** Spring constructor — fields injected via {@code @Value}; client built in {@link #init()}. */
+    public JackHenryAdapter() {}
+
+    /** Test constructor — injects a pre-configured {@link JackHenrySoapClient} directly. */
+    JackHenryAdapter(JackHenrySoapClient soapClient) {
+        this.soapClient = soapClient;
+    }
+
+    @PostConstruct
+    void init() {
+        if (soapClient != null) return; // already set via test constructor
+
+        // Use SimpleClientHttpRequestFactory (HTTP/1.1) for SOAP compatibility.
+        // The jXchange Service Gateway uses HTTP/1.1 SOAP; HTTP/2 upgrade would
+        // cause RST_STREAM errors since SOAP bindings are not h2-aware.
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+
+        RestClient tokenClient = RestClient.builder()
+                .baseUrl(baseUrl)
+                .requestFactory(factory)
+                .build();
+        RestClient apiClient = RestClient.builder()
+                .baseUrl(baseUrl)
+                .requestFactory(factory)
+                .build();
+
+        JackHenryTokenManager tokenManager = new JackHenryTokenManager(
+                tokenClient, tokenPath, clientId, clientSecret, tokenExpiryBufferSeconds);
+        soapClient = new JackHenrySoapClient(apiClient, tokenManager, institutionRoutingId);
+    }
+
+    // ── CoreBankingAdapter ────────────────────────────────────────────────────
+
     @CircuitBreaker(name = "corebanking", fallbackMethod = "fallbackPostCreditTransfer")
     @Override
     public CoreBankingResponse postCreditTransfer(Pacs008Message message) {
-        // TODO: implement Jack Henry transaction posting
-        throw new UnsupportedOperationException("Jack Henry adapter — planned (Phase 3)");
+        return soapClient.postTransaction(message);
     }
 
     @CircuitBreaker(name = "corebanking", fallbackMethod = "fallbackGetAvailableBalance")
     @Override
     public BigDecimal getAvailableBalance(String accountId) {
-        // TODO: implement Jack Henry balance inquiry
-        throw new UnsupportedOperationException("Jack Henry adapter — planned (Phase 3)");
+        return soapClient.getBalance(accountId);
     }
 
     @CircuitBreaker(name = "corebanking", fallbackMethod = "fallbackIsCoreSystemAvailable")
     @Override
     public boolean isCoreSystemAvailable() {
-        // TODO: implement Jack Henry health check
-        throw new UnsupportedOperationException("Jack Henry adapter — planned (Phase 3)");
+        return soapClient.isHealthy();
     }
 
     @Override
@@ -55,7 +140,7 @@ public class JackHenryAdapter implements CoreBankingAdapter {
         return "Jack Henry";
     }
 
-    // ── Circuit breaker fallbacks ────────────────────────────────────────────
+    // ── Circuit breaker fallbacks ─────────────────────────────────────────────
 
     private CoreBankingResponse fallbackPostCreditTransfer(Pacs008Message message, Throwable t) {
         return new CoreBankingResponse(

@@ -59,15 +59,21 @@ These are deliberate design choices with known trade-offs. They are not bugs.
 
 These are features that are not yet built. They are explicitly tracked as future work.
 
-### 5. Jack Henry adapter is a skeleton implementation
+### 5. No remaining implementation gaps for the three primary vendors
 
-`FiservAdapter` and `FisAdapter` are fully implemented — both use OAuth 2.0 client credentials, map vendor-specific rejection codes to ISO 20022 reason codes, and are covered by WireMock integration tests. `JackHenryAdapter` exists and implements the `CoreBankingAdapter` interface, but its methods are stubs pending vendor API access.
+`FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` are all fully implemented. Each uses OAuth 2.0 client credentials, maps vendor-specific rejection codes to ISO 20022 reason codes, and is covered by WireMock integration tests.
+
+| Adapter | Protocol | Auth | Tests |
+|---------|----------|------|-------|
+| `FiservAdapter` | REST/JSON | OAuth 2.0 (form body) | WireMock, 12 tests |
+| `FisAdapter` | REST/JSON | OAuth 2.0 (Basic auth header) | WireMock, 11 tests |
+| `JackHenryAdapter` | SOAP/XML (jXchange) | OAuth 2.0 (Basic auth header) | WireMock, 12 tests |
 
 `MockVendorAdapter` is a functional reference implementation — it provides a full in-memory balance ledger and configurable failure modes (timeout simulation, core availability toggle), and is activated via `openfednow.adapter=mock`. It is suitable for development and contract-testing, but is not a substitute for a real vendor integration.
 
 `CoreBankingAdapterContractTest` is an abstract test class that all adapters must extend and pass. It defines the behavioral contract that any adapter must satisfy before it can be used in production.
 
-A production deployment requires implementing the vendor-specific HTTP integration in `JackHenryAdapter`. The adapter interface (`CoreBankingAdapter`) is the only contract point — the rest of the framework does not need to change.
+**Production deployment note:** Each adapter requires institution-specific credentials (OAuth client ID, client secret, and base URL) obtained from the respective vendor. The `JackHenryAdapter` additionally requires an institution routing ID (9-digit ABA number) used as `InstRtId` in the jXchange SOAP header. The adapter interface (`CoreBankingAdapter`) is the only contract point — the rest of the framework does not need to change.
 
 ---
 

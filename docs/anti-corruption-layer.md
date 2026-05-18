@@ -20,7 +20,7 @@ This means building adapters for Fiserv, Jack Henry, and FIS makes the full fram
 |--------|-----------|-------------|--------|
 | Fiserv | DNA, Precision, Premier, Cleartouch | 42% banks, 31% CUs | Implemented |
 | FIS | Horizon, IBS | 9% banks | Implemented |
-| Jack Henry | SilverLake, Symitar, CIF 20/20 | 21% banks, 12% CUs | Planned |
+| Jack Henry | SilverLake, Symitar, CIF 20/20 | 21% banks, 12% CUs | Implemented |
 
 ## Vendor-Specific Implementation Notes
 
@@ -43,7 +43,14 @@ FIS Horizon and IBS use proprietary REST APIs distinct from Fiserv's. Field nami
 
 ### Jack Henry
 
-Jack Henry SilverLake (banks) and Symitar (credit unions) use different APIs despite being the same vendor. The adapter layer will require two concrete implementations under the Jack Henry umbrella. The skeleton is in `JackHenryAdapter.java`; implementation pending vendor API access.
+Jack Henry SilverLake (banks) and Symitar (credit unions) are both served by the jXchange SOAP Service Gateway, which provides a unified API across platforms. The adapter is implemented in `JackHenryAdapter.java`.
+
+Additional Jack Henry implementation notes:
+- **Protocol:** SOAP/XML over HTTPS (not REST). All operations — `TrnAdd`, `AcctBalInq`, and `Ping` — POST to the same Service Gateway endpoint, routed by the `SOAPAction` header.
+- **jXchangeHdr:** Every request except `Ping` must include a `jXchangeHdr_CType` SOAP header with required fields: `AuditUsrId`, `AuditWsId`, `ValidConsmName` (max 15 chars), `ValidConsmProd` (max 25 chars), and `InstRtId` (9-digit ABA routing number).
+- **Authentication:** OAuth 2.0 client credentials grant with HTTP Basic auth header (`Authorization: Basic base64(clientId:clientSecret)`), the same pattern as FIS. Jack Henry migrated from legacy WS-Security username/password authentication to OAuth 2.0 in May 2025.
+- **Amount format:** Plain decimal strings (e.g. `"1000.50"`), same as FIS. Not fixed-point cents.
+- **Error codes:** Numeric values in SOAP fault `ErrRec/ErrCode` (e.g. `3050` for insufficient funds), mapped to ISO 20022 codes by `JackHenryReasonCodeMapper`.
 
 ## Sync-to-Async Bridge
 
