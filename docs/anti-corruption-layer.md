@@ -8,9 +8,9 @@ FedNow uses the ISO 20022 international messaging standard: JSON over HTTPS, UTF
 
 These two worlds cannot communicate directly without translation — and the translation is different for every vendor.
 
-## The 85/15 Principle
+## The 87/13 Principle
 
-Approximately 85% of the integration architecture is identical across all vendors. Only the adapter — the piece that speaks each vendor's proprietary language — varies. This adapter represents ~15% of the total engineering scope.
+Approximately 87% of the integration architecture is identical across all vendors. Only the adapter — the piece that speaks each vendor's proprietary language — varies. This adapter represents ~13% of the total engineering scope.
 
 This means building adapters for Fiserv, Jack Henry, and FIS makes the full framework available to >70% of U.S. financial institutions without duplicating the underlying work.
 

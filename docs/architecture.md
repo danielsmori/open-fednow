@@ -105,9 +105,9 @@ The SyncAsyncBridge resolves this by:
 
 This design ensures FedNow never times out waiting for a legacy core response.
 
-### The 85/15 Principle
+### The 87/13 Principle
 
-Approximately 85% of the integration architecture — Layers 1, 3, and 4, plus the ACL core — is identical across all core banking vendors. Only the vendor-specific adapter (the concrete implementation of `CoreBankingAdapter`) varies. This represents approximately 15% of total engineering scope.
+Approximately 87% of the integration architecture — Layers 1, 3, and 4, plus the ACL core — is identical across all core banking vendors. Only the vendor-specific adapter (the concrete implementation of `CoreBankingAdapter`) varies. This represents approximately 13% of total engineering scope.
 
 Building adapters for Fiserv, FIS, and Jack Henry covers >70% of U.S. financial institutions without duplicating the underlying framework.
 

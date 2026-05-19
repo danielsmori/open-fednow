@@ -46,7 +46,7 @@ Each layer in the OpenFedNow framework addresses an incompatibility that was fir
 
 Brazil's financial institutions ran core banking systems with proprietary APIs and data formats — many of them IBM mainframe systems using EBCDIC encoding, fixed-point amounts, and COBOL-era field naming conventions. PIX used ISO 20022 JSON. The translation layer (what OpenFedNow calls the Anti-Corruption Layer) was the first component designed.
 
-The 85/15 principle emerged from this work: once the framework architecture was established, the per-institution custom work was exclusively in the adapter — the translation component for each institution's specific core. The framework itself did not change between institutions.
+The 87/13 principle emerged from this work: once the framework architecture was established, the per-institution custom work was exclusively in the adapter — the translation component for each institution's specific core. The framework itself did not change between institutions.
 
 **BACEN DICT API Integration.** Every outbound PIX payment required a live query to the BACEN DICT API (Diretório de Identifiers de Contas Transacionais) before message construction. PIX key resolution — mapping a CPF (individual taxpayer ID), CNPJ (company ID), phone number, email address, or EVP (random key) to the destination account — must be performed at the adapter layer, not in the core. This means the ACL must make an HTTPS call to BCB's DICT API on every outbound payment, validate the key-to-account mapping, inject the resolved account data into the ISO 20022 message, and handle DICT lookup errors as a distinct rejection path. This lookup adds a network round-trip to the payment path and must complete within the 10-second SLA under BCB Resolution No. 1/2020.
 
@@ -74,7 +74,7 @@ The distributed transaction problem — a payment spanning FedNow, the Shadow Le
 
 **The architecture is correct.** Every technical challenge in FedNow integration — batch-to-real-time mismatch, 24/7 availability, ISO 20022 protocol translation, distributed transaction safety — was encountered and resolved in the PIX deployment. The solutions are not theoretical; they operated at hundreds of millions of transactions per month.
 
-**The 85/15 principle holds at scale.** The framework was applied across multiple institutions during the PIX rollout, each with different core banking systems. In each case, the shared framework was unchanged; only the adapter layer varied. This validates the design principle that makes OpenFedNow reusable across all U.S. financial institutions.
+**The 87/13 principle holds at scale.** The framework was applied across multiple institutions during the PIX rollout, each with different core banking systems. In each case, the shared framework was unchanged; only the adapter layer varied. This validates the design principle that makes OpenFedNow reusable across all U.S. financial institutions.
 
 **Community-bank-scale problems are the same as national-scale problems, technically.** A community bank connecting to FedNow faces the same four incompatibilities as a national bank. The transaction volume is lower, but the architectural challenges are identical. The PIX framework scales down cleanly because it was designed around architectural correctness, not throughput.
 

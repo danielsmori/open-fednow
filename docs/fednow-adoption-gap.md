@@ -73,7 +73,7 @@ OpenFedNow resolves all four incompatibilities through its five-layer architectu
 | Protocol | Anti-Corruption Layer: ISO 20022 ↔ vendor-specific translation per adapter |
 | Concurrency | Processing Engine: circuit breakers, idempotency, distributed saga orchestration |
 
-The Apache 2.0 license ensures that any institution — regardless of size — can deploy the framework without licensing fees. The 85/15 principle ensures that building three adapters (Fiserv, FIS, Jack Henry) covers the majority of the market.
+The Apache 2.0 license ensures that any institution — regardless of size — can deploy the framework without licensing fees. The 87/13 principle ensures that building three adapters (Fiserv, FIS, Jack Henry) covers the majority of the market.
 
 ---
 
