@@ -130,6 +130,18 @@ openfednow:
   gateway:
     response-timeout-seconds: 18   # must be < FedNow's / TCH's 20-second window
 
+  # Payment saga settings
+  saga:
+    # Sagas in a forward-progress state (INITIATED, FUNDS_RESERVED, CORE_SUBMITTED)
+    # for longer than this window are treated as stuck and compensated
+    # automatically with ISO 20022 reason code XPIR (Expired).
+    # Default 30s comfortably exceeds the 20s FedNow SLA window so a normally
+    # completing saga is never mistaken for stuck.
+    timeout-seconds: ${SAGA_TIMEOUT_SECONDS:30}
+    # Frequency of the timeout sweep. Smaller values surface stuck sagas sooner
+    # but increase database load; default 10s is a reasonable balance.
+    timeout-check-interval-seconds: ${SAGA_TIMEOUT_CHECK_INTERVAL_SECONDS:10}
+
   # Shadow Ledger settings
   shadow-ledger:
     idempotency-ttl-hours: 48

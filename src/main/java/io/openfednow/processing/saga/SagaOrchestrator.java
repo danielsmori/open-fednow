@@ -89,6 +89,42 @@ public class SagaOrchestrator {
     }
 
     /**
+     * Returns saga IDs that are still in a forward-progress state and have been
+     * running longer than the supplied timeout window.
+     *
+     * <p>States considered <em>timed out</em> are {@code INITIATED},
+     * {@code FUNDS_RESERVED}, and {@code CORE_SUBMITTED}. The terminal states
+     * ({@code COMPLETED}, {@code FAILED}) are excluded as expected;
+     * {@code COMPENSATING} is excluded because compensation is already in
+     * progress; {@code FEDNOW_CONFIRMED} is excluded because settlement was
+     * confirmed and the only remaining work is the bookkeeping transition to
+     * {@code COMPLETED} (handled by {@code SagaRecoveryService} on restart).
+     *
+     * <p>Filtered against {@code created_at}, matching the timeout semantics
+     * called out in issue #37 — "a saga that stalls indefinitely". Backed by
+     * {@code idx_saga_state} so cost scales with in-flight sagas, not table size.
+     *
+     * @param timeoutSeconds how long a saga may stay in a forward-progress state
+     *                       before it is treated as stuck. Must be positive.
+     */
+    public java.util.List<String> findTimedOutSagaIds(int timeoutSeconds) {
+        if (timeoutSeconds <= 0) {
+            throw new IllegalArgumentException("timeoutSeconds must be positive");
+        }
+        java.sql.Timestamp threshold = java.sql.Timestamp.from(
+                java.time.Instant.now().minusSeconds(timeoutSeconds));
+        return jdbc.queryForList(
+                """
+                SELECT saga_id FROM saga_state
+                WHERE state IN ('INITIATED', 'FUNDS_RESERVED', 'CORE_SUBMITTED')
+                  AND created_at < ?
+                ORDER BY created_at ASC
+                """,
+                String.class,
+                threshold);
+    }
+
+    /**
      * Returns all sagas that have not yet reached a terminal state, ordered oldest first.
      *
      * <p>Used by admin endpoints and operational dashboards to surface in-flight
