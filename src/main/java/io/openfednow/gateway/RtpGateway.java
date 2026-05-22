@@ -140,7 +140,7 @@ public class RtpGateway {
             }
         }
 
-        ResponseEntity<Pacs002Message> routerResponse = messageRouter.routeInbound(message);
+        ResponseEntity<Pacs002Message> routerResponse = messageRouter.routeInbound(message, Rail.RTP);
 
         // When the inbound message was XML (production RTP format), return the
         // pacs.002 status report as canonical ISO 20022 XML. For sandbox/JSON

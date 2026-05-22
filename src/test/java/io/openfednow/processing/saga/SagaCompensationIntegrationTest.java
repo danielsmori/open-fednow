@@ -1,5 +1,6 @@
 package io.openfednow.processing.saga;
 
+import io.openfednow.gateway.Rail;
 import io.openfednow.infrastructure.AbstractInfrastructureIntegrationTest;
 import io.openfednow.iso20022.Pacs008Message;
 import io.openfednow.shadowledger.ShadowLedger;
@@ -47,7 +48,7 @@ class SagaCompensationIntegrationTest extends AbstractInfrastructureIntegrationT
 
     @Test
     void sagaInitiateCreatesDbRecord() {
-        PaymentSaga saga = orchestrator.initiate(message("TXN-INIT-001", "E2E-INIT-001"));
+        PaymentSaga saga = orchestrator.initiate(message("TXN-INIT-001", "E2E-INIT-001"), Rail.FEDNOW);
 
         String state = jdbc.queryForObject(
                 "SELECT state FROM saga_state WHERE saga_id = ?",
@@ -56,8 +57,41 @@ class SagaCompensationIntegrationTest extends AbstractInfrastructureIntegrationT
     }
 
     @Test
+    void sagaInitiatePersistsSourceRailFedNow() {
+        PaymentSaga saga = orchestrator.initiate(
+                message("TXN-RAIL-FED", "E2E-RAIL-FED"), Rail.FEDNOW);
+
+        String rail = jdbc.queryForObject(
+                "SELECT source_rail FROM saga_state WHERE saga_id = ?",
+                String.class, saga.getSagaId());
+        assertThat(rail).isEqualTo("FEDNOW");
+        assertThat(saga.getSourceRail()).isEqualTo(Rail.FEDNOW);
+    }
+
+    @Test
+    void sagaInitiatePersistsSourceRailRtp() {
+        PaymentSaga saga = orchestrator.initiate(
+                message("TXN-RAIL-RTP", "E2E-RAIL-RTP"), Rail.RTP);
+
+        String rail = jdbc.queryForObject(
+                "SELECT source_rail FROM saga_state WHERE saga_id = ?",
+                String.class, saga.getSagaId());
+        assertThat(rail).isEqualTo("RTP");
+        assertThat(saga.getSourceRail()).isEqualTo(Rail.RTP);
+    }
+
+    @Test
+    void resumedSagaCarriesSourceRail() {
+        PaymentSaga original = orchestrator.initiate(
+                message("TXN-RAIL-RESUME", "E2E-RAIL-RESUME"), Rail.RTP);
+
+        PaymentSaga resumed = orchestrator.resume(original.getSagaId());
+        assertThat(resumed.getSourceRail()).isEqualTo(Rail.RTP);
+    }
+
+    @Test
     void sagaInitiateRecordsTransactionAndEndToEndIds() {
-        PaymentSaga saga = orchestrator.initiate(message("TXN-INIT-002", "E2E-INIT-002"));
+        PaymentSaga saga = orchestrator.initiate(message("TXN-INIT-002", "E2E-INIT-002"), Rail.FEDNOW);
 
         String txnId = jdbc.queryForObject(
                 "SELECT transaction_id FROM saga_state WHERE saga_id = ?",
@@ -73,7 +107,7 @@ class SagaCompensationIntegrationTest extends AbstractInfrastructureIntegrationT
 
     @Test
     void sagaCanBeResumedFromDb() {
-        PaymentSaga original = orchestrator.initiate(message("TXN-RESUME-001", "E2E-RESUME-001"));
+        PaymentSaga original = orchestrator.initiate(message("TXN-RESUME-001", "E2E-RESUME-001"), Rail.FEDNOW);
         orchestrator.advance(original, PaymentSaga.SagaState.FUNDS_RESERVED);
 
         PaymentSaga resumed = orchestrator.resume(original.getSagaId());
@@ -85,7 +119,7 @@ class SagaCompensationIntegrationTest extends AbstractInfrastructureIntegrationT
 
     @Test
     void resumedSagaCanContinueToCompletion() {
-        PaymentSaga saga = orchestrator.initiate(message("TXN-COMPLETE-001", "E2E-COMPLETE-001"));
+        PaymentSaga saga = orchestrator.initiate(message("TXN-COMPLETE-001", "E2E-COMPLETE-001"), Rail.FEDNOW);
         orchestrator.advance(saga, PaymentSaga.SagaState.FUNDS_RESERVED);
         orchestrator.advance(saga, PaymentSaga.SagaState.CORE_SUBMITTED);
 
@@ -107,7 +141,7 @@ class SagaCompensationIntegrationTest extends AbstractInfrastructureIntegrationT
     @Test
     void compensationReversesDebitAndReachesFailedState() {
         redis.opsForValue().set("balance:ACC-COMP-001", "10000"); // $100.00
-        PaymentSaga saga = orchestrator.initiate(message("TXN-COMP-001", "E2E-COMP-001"));
+        PaymentSaga saga = orchestrator.initiate(message("TXN-COMP-001", "E2E-COMP-001"), Rail.FEDNOW);
         shadowLedger.applyDebit("ACC-COMP-001", new BigDecimal("100.00"), "TXN-COMP-001");
         orchestrator.advance(saga, PaymentSaga.SagaState.FUNDS_RESERVED);
 
@@ -127,7 +161,7 @@ class SagaCompensationIntegrationTest extends AbstractInfrastructureIntegrationT
     @Test
     void compensationRecordsReturnReasonCodeInDb() {
         redis.opsForValue().set("balance:ACC-COMP-002", "5000"); // $50.00
-        PaymentSaga saga = orchestrator.initiate(message("TXN-COMP-002", "E2E-COMP-002"));
+        PaymentSaga saga = orchestrator.initiate(message("TXN-COMP-002", "E2E-COMP-002"), Rail.FEDNOW);
         shadowLedger.applyDebit("ACC-COMP-002", new BigDecimal("50.00"), "TXN-COMP-002");
         orchestrator.advance(saga, PaymentSaga.SagaState.FUNDS_RESERVED);
 
@@ -143,7 +177,7 @@ class SagaCompensationIntegrationTest extends AbstractInfrastructureIntegrationT
 
     @Test
     void compensationFromInitiatedDoesNotThrow() {
-        PaymentSaga saga = orchestrator.initiate(message("TXN-NOFUND-001", "E2E-NOFUND-001"));
+        PaymentSaga saga = orchestrator.initiate(message("TXN-NOFUND-001", "E2E-NOFUND-001"), Rail.FEDNOW);
 
         assertThatCode(() -> orchestrator.compensate(saga.getSagaId(), "NARR"))
                 .doesNotThrowAnyException();
@@ -151,7 +185,7 @@ class SagaCompensationIntegrationTest extends AbstractInfrastructureIntegrationT
 
     @Test
     void compensationFromInitiatedReachesFailedWithoutReversal() {
-        PaymentSaga saga = orchestrator.initiate(message("TXN-NOFUND-002", "E2E-NOFUND-002"));
+        PaymentSaga saga = orchestrator.initiate(message("TXN-NOFUND-002", "E2E-NOFUND-002"), Rail.FEDNOW);
         orchestrator.compensate(saga.getSagaId(), "NARR");
 
         String state = jdbc.queryForObject(
@@ -172,7 +206,7 @@ class SagaCompensationIntegrationTest extends AbstractInfrastructureIntegrationT
     @Test
     void reversalAppearsInAuditLog() {
         redis.opsForValue().set("balance:ACC-AUDIT-001", "20000"); // $200.00
-        PaymentSaga saga = orchestrator.initiate(message("TXN-AUDIT-001", "E2E-AUDIT-001"));
+        PaymentSaga saga = orchestrator.initiate(message("TXN-AUDIT-001", "E2E-AUDIT-001"), Rail.FEDNOW);
         shadowLedger.applyDebit("ACC-AUDIT-001", new BigDecimal("200.00"), "TXN-AUDIT-001");
         orchestrator.advance(saga, PaymentSaga.SagaState.FUNDS_RESERVED);
 
@@ -194,7 +228,7 @@ class SagaCompensationIntegrationTest extends AbstractInfrastructureIntegrationT
 
     @Test
     void compensatingAlreadyFailedSagaIsNoOp() {
-        PaymentSaga saga = orchestrator.initiate(message("TXN-GUARD-001", "E2E-GUARD-001"));
+        PaymentSaga saga = orchestrator.initiate(message("TXN-GUARD-001", "E2E-GUARD-001"), Rail.FEDNOW);
         orchestrator.compensate(saga.getSagaId(), "NARR"); // → FAILED
 
         // Second compensate must not throw and must leave state unchanged

@@ -68,13 +68,13 @@ class FlywayMigrationTest {
     }
 
     @Test
-    void exactlyFourMigrationsArePresent() {
+    void exactlyFiveMigrationsArePresent() {
         Flyway flyway = Flyway.configure()
                 .dataSource(dataSource)
                 .locations("classpath:db/migration")
                 .load();
 
-        assertThat(flyway.info().all()).hasSize(4);
+        assertThat(flyway.info().all()).hasSize(5);
     }
 
     // --- V1: shadow_ledger_transaction_log ---
@@ -142,6 +142,54 @@ class FlywayMigrationTest {
         }
 
         assertThat(rowCount("saga_state")).isEqualTo(before + states.length);
+    }
+
+    // --- V5: saga_state source_rail column ---
+
+    @Test
+    void sagaStateAcceptsBothFedNowAndRtpSourceRails() {
+        int before = rowCount("saga_state");
+
+        jdbc.update("""
+                INSERT INTO saga_state (saga_id, transaction_id, end_to_end_id, state, source_rail)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                "SAGA-RAIL-FED", "TXN-RAIL-FED", "E2E-RAIL-FED", "INITIATED", "FEDNOW");
+        jdbc.update("""
+                INSERT INTO saga_state (saga_id, transaction_id, end_to_end_id, state, source_rail)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                "SAGA-RAIL-RTP", "TXN-RAIL-RTP", "E2E-RAIL-RTP", "INITIATED", "RTP");
+
+        assertThat(rowCount("saga_state")).isEqualTo(before + 2);
+    }
+
+    @Test
+    void sagaStateRejectsInvalidSourceRail() {
+        try {
+            jdbc.update("""
+                    INSERT INTO saga_state (saga_id, transaction_id, end_to_end_id, state, source_rail)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    "SAGA-RAIL-BAD", "TXN-RAIL-BAD", "E2E-RAIL-BAD", "INITIATED", "ACH");
+            assertThat(false).as("Expected constraint violation for invalid source_rail").isTrue();
+        } catch (Exception e) {
+            assertThat(e.getMessage()).containsIgnoringCase("constraint");
+        }
+    }
+
+    @Test
+    void sagaStateDefaultsSourceRailToFedNowWhenOmitted() {
+        jdbc.update("""
+                INSERT INTO saga_state (saga_id, transaction_id, end_to_end_id, state)
+                VALUES (?, ?, ?, ?)
+                """,
+                "SAGA-RAIL-DEFAULT", "TXN-RAIL-DEFAULT", "E2E-RAIL-DEFAULT", "INITIATED");
+
+        String rail = jdbc.queryForObject(
+                "SELECT source_rail FROM saga_state WHERE saga_id = ?",
+                String.class, "SAGA-RAIL-DEFAULT");
+        assertThat(rail).isEqualTo("FEDNOW");
     }
 
     @Test

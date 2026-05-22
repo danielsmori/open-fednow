@@ -1,5 +1,7 @@
 package io.openfednow.processing.saga;
 
+import io.openfednow.gateway.Rail;
+
 /**
  * Layer 3 — Payment Saga
  *
@@ -21,6 +23,10 @@ package io.openfednow.processing.saga;
  *
  * <p>State is persisted to {@code saga_state} by {@link SagaOrchestrator};
  * this class is a pure state machine with no infrastructure dependencies.
+ *
+ * <p>Each saga also records the {@link Rail} the originating pacs.008 arrived on,
+ * so that asynchronous response paths (post-bridge ACSC notifications,
+ * compensation-time pacs.004 returns) can dispatch through the correct gateway.
  */
 public class PaymentSaga {
 
@@ -36,19 +42,22 @@ public class PaymentSaga {
 
     private final String sagaId;
     private final String transactionId;
+    private final Rail sourceRail;
     private SagaState state;
     private String failureReason;
 
-    public PaymentSaga(String sagaId, String transactionId) {
+    public PaymentSaga(String sagaId, String transactionId, Rail sourceRail) {
         this.sagaId = sagaId;
         this.transactionId = transactionId;
+        this.sourceRail = sourceRail;
         this.state = SagaState.INITIATED;
     }
 
     /** Package-private constructor used by {@link SagaOrchestrator} to restore state from DB. */
-    PaymentSaga(String sagaId, String transactionId, SagaState restoredState) {
+    PaymentSaga(String sagaId, String transactionId, Rail sourceRail, SagaState restoredState) {
         this.sagaId = sagaId;
         this.transactionId = transactionId;
+        this.sourceRail = sourceRail;
         this.state = restoredState;
     }
 
@@ -87,6 +96,7 @@ public class PaymentSaga {
 
     public String getSagaId()       { return sagaId; }
     public String getTransactionId() { return transactionId; }
+    public Rail getSourceRail()     { return sourceRail; }
     public SagaState getState()     { return state; }
     public String getFailureReason() { return failureReason; }
 

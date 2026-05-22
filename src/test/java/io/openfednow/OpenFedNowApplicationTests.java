@@ -70,7 +70,8 @@ class OpenFedNowApplicationTests {
     @Test
     void paymentSagaInitializesWithCorrectState() {
         io.openfednow.processing.saga.PaymentSaga saga =
-                new io.openfednow.processing.saga.PaymentSaga("SAGA-001", "TXN-001");
+                new io.openfednow.processing.saga.PaymentSaga(
+                        "SAGA-001", "TXN-001", io.openfednow.gateway.Rail.FEDNOW);
 
         assertThat(saga.getSagaId()).isEqualTo("SAGA-001");
         assertThat(saga.getTransactionId()).isEqualTo("TXN-001");

@@ -1,5 +1,6 @@
 package io.openfednow.processing.saga;
 
+import io.openfednow.gateway.Rail;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -16,7 +17,7 @@ class PaymentSagaAdvanceTest {
 
     @Test
     void happyPathForwardProgression() {
-        PaymentSaga saga = new PaymentSaga("SAGA-001", "TXN-001");
+        PaymentSaga saga = new PaymentSaga("SAGA-001", "TXN-001", Rail.FEDNOW);
 
         saga.advance(PaymentSaga.SagaState.FUNDS_RESERVED);
         assertThat(saga.getState()).isEqualTo(PaymentSaga.SagaState.FUNDS_RESERVED);
@@ -35,7 +36,7 @@ class PaymentSagaAdvanceTest {
 
     @Test
     void compensationFromInitiated() {
-        PaymentSaga saga = new PaymentSaga("SAGA-002", "TXN-002");
+        PaymentSaga saga = new PaymentSaga("SAGA-002", "TXN-002", Rail.FEDNOW);
         saga.compensate(PaymentSaga.SagaState.INITIATED, "AM04");
 
         assertThat(saga.getState()).isEqualTo(PaymentSaga.SagaState.COMPENSATING);
@@ -44,7 +45,7 @@ class PaymentSagaAdvanceTest {
 
     @Test
     void compensationFromFundsReserved() {
-        PaymentSaga saga = new PaymentSaga("SAGA-003", "TXN-003");
+        PaymentSaga saga = new PaymentSaga("SAGA-003", "TXN-003", Rail.FEDNOW);
         saga.advance(PaymentSaga.SagaState.FUNDS_RESERVED);
         saga.compensate(PaymentSaga.SagaState.FUNDS_RESERVED, "AC04");
 
@@ -54,7 +55,7 @@ class PaymentSagaAdvanceTest {
 
     @Test
     void compensatingCanAdvanceToFailed() {
-        PaymentSaga saga = new PaymentSaga("SAGA-004", "TXN-004");
+        PaymentSaga saga = new PaymentSaga("SAGA-004", "TXN-004", Rail.FEDNOW);
         saga.compensate(PaymentSaga.SagaState.INITIATED, "NARR");
         saga.advance(PaymentSaga.SagaState.FAILED);
 
@@ -65,7 +66,7 @@ class PaymentSagaAdvanceTest {
 
     @Test
     void skipStateIsRejected() {
-        PaymentSaga saga = new PaymentSaga("SAGA-005", "TXN-005");
+        PaymentSaga saga = new PaymentSaga("SAGA-005", "TXN-005", Rail.FEDNOW);
         // Cannot skip from INITIATED directly to CORE_SUBMITTED
         assertThatThrownBy(() -> saga.advance(PaymentSaga.SagaState.CORE_SUBMITTED))
                 .isInstanceOf(IllegalStateException.class)
@@ -75,7 +76,7 @@ class PaymentSagaAdvanceTest {
 
     @Test
     void completedIsTerminalAndCannotAdvance() {
-        PaymentSaga saga = new PaymentSaga("SAGA-006", "TXN-006");
+        PaymentSaga saga = new PaymentSaga("SAGA-006", "TXN-006", Rail.FEDNOW);
         saga.advance(PaymentSaga.SagaState.FUNDS_RESERVED);
         saga.advance(PaymentSaga.SagaState.CORE_SUBMITTED);
         saga.advance(PaymentSaga.SagaState.FEDNOW_CONFIRMED);
@@ -87,7 +88,7 @@ class PaymentSagaAdvanceTest {
 
     @Test
     void failedIsTerminalAndCannotAdvance() {
-        PaymentSaga saga = new PaymentSaga("SAGA-007", "TXN-007");
+        PaymentSaga saga = new PaymentSaga("SAGA-007", "TXN-007", Rail.FEDNOW);
         saga.compensate(PaymentSaga.SagaState.INITIATED, "NARR");
         saga.advance(PaymentSaga.SagaState.FAILED);
 
@@ -97,7 +98,7 @@ class PaymentSagaAdvanceTest {
 
     @Test
     void cannotAdvanceFromInitiatedToCompleted() {
-        PaymentSaga saga = new PaymentSaga("SAGA-008", "TXN-008");
+        PaymentSaga saga = new PaymentSaga("SAGA-008", "TXN-008", Rail.FEDNOW);
         assertThatThrownBy(() -> saga.advance(PaymentSaga.SagaState.COMPLETED))
                 .isInstanceOf(IllegalStateException.class);
     }
@@ -106,7 +107,7 @@ class PaymentSagaAdvanceTest {
 
     @Test
     void restoredSagaHasCorrectState() {
-        PaymentSaga saga = new PaymentSaga("SAGA-009", "TXN-009",
+        PaymentSaga saga = new PaymentSaga("SAGA-009", "TXN-009", Rail.FEDNOW,
                 PaymentSaga.SagaState.CORE_SUBMITTED);
 
         assertThat(saga.getState()).isEqualTo(PaymentSaga.SagaState.CORE_SUBMITTED);
@@ -115,7 +116,7 @@ class PaymentSagaAdvanceTest {
 
     @Test
     void restoredSagaCanContinueForward() {
-        PaymentSaga saga = new PaymentSaga("SAGA-010", "TXN-010",
+        PaymentSaga saga = new PaymentSaga("SAGA-010", "TXN-010", Rail.FEDNOW,
                 PaymentSaga.SagaState.CORE_SUBMITTED);
 
         saga.advance(PaymentSaga.SagaState.FEDNOW_CONFIRMED);

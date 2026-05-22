@@ -52,6 +52,9 @@ public class CorrelationFilter extends OncePerRequestFilter {
     /** MDC key for the ISO 20022 TransactionId (set by MessageRouter, not this filter). */
     public static final String MDC_TRANSACTION_ID = "transactionId";
 
+    /** MDC key for the inbound source rail (FEDNOW / RTP), set by MessageRouter. */
+    public static final String MDC_SOURCE_RAIL = "sourceRail";
+
     /** Request header from which the EndToEndId is read. */
     public static final String HEADER_END_TO_END_ID = "X-End-To-End-Id";
 

@@ -39,6 +39,11 @@ import java.util.Optional;
  *   Bridge mode (core offline):
  *   FedNow → FedNowGateway → MessageRouter → AvailabilityBridge (queue) → ACSP
  * </pre>
+ *
+ * <p>The router accepts inbound messages from both the FedNow and RTP gateways
+ * and records the source {@link Rail} on the saga, so that out-of-band
+ * responses (reconciliation-time notifications, compensation-time pacs.004
+ * returns) can be dispatched through the correct gateway. See ADR-0005.
  */
 @Component
 public class MessageRouter {
@@ -76,8 +81,8 @@ public class MessageRouter {
     }
 
     /**
-     * Routes an inbound pacs.008 credit transfer from FedNow to the
-     * Anti-Corruption Layer for processing against the core banking system.
+     * Routes an inbound pacs.008 credit transfer from a payment rail (FedNow or RTP)
+     * to the Anti-Corruption Layer for processing against the core banking system.
      *
      * <p>Processing order:
      * <ol>
@@ -90,16 +95,20 @@ public class MessageRouter {
      *   <li>Record the outcome in the idempotency service</li>
      * </ol>
      *
-     * @param message validated pacs.008.001.08 message from FedNow
+     * @param message validated pacs.008.001.08 message
+     * @param sourceRail the rail (FedNow or RTP) the message arrived on; persisted on
+     *                   the saga so asynchronous responses dispatch through the same rail
      * @return pacs.002 status report (ACSC = accepted, RJCT = rejected, ACSP = provisional)
      */
-    public ResponseEntity<Pacs002Message> routeInbound(Pacs008Message message) {
+    public ResponseEntity<Pacs002Message> routeInbound(Pacs008Message message, Rail sourceRail) {
         MDC.put(CorrelationFilter.MDC_END_TO_END_ID, message.getEndToEndId());
         MDC.put(CorrelationFilter.MDC_TRANSACTION_ID, message.getTransactionId());
+        MDC.put(CorrelationFilter.MDC_SOURCE_RAIL, sourceRail.name());
 
-        log.info("Inbound credit transfer received amount={} currency={}",
+        log.info("Inbound credit transfer received amount={} currency={} sourceRail={}",
                 message.getInterbankSettlementAmount(),
-                message.getInterbankSettlementCurrency());
+                message.getInterbankSettlementCurrency(),
+                sourceRail);
 
         // Step 1 — idempotency check
         Optional<Pacs002Message> cached = idempotencyService.checkDuplicate(message.getEndToEndId());
@@ -109,7 +118,7 @@ public class MessageRouter {
         }
 
         // Step 2 — initiate saga (durable record of this payment's lifecycle)
-        PaymentSaga saga = sagaOrchestrator.initiate(message);
+        PaymentSaga saga = sagaOrchestrator.initiate(message, sourceRail);
 
         Pacs002Message response;
 
@@ -238,8 +247,10 @@ public class MessageRouter {
             return ResponseEntity.ok(insufficientFunds);
         }
 
-        // Step 3 — initiate saga
-        PaymentSaga saga = sagaOrchestrator.initiate(message);
+        // Step 3 — initiate saga. routeOutbound is only invoked by FedNowGateway today;
+        // RTP outbound goes straight through RtpClient. If outbound routing is ever extended
+        // to RTP, this constant should be threaded through as a parameter.
+        PaymentSaga saga = sagaOrchestrator.initiate(message, Rail.FEDNOW);
 
         // Step 4 — reserve funds: debit debtor account in Shadow Ledger
         shadowLedger.applyDebit(

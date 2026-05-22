@@ -16,6 +16,7 @@ import java.time.OffsetDateTime;
 import static io.openfednow.iso20022.Pacs002Message.TransactionStatus.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
@@ -76,21 +77,21 @@ class RtpGatewayTest {
     @Test
     void receiveTransfer_json_routesInboundToMessageRouter() throws Exception {
         Pacs002Message acsc = Pacs002Message.accepted("E2E-RTP-001", "TXN-RTP-001");
-        when(messageRouter.routeInbound(any())).thenReturn(ResponseEntity.ok(acsc));
+        when(messageRouter.routeInbound(any(), any())).thenReturn(ResponseEntity.ok(acsc));
 
         ResponseEntity<?> actual = gateway.receiveTransfer(
                 toJson(buildMessage("E2E-RTP-001", "TXN-RTP-001", "250.00")),
                 MediaType.APPLICATION_JSON_VALUE);
 
         assertThat(actual.getStatusCode()).isEqualTo(HttpStatus.OK);
-        verify(messageRouter).routeInbound(any());
+        verify(messageRouter).routeInbound(any(), eq(io.openfednow.gateway.Rail.RTP));
     }
 
     @Test
     void receiveTransfer_json_returnsMessageRouterResponseUnmodified() throws Exception {
         Pacs002Message rjct = Pacs002Message.rejected(
                 "E2E-RTP-002", "TXN-RTP-002", "AM04", "Insufficient funds");
-        when(messageRouter.routeInbound(any())).thenReturn(ResponseEntity.ok(rjct));
+        when(messageRouter.routeInbound(any(), any())).thenReturn(ResponseEntity.ok(rjct));
 
         ResponseEntity<?> actual = gateway.receiveTransfer(
                 toJson(buildMessage("E2E-RTP-002", "TXN-RTP-002", "500.00")),
@@ -106,7 +107,7 @@ class RtpGatewayTest {
     @Test
     void receiveTransfer_xml_invokesTchCertificateValidation() {
         Pacs002Message acsc = Pacs002Message.accepted("E2E-RTP-XML-001", "TXN-RTP-XML-001");
-        when(messageRouter.routeInbound(any())).thenReturn(ResponseEntity.ok(acsc));
+        when(messageRouter.routeInbound(any(), any())).thenReturn(ResponseEntity.ok(acsc));
 
         gateway.receiveTransfer(buildPacs008Xml("E2E-RTP-XML-001"), MediaType.APPLICATION_XML_VALUE);
 
@@ -116,7 +117,7 @@ class RtpGatewayTest {
     @Test
     void receiveTransfer_xml_returnsXmlContentType() {
         Pacs002Message acsc = Pacs002Message.accepted("E2E-XML-002", "TXN-XML-002");
-        when(messageRouter.routeInbound(any())).thenReturn(ResponseEntity.ok(acsc));
+        when(messageRouter.routeInbound(any(), any())).thenReturn(ResponseEntity.ok(acsc));
 
         ResponseEntity<?> response = gateway.receiveTransfer(
                 buildPacs008Xml("E2E-XML-002"), MediaType.APPLICATION_XML_VALUE);
@@ -129,7 +130,7 @@ class RtpGatewayTest {
 
     @Test
     void receiveTransfer_json_invokesTchCertificateValidation() throws Exception {
-        when(messageRouter.routeInbound(any())).thenReturn(
+        when(messageRouter.routeInbound(any(), any())).thenReturn(
                 ResponseEntity.ok(Pacs002Message.accepted("E2E-CERT-001", "TXN-CERT-001")));
 
         gateway.receiveTransfer(

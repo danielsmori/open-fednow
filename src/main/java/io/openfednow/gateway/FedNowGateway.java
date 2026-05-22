@@ -82,7 +82,7 @@ public class FedNowGateway {
     })
     public ResponseEntity<Pacs002Message> receiveTransfer(@Valid @RequestBody Pacs008Message message) {
         certificateManager.validateClientCertificate();
-        return messageRouter.routeInbound(message);
+        return messageRouter.routeInbound(message, Rail.FEDNOW);
     }
 
     /**

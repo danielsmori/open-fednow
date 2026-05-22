@@ -119,7 +119,7 @@ class KafkaEventBusIntegrationTest extends AbstractInfrastructureIntegrationTest
 
     @Test
     void inboundCredit_acsc_publishesInboundCreditAppliedEvent() {
-        messageRouter.routeInbound(inbound("TXN-KFK-IN-001", "E2E-KFK-IN-001", "250.00"));
+        messageRouter.routeInbound(inbound("TXN-KFK-IN-001", "E2E-KFK-IN-001", "250.00"), io.openfednow.gateway.Rail.FEDNOW);
 
         List<ConsumerRecord<String, String>> records = poll();
 
@@ -134,7 +134,7 @@ class KafkaEventBusIntegrationTest extends AbstractInfrastructureIntegrationTest
     void inboundCredit_rjct_publishesInboundPaymentRejectedEvent() {
         // RJCT_FUNDS_ prefix causes SandboxAdapter to return REJECTED with AM04
         messageRouter.routeInbound(inbound("TXN-KFK-IN-002", "E2E-KFK-IN-002-RJCT",
-                "100.00", "RJCT_FUNDS_ACC-001"));
+                "100.00", "RJCT_FUNDS_ACC-001"), io.openfednow.gateway.Rail.FEDNOW);
 
         List<ConsumerRecord<String, String>> records = poll();
 
@@ -183,7 +183,7 @@ class KafkaEventBusIntegrationTest extends AbstractInfrastructureIntegrationTest
 
     @Test
     void publishedEvent_isKeyedByTransactionId() {
-        messageRouter.routeInbound(inbound("TXN-KFK-KEY-001", "E2E-KFK-KEY-001", "50.00"));
+        messageRouter.routeInbound(inbound("TXN-KFK-KEY-001", "E2E-KFK-KEY-001", "50.00"), io.openfednow.gateway.Rail.FEDNOW);
 
         List<ConsumerRecord<String, String>> records = poll();
 

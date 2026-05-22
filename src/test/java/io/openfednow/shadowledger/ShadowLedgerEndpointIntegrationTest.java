@@ -55,7 +55,7 @@ class ShadowLedgerEndpointIntegrationTest extends AbstractInfrastructureIntegrat
     void inboundPayment_creditsCreditorAccount() {
         Pacs008Message message = message("TXN-SL-001", "E2E-SL-001", "250.00", "ACC-CRED-001");
 
-        messageRouter.routeInbound(message);
+        messageRouter.routeInbound(message, io.openfednow.gateway.Rail.FEDNOW);
 
         BigDecimal balance = shadowLedger.getAvailableBalance("ACC-CRED-001");
         assertThat(balance).isEqualByComparingTo("250.00");
@@ -65,7 +65,7 @@ class ShadowLedgerEndpointIntegrationTest extends AbstractInfrastructureIntegrat
     void inboundPayment_writesAuditLogEntry() {
         Pacs008Message message = message("TXN-SL-002", "E2E-SL-002", "100.00", "ACC-AUDIT-001");
 
-        messageRouter.routeInbound(message);
+        messageRouter.routeInbound(message, io.openfednow.gateway.Rail.FEDNOW);
 
         Integer count = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM shadow_ledger_transaction_log " +
@@ -78,7 +78,7 @@ class ShadowLedgerEndpointIntegrationTest extends AbstractInfrastructureIntegrat
     void inboundPayment_auditLogRecordsCorrectAmount() {
         Pacs008Message message = message("TXN-SL-003", "E2E-SL-003", "750.50", "ACC-AMT-001");
 
-        messageRouter.routeInbound(message);
+        messageRouter.routeInbound(message, io.openfednow.gateway.Rail.FEDNOW);
 
         BigDecimal loggedAmount = jdbc.queryForObject(
                 "SELECT amount FROM shadow_ledger_transaction_log WHERE transaction_id = 'TXN-SL-003'",
@@ -92,8 +92,8 @@ class ShadowLedgerEndpointIntegrationTest extends AbstractInfrastructureIntegrat
     void duplicateInboundPayment_doesNotDoubleCredit() {
         Pacs008Message message = message("TXN-SL-DUP-001", "E2E-SL-DUP-001", "500.00", "ACC-DUP-001");
 
-        messageRouter.routeInbound(message);
-        messageRouter.routeInbound(message); // duplicate — must be suppressed
+        messageRouter.routeInbound(message, io.openfednow.gateway.Rail.FEDNOW);
+        messageRouter.routeInbound(message, io.openfednow.gateway.Rail.FEDNOW); // duplicate — must be suppressed
 
         BigDecimal balance = shadowLedger.getAvailableBalance("ACC-DUP-001");
         assertThat(balance).isEqualByComparingTo("500.00");
@@ -103,8 +103,8 @@ class ShadowLedgerEndpointIntegrationTest extends AbstractInfrastructureIntegrat
     void duplicateInboundPayment_returnsCachedResponse() {
         Pacs008Message message = message("TXN-SL-DUP-002", "E2E-SL-DUP-002", "200.00", "ACC-DUP-002");
 
-        Pacs002Message first = messageRouter.routeInbound(message).getBody();
-        Pacs002Message second = messageRouter.routeInbound(message).getBody();
+        Pacs002Message first = messageRouter.routeInbound(message, io.openfednow.gateway.Rail.FEDNOW).getBody();
+        Pacs002Message second = messageRouter.routeInbound(message, io.openfednow.gateway.Rail.FEDNOW).getBody();
 
         assertThat(second.getTransactionStatus()).isEqualTo(first.getTransactionStatus());
         assertThat(second.getOriginalEndToEndId()).isEqualTo(first.getOriginalEndToEndId());
@@ -117,7 +117,7 @@ class ShadowLedgerEndpointIntegrationTest extends AbstractInfrastructureIntegrat
         Pacs008Message message = message("TXN-SL-RJT-001", "E2E-SL-RJT-001", "250.00",
                 "RJCT_FUNDS_ACC-001");
 
-        Pacs002Message response = messageRouter.routeInbound(message).getBody();
+        Pacs002Message response = messageRouter.routeInbound(message, io.openfednow.gateway.Rail.FEDNOW).getBody();
 
         assertThat(response.getTransactionStatus()).isEqualTo(Pacs002Message.TransactionStatus.RJCT);
         BigDecimal balance = shadowLedger.getAvailableBalance("RJCT_FUNDS_ACC-001");
@@ -129,7 +129,7 @@ class ShadowLedgerEndpointIntegrationTest extends AbstractInfrastructureIntegrat
         Pacs008Message message = message("TXN-SL-RJT-002", "E2E-SL-RJT-002", "100.00",
                 "RJCT_ACCT_ACC-001");
 
-        Pacs002Message response = messageRouter.routeInbound(message).getBody();
+        Pacs002Message response = messageRouter.routeInbound(message, io.openfednow.gateway.Rail.FEDNOW).getBody();
 
         assertThat(response.getRejectReasonCode()).isEqualTo("AC01");
     }
@@ -139,7 +139,7 @@ class ShadowLedgerEndpointIntegrationTest extends AbstractInfrastructureIntegrat
         Pacs008Message message = message("TXN-SL-RJT-003", "E2E-SL-RJT-003", "300.00",
                 "RJCT_CLOSED_ACC-001");
 
-        Pacs002Message response = messageRouter.routeInbound(message).getBody();
+        Pacs002Message response = messageRouter.routeInbound(message, io.openfednow.gateway.Rail.FEDNOW).getBody();
 
         assertThat(response.getTransactionStatus()).isEqualTo(Pacs002Message.TransactionStatus.RJCT);
         assertThat(response.getRejectReasonCode()).isEqualTo("AC04");
@@ -154,7 +154,7 @@ class ShadowLedgerEndpointIntegrationTest extends AbstractInfrastructureIntegrat
         Pacs008Message message = message("TXN-SL-SAGA-001", "E2E-SL-SAGA-001", "150.00",
                 "ACC-SAGA-001");
 
-        messageRouter.routeInbound(message);
+        messageRouter.routeInbound(message, io.openfednow.gateway.Rail.FEDNOW);
 
         String state = jdbc.queryForObject(
                 "SELECT state FROM saga_state WHERE transaction_id = 'TXN-SL-SAGA-001'",
@@ -167,7 +167,7 @@ class ShadowLedgerEndpointIntegrationTest extends AbstractInfrastructureIntegrat
         Pacs008Message message = message("TXN-SL-SAGA-002", "E2E-SL-SAGA-002", "100.00",
                 "RJCT_FUNDS_ACC-FAIL-001");
 
-        messageRouter.routeInbound(message);
+        messageRouter.routeInbound(message, io.openfednow.gateway.Rail.FEDNOW);
 
         String state = jdbc.queryForObject(
                 "SELECT state FROM saga_state WHERE transaction_id = 'TXN-SL-SAGA-002'",
@@ -184,7 +184,7 @@ class ShadowLedgerEndpointIntegrationTest extends AbstractInfrastructureIntegrat
         Pacs008Message message = message("TXN-SL-RECON-001", "E2E-SL-RECON-001", "400.00",
                 "ACC-RECON-001");
 
-        messageRouter.routeInbound(message);
+        messageRouter.routeInbound(message, io.openfednow.gateway.Rail.FEDNOW);
 
         Integer unconfirmed = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM shadow_ledger_transaction_log " +

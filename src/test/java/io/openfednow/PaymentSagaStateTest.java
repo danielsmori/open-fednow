@@ -1,6 +1,7 @@
 package io.openfednow;
 
 import io.openfednow.acl.core.CoreBankingResponse;
+import io.openfednow.gateway.Rail;
 import io.openfednow.iso20022.Pacs002Message;
 import io.openfednow.processing.saga.PaymentSaga;
 import io.openfednow.processing.saga.PaymentSaga.SagaState;
@@ -26,15 +27,23 @@ class PaymentSagaStateTest {
 
     @Test
     void sagaInitializesWithInitiatedState() {
-        PaymentSaga saga = new PaymentSaga("SAGA-001", "TXN-001");
+        PaymentSaga saga = new PaymentSaga("SAGA-001", "TXN-001", Rail.FEDNOW);
         assertThat(saga.getState()).isEqualTo(SagaState.INITIATED);
     }
 
     @Test
     void sagaPreservesIdentifiers() {
-        PaymentSaga saga = new PaymentSaga("SAGA-XYZ", "TXN-ABC");
+        PaymentSaga saga = new PaymentSaga("SAGA-XYZ", "TXN-ABC", Rail.FEDNOW);
         assertThat(saga.getSagaId()).isEqualTo("SAGA-XYZ");
         assertThat(saga.getTransactionId()).isEqualTo("TXN-ABC");
+    }
+
+    @Test
+    void sagaCarriesSourceRail() {
+        PaymentSaga fedNowSaga = new PaymentSaga("SAGA-RAIL-1", "TXN-RAIL-1", Rail.FEDNOW);
+        PaymentSaga rtpSaga = new PaymentSaga("SAGA-RAIL-2", "TXN-RAIL-2", Rail.RTP);
+        assertThat(fedNowSaga.getSourceRail()).isEqualTo(Rail.FEDNOW);
+        assertThat(rtpSaga.getSourceRail()).isEqualTo(Rail.RTP);
     }
 
     @Test

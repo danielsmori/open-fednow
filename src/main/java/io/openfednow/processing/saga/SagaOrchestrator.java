@@ -1,5 +1,6 @@
 package io.openfednow.processing.saga;
 
+import io.openfednow.gateway.Rail;
 import io.openfednow.iso20022.Pacs008Message;
 import io.openfednow.shadowledger.ShadowLedger;
 import org.slf4j.Logger;
@@ -41,24 +42,27 @@ public class SagaOrchestrator {
      * the saga to {@code FUNDS_RESERVED} after reserving funds in the Shadow Ledger.
      *
      * @param message the validated pacs.008 to process
+     * @param sourceRail the rail (FedNow or RTP) the message arrived on; persisted so that
+     *                   asynchronous response paths can dispatch through the correct gateway
      * @return the initiated PaymentSaga instance
      */
-    public PaymentSaga initiate(Pacs008Message message) {
+    public PaymentSaga initiate(Pacs008Message message, Rail sourceRail) {
         String sagaId = "SAGA-" + UUID.randomUUID();
-        PaymentSaga saga = new PaymentSaga(sagaId, message.getTransactionId());
+        PaymentSaga saga = new PaymentSaga(sagaId, message.getTransactionId(), sourceRail);
 
         jdbc.update("""
                 INSERT INTO saga_state
-                    (saga_id, transaction_id, end_to_end_id, state)
-                VALUES (?, ?, ?, ?)
+                    (saga_id, transaction_id, end_to_end_id, state, source_rail)
+                VALUES (?, ?, ?, ?, ?)
                 """,
                 sagaId,
                 message.getTransactionId(),
                 message.getEndToEndId(),
-                saga.getState().name());
+                saga.getState().name(),
+                sourceRail.name());
 
-        log.info("Saga initiated sagaId={} transactionId={} e2e={}",
-                sagaId, message.getTransactionId(), message.getEndToEndId());
+        log.info("Saga initiated sagaId={} transactionId={} e2e={} sourceRail={}",
+                sagaId, message.getTransactionId(), message.getEndToEndId(), sourceRail);
         return saga;
     }
 
@@ -75,10 +79,11 @@ public class SagaOrchestrator {
      */
     public PaymentSaga resume(String sagaId) {
         return jdbc.queryForObject(
-                "SELECT saga_id, transaction_id, state FROM saga_state WHERE saga_id = ?",
+                "SELECT saga_id, transaction_id, source_rail, state FROM saga_state WHERE saga_id = ?",
                 (rs, rowNum) -> new PaymentSaga(
                         rs.getString("saga_id"),
                         rs.getString("transaction_id"),
+                        Rail.valueOf(rs.getString("source_rail")),
                         PaymentSaga.SagaState.valueOf(rs.getString("state"))),
                 sagaId);
     }
