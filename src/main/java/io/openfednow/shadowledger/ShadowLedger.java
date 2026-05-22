@@ -219,6 +219,45 @@ public class ShadowLedger {
     }
 
     /**
+     * Seeds the Shadow Ledger balance only when Redis has no entry for the account.
+     *
+     * <p>Used at application startup by {@link BalanceSeedService} so a fresh deployment
+     * (or one whose Redis cache was evicted / restarted) does not begin life with
+     * every account reading zero. Uses Redis {@code SETNX} semantics so a live
+     * balance is never clobbered by the startup seed.
+     *
+     * @return {@code true} if the value was written, {@code false} if a balance already
+     *         existed for the account
+     */
+    public boolean seedBalanceIfAbsent(String accountId, BigDecimal balance) {
+        long cents = dollarsToCents(balance);
+        Boolean written = redis.opsForValue()
+                .setIfAbsent(BALANCE_KEY_PREFIX + accountId, String.valueOf(cents));
+        boolean seeded = Boolean.TRUE.equals(written);
+        if (seeded) {
+            log.info("Shadow Ledger seeded account={} balance={}", accountId, balance);
+        } else {
+            log.debug("Shadow Ledger seed skipped (already present) account={}", accountId);
+        }
+        return seeded;
+    }
+
+    /**
+     * Unconditionally overwrites the Shadow Ledger balance with the supplied value.
+     *
+     * <p>Used by the on-demand admin seed endpoint, where the operator has
+     * explicitly asked for the balance to be replaced with the core's current view.
+     * Distinct from {@link #reconcile(String, BigDecimal)} in that this is a
+     * one-shot operator action and does not log a RECONCILIATION audit row —
+     * those rows belong to the scheduled reconciliation cycle.
+     */
+    public void seedBalance(String accountId, BigDecimal balance) {
+        long cents = dollarsToCents(balance);
+        redis.opsForValue().set(BALANCE_KEY_PREFIX + accountId, String.valueOf(cents));
+        log.info("Shadow Ledger force-seeded account={} balance={}", accountId, balance);
+    }
+
+    /**
      * Overwrites the Shadow Ledger balance with the core system's confirmed balance.
      * Logs the reconciliation with discrepancy detection. No-ops when balances match.
      */

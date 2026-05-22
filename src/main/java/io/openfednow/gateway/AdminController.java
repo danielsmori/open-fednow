@@ -5,6 +5,8 @@ import io.openfednow.processing.saga.SagaSnapshot;
 import io.openfednow.security.audit.AdminAuditEntry;
 import io.openfednow.security.audit.AdminAuditLogService;
 import io.openfednow.shadowledger.AccountBalanceView;
+import io.openfednow.shadowledger.BalanceSeedReport;
+import io.openfednow.shadowledger.BalanceSeedService;
 import io.openfednow.shadowledger.ReconciliationRunSummary;
 import io.openfednow.shadowledger.ReconciliationService;
 import io.openfednow.shadowledger.ShadowLedger;
@@ -47,15 +49,18 @@ public class AdminController {
     private final SagaOrchestrator sagaOrchestrator;
     private final ShadowLedger shadowLedger;
     private final AdminAuditLogService adminAuditLogService;
+    private final BalanceSeedService balanceSeedService;
 
     public AdminController(ReconciliationService reconciliationService,
                            SagaOrchestrator sagaOrchestrator,
                            ShadowLedger shadowLedger,
-                           AdminAuditLogService adminAuditLogService) {
+                           AdminAuditLogService adminAuditLogService,
+                           BalanceSeedService balanceSeedService) {
         this.reconciliationService = reconciliationService;
         this.sagaOrchestrator = sagaOrchestrator;
         this.shadowLedger = shadowLedger;
         this.adminAuditLogService = adminAuditLogService;
+        this.balanceSeedService = balanceSeedService;
     }
 
     /**
@@ -294,5 +299,33 @@ public class AdminController {
         int boundedLimit = Math.max(1, Math.min(limit, AUDIT_LOG_MAX_LIMIT));
         int boundedOffset = Math.max(0, offset);
         return ResponseEntity.ok(adminAuditLogService.listRecent(boundedLimit, boundedOffset));
+    }
+
+    // ── Shadow Ledger balance seed (issue #39) ────────────────────────────────
+
+    /**
+     * Re-seeds Shadow Ledger balances from the core banking system for every
+     * account listed in {@code openfednow.shadow-ledger.seed-accounts}.
+     *
+     * <p>Unlike the startup seed, this endpoint <em>overwrites</em> existing
+     * balances. The operator is explicitly asking for the Shadow Ledger to be
+     * resynchronized with the core's current view — typical after a known
+     * discrepancy, a Redis cluster failover, or initial post-deployment setup.
+     */
+    @PostMapping("/shadow-ledger/seed")
+    @Operation(
+        summary = "Re-seed Shadow Ledger balances from the core",
+        description = """
+            Iterates the configured seed-account list, queries the core banking \
+            adapter for each account's current balance, and writes the result \
+            unconditionally to the Shadow Ledger. Returns a BalanceSeedReport \
+            with per-account outcomes (SEEDED / SKIPPED / FAILED) so the \
+            operator can confirm exactly which accounts were resynchronized."""
+    )
+    @ApiResponse(responseCode = "200", description = "Per-account seed outcomes",
+        content = @Content(mediaType = "application/json",
+                           schema = @Schema(implementation = BalanceSeedReport.class)))
+    public ResponseEntity<BalanceSeedReport> seedShadowLedger() {
+        return ResponseEntity.ok(balanceSeedService.seedAllConfigured());
     }
 }

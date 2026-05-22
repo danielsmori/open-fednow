@@ -134,6 +134,12 @@ openfednow:
   shadow-ledger:
     idempotency-ttl-hours: 48
     reconciliation-poll-interval-seconds: 30
+    # Comma-separated account IDs to seed from the core banking system on
+    # startup and via POST /admin/shadow-ledger/seed. Empty by default — a
+    # fresh deployment performs no seeding until this is configured. Startup
+    # seed uses SETNX semantics (never clobbers a live balance); the admin
+    # endpoint overwrites unconditionally.
+    seed-accounts: ${SHADOW_LEDGER_SEED_ACCOUNTS:}
 
   # TLS / Certificate settings
   # Fed PKI (FedNow rail) and TCH PKI (RTP rail) use separate certificate authorities.

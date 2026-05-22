@@ -9,6 +9,8 @@ import io.openfednow.security.audit.AdminAuditEntry;
 import io.openfednow.security.audit.AdminAuditLogService;
 import io.openfednow.security.audit.AuditResult;
 import io.openfednow.shadowledger.AccountBalanceView;
+import io.openfednow.shadowledger.BalanceSeedReport;
+import io.openfednow.shadowledger.BalanceSeedService;
 import io.openfednow.shadowledger.ReconciliationRunSummary;
 import io.openfednow.shadowledger.ReconciliationService;
 import io.openfednow.shadowledger.ShadowLedger;
@@ -50,6 +52,7 @@ class AdminControllerTest {
     private ShadowLedger shadowLedger;
     private ReconciliationService reconciliationService;
     private AdminAuditLogService adminAuditLogService;
+    private BalanceSeedService balanceSeedService;
 
     @BeforeEach
     void setUp() {
@@ -57,9 +60,11 @@ class AdminControllerTest {
         shadowLedger = mock(ShadowLedger.class);
         reconciliationService = mock(ReconciliationService.class);
         adminAuditLogService = mock(AdminAuditLogService.class);
+        balanceSeedService = mock(BalanceSeedService.class);
 
         AdminController controller = new AdminController(
-                reconciliationService, sagaOrchestrator, shadowLedger, adminAuditLogService);
+                reconciliationService, sagaOrchestrator, shadowLedger,
+                adminAuditLogService, balanceSeedService);
 
         ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
         MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter(mapper);
@@ -368,6 +373,40 @@ class AdminControllerTest {
                 .andExpect(status().isOk());
 
         verify(adminAuditLogService).listRecent(20, 40);
+    }
+
+    // ── POST /admin/shadow-ledger/seed (issue #39) ────────────────────────────
+
+    @Test
+    void seedShadowLedger_invokesServiceAndReturnsReport() throws Exception {
+        BalanceSeedReport report = BalanceSeedReport.of(List.of(
+                BalanceSeedReport.AccountSeedOutcome.seeded("ACC-1", new BigDecimal("100.00")),
+                BalanceSeedReport.AccountSeedOutcome.failed("ACC-2", "core unreachable")));
+        when(balanceSeedService.seedAllConfigured()).thenReturn(report);
+
+        mockMvc.perform(post("/admin/shadow-ledger/seed"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.seededCount").value(1))
+                .andExpect(jsonPath("$.failedCount").value(1))
+                .andExpect(jsonPath("$.outcomes[0].accountId").value("ACC-1"))
+                .andExpect(jsonPath("$.outcomes[0].status").value("SEEDED"))
+                .andExpect(jsonPath("$.outcomes[1].accountId").value("ACC-2"))
+                .andExpect(jsonPath("$.outcomes[1].status").value("FAILED"));
+
+        verify(balanceSeedService).seedAllConfigured();
+    }
+
+    @Test
+    void seedShadowLedger_returnsEmptyReportWhenNoAccountsConfigured() throws Exception {
+        when(balanceSeedService.seedAllConfigured()).thenReturn(BalanceSeedReport.empty());
+
+        mockMvc.perform(post("/admin/shadow-ledger/seed"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.seededCount").value(0))
+                .andExpect(jsonPath("$.skippedCount").value(0))
+                .andExpect(jsonPath("$.failedCount").value(0))
+                .andExpect(jsonPath("$.outcomes").isArray())
+                .andExpect(jsonPath("$.outcomes.length()").value(0));
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────
