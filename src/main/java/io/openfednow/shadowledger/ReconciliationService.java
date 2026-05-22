@@ -3,6 +3,7 @@ package io.openfednow.shadowledger;
 import io.openfednow.acl.core.CoreBankingAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -41,13 +42,25 @@ public class ReconciliationService {
     private final ShadowLedger shadowLedger;
     private final JdbcTemplate jdbc;
     private final CoreBankingAdapter coreBankingAdapter;
+    private final int batchSize;
 
     public ReconciliationService(ShadowLedger shadowLedger,
                                  JdbcTemplate jdbc,
-                                 CoreBankingAdapter coreBankingAdapter) {
+                                 CoreBankingAdapter coreBankingAdapter,
+                                 @Value("${openfednow.reconciliation.batch-size:500}") int batchSize) {
+        if (batchSize <= 0) {
+            throw new IllegalArgumentException(
+                    "openfednow.reconciliation.batch-size must be positive");
+        }
         this.shadowLedger = shadowLedger;
         this.jdbc = jdbc;
         this.coreBankingAdapter = coreBankingAdapter;
+        this.batchSize = batchSize;
+    }
+
+    /** Visible to tests. */
+    int getBatchSize() {
+        return batchSize;
     }
 
     /**
@@ -75,39 +88,55 @@ public class ReconciliationService {
         int discrepanciesDetected = 0;
 
         try {
-            // Find distinct accounts with unconfirmed entries
-            List<String> accounts = jdbc.queryForList(
-                    "SELECT DISTINCT account_id FROM shadow_ledger_transaction_log " +
-                    "WHERE core_confirmed = FALSE ORDER BY account_id",
-                    String.class);
+            // Process accounts in keyset-paginated batches so a large institution's
+            // tens-of-thousands of pending accounts never load into a single JVM list.
+            // Keyset (account_id > lastSeen) is robust against per-account failures:
+            // a failed account stays unconfirmed but is skipped on the next iteration
+            // because we always advance lastSeen past the batch we just processed,
+            // so the loop terminates after one pass even if every account fails.
+            String lastSeen = null;
+            int totalAccounts = 0;
 
-            log.info("Reconciliation found {} accounts with pending entries", accounts.size());
-
-            for (String accountId : accounts) {
-                try {
-                    BigDecimal coreBalance = coreBankingAdapter.getAvailableBalance(accountId);
-                    BigDecimal shadowBalance = shadowLedger.getAvailableBalance(accountId);
-
-                    if (coreBalance.compareTo(shadowBalance) != 0) {
-                        discrepanciesDetected++;
-                        log.warn("Balance discrepancy account={} shadow={} core={}",
-                                accountId, shadowBalance, coreBalance);
-                        shadowLedger.reconcile(accountId, coreBalance);
-                    }
-
-                    // Mark this account's unconfirmed entries as confirmed
-                    int confirmed = jdbc.update(
-                            "UPDATE shadow_ledger_transaction_log " +
-                            "SET core_confirmed = TRUE " +
-                            "WHERE account_id = ? AND core_confirmed = FALSE",
-                            accountId);
-                    transactionsReplayed += confirmed;
-
-                } catch (Exception e) {
-                    log.error("Reconciliation failed for account={}", accountId, e);
-                    discrepanciesDetected++;
+            while (true) {
+                List<String> batch = fetchNextAccountBatch(lastSeen);
+                if (batch.isEmpty()) {
+                    break;
                 }
+                totalAccounts += batch.size();
+
+                for (String accountId : batch) {
+                    try {
+                        BigDecimal coreBalance = coreBankingAdapter.getAvailableBalance(accountId);
+                        BigDecimal shadowBalance = shadowLedger.getAvailableBalance(accountId);
+
+                        if (coreBalance.compareTo(shadowBalance) != 0) {
+                            discrepanciesDetected++;
+                            log.warn("Balance discrepancy account={} shadow={} core={}",
+                                    accountId, shadowBalance, coreBalance);
+                            shadowLedger.reconcile(accountId, coreBalance);
+                        }
+
+                        // Mark this account's unconfirmed entries as confirmed
+                        int confirmed = jdbc.update(
+                                "UPDATE shadow_ledger_transaction_log " +
+                                "SET core_confirmed = TRUE " +
+                                "WHERE account_id = ? AND core_confirmed = FALSE",
+                                accountId);
+                        transactionsReplayed += confirmed;
+
+                    } catch (Exception e) {
+                        log.error("Reconciliation failed for account={}", accountId, e);
+                        discrepanciesDetected++;
+                    }
+                }
+
+                // Advance the cursor past this batch even if some accounts failed —
+                // we still want to make progress on the rest of the work.
+                lastSeen = batch.get(batch.size() - 1);
             }
+
+            log.info("Reconciliation processed {} account(s) across {}-row batches",
+                    totalAccounts, batchSize);
 
         } catch (Exception e) {
             log.error("Reconciliation cycle failed", e);
@@ -224,6 +253,31 @@ public class ReconciliationService {
     }
 
     // ── Internal helpers ───────────────────────────────────────────────────────
+
+    /**
+     * Fetches the next page of distinct account IDs with unconfirmed entries.
+     *
+     * <p>Keyset pagination on {@code account_id > lastSeen} — robust against
+     * concurrent inserts and per-account processing failures. Bounded by
+     * {@link #batchSize} so memory stays flat regardless of institution scale.
+     *
+     * @param lastSeen the highest account_id processed so far, or null on the first iteration
+     * @return up to {@code batchSize} distinct account IDs in ascending order
+     */
+    private List<String> fetchNextAccountBatch(String lastSeen) {
+        if (lastSeen == null) {
+            return jdbc.queryForList(
+                    "SELECT DISTINCT account_id FROM shadow_ledger_transaction_log " +
+                    "WHERE core_confirmed = FALSE " +
+                    "ORDER BY account_id LIMIT ?",
+                    String.class, batchSize);
+        }
+        return jdbc.queryForList(
+                "SELECT DISTINCT account_id FROM shadow_ledger_transaction_log " +
+                "WHERE core_confirmed = FALSE AND account_id > ? " +
+                "ORDER BY account_id LIMIT ?",
+                String.class, lastSeen, batchSize);
+    }
 
     private void closeRunRecord(Long runId, int replayed, int discrepancies,
                                 boolean successful, String summary) {

@@ -26,6 +26,7 @@
 | Shadow Ledger endpoint wiring (inbound + outbound) | ✅ Implemented in sandbox/reference mode |
 | 24/7 Bridge Mode — queues payments during core maintenance window | ✅ Implemented + tested |
 | Reconciliation — replay and sync after core returns online | ✅ Implemented + tested |
+| Reconciliation pagination — keyset-paginated account scan for large institutions | ✅ Configurable batch size (default 500); memory stays flat regardless of pending-account count |
 | Saga orchestration — compensation on core rejection | ✅ Implemented + tested |
 | Idempotency — Redis + PostgreSQL dual-write, 48h window | ✅ Implemented + tested |
 | Concurrent overdraft prevention under load | ✅ Tested (race-condition suite) |

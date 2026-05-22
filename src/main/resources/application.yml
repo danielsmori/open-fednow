@@ -150,6 +150,13 @@ openfednow:
     # but increase database load; default 10s is a reasonable balance.
     timeout-check-interval-seconds: ${SAGA_TIMEOUT_CHECK_INTERVAL_SECONDS:10}
 
+  # Reconciliation batch sizing. Each reconciliation cycle paginates through
+  # accounts with unconfirmed entries in keyset-paginated batches, so memory
+  # usage stays flat regardless of institution scale. Increase for higher
+  # throughput on well-resourced JVMs; decrease for tighter heap budgets.
+  reconciliation:
+    batch-size: ${RECONCILIATION_BATCH_SIZE:500}
+
   # Shadow Ledger settings
   shadow-ledger:
     idempotency-ttl-hours: 48
