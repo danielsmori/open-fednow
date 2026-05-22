@@ -58,6 +58,15 @@ openfednow:
     enabled: ${KAFKA_ENABLED:false}
     topic: ${KAFKA_TOPIC:openfednow.payment.events}
 
+  # Idempotency record retention. FedNow's documented retry window for duplicate
+  # pacs.008 messages is 24 hours; the default 48-hour TTL doubles that window
+  # to absorb clock skew and late retries. The same TTL is applied to the Redis
+  # cache entry and to the PostgreSQL expires_at column. IdempotencyCleanupService
+  # sweeps expired Postgres rows on the configured interval (Redis expires natively).
+  idempotency:
+    ttl-hours: ${IDEMPOTENCY_TTL_HOURS:48}
+    cleanup-interval-minutes: ${IDEMPOTENCY_CLEANUP_INTERVAL_MINUTES:60}
+
   # Core banking adapter to use: sandbox | fiserv | fis | jackhenry
   # Default is 'sandbox' for local development. Set CORE_ADAPTER=fiserv (etc.)
   # to target a real vendor integration.

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.openfednow.iso20022.Pacs002Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -38,18 +39,29 @@ public class IdempotencyService {
 
     private static final Logger log = LoggerFactory.getLogger(IdempotencyService.class);
 
-    /** How long to retain idempotency records (FedNow retry window is 24 hours). */
-    private static final long RETENTION_HOURS = 48;
     private static final String KEY_PREFIX = "idempotency:";
 
     private final StringRedisTemplate redis;
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
+    private final long retentionHours;
 
-    public IdempotencyService(StringRedisTemplate redis, JdbcTemplate jdbc, ObjectMapper objectMapper) {
+    public IdempotencyService(StringRedisTemplate redis,
+                              JdbcTemplate jdbc,
+                              ObjectMapper objectMapper,
+                              @Value("${openfednow.idempotency.ttl-hours:48}") long retentionHours) {
         this.redis = redis;
         this.jdbc = jdbc;
         this.objectMapper = objectMapper;
+        if (retentionHours <= 0) {
+            throw new IllegalArgumentException("openfednow.idempotency.ttl-hours must be positive");
+        }
+        this.retentionHours = retentionHours;
+    }
+
+    /** Visible to {@link IdempotencyCleanupService} and tests so the same TTL drives sweeps. */
+    long getRetentionHours() {
+        return retentionHours;
     }
 
     /**
@@ -108,7 +120,7 @@ public class IdempotencyService {
         // Write to Redis with TTL
         try {
             String json = objectMapper.writeValueAsString(response);
-            redis.opsForValue().set(KEY_PREFIX + endToEndId, json, Duration.ofHours(RETENTION_HOURS));
+            redis.opsForValue().set(KEY_PREFIX + endToEndId, json, Duration.ofHours(retentionHours));
         } catch (JsonProcessingException e) {
             log.warn("Failed to serialize idempotency response e2e={}", endToEndId, e);
         }
@@ -132,7 +144,7 @@ public class IdempotencyService {
                 status,
                 response.getRejectReasonCode(),
                 now,
-                now.plusHours(RETENTION_HOURS));
+                now.plusHours(retentionHours));
 
         log.debug("Idempotency outcome recorded e2e={} status={}", endToEndId, status);
     }
