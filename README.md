@@ -31,7 +31,14 @@
 | Concurrent overdraft prevention under load | ✅ Tested (race-condition suite) |
 | Send-side (outbound) payment flow | ✅ Implemented in sandbox/reference mode |
 | Admin auth — HTTP Basic on `/admin/*` | ✅ Implemented as reference configuration |
-| Dual-rail architecture (FedNow + RTP) | ✅ ISO 20022 foundation; Layer 1 varies, Layers 2–4 rail-agnostic |
+| Admin audit log — every `/admin/**` access recorded to PostgreSQL | ✅ Implemented; both GRANTED and DENIED captured, surfaced via `GET /admin/audit-log` |
+| Admin query endpoints — saga state, balances, reconciliation history | ✅ `GET /admin/sagas[/{txId}]`, `/admin/accounts/{id}/balance`, `/admin/reconciliation-runs[/{id}]`, `/admin/audit-log` |
+| Saga recovery on application restart | ✅ `ApplicationReadyEvent` listener; dispatches each non-terminal saga by state (compensate, advance, finalize) |
+| Saga timeout monitor — auto-compensate stalled sagas | ✅ `@Scheduled` sweep; ISO 20022 `XPIR` reason; `saga.timeout` Micrometer counter |
+| Balance seeding from core on startup | ✅ Configurable account list seeded via SETNX; `POST /admin/shadow-ledger/seed` for on-demand re-seed |
+| Idempotency cleanup — scheduled sweep of expired Postgres rows | ✅ Configurable TTL (default 48h) and sweep cadence (default 60min) |
+| Rate limiting — per-client on `/fednow/**` and `/rtp/**` POSTs | ✅ Resilience4j `RateLimiter` per IP / X-Forwarded-For; 429 + Retry-After; `gateway.rate_limited` counter |
+| Dual-rail architecture (FedNow + RTP) | ✅ ISO 20022 foundation; Layer 1 varies, Layers 2–4 rail-agnostic; source rail persisted on `saga_state` |
 | RTP Layer 1 — inbound XML, outbound XML, TCH cert validation hook, sandbox + HTTP client | ✅ Implemented and tested in reference mode; symmetric with FedNow Layer 1 |
 | Optional Kafka event bus — `PaymentEventPublisher`, 6 event types | ✅ Implemented (disabled by default; no Kafka required) |
 | Vendor adapters (Fiserv, FIS, Jack Henry) | ✅ All three implemented (OAuth 2.0, ISO 20022 code mapping, WireMock tests); Fiserv + FIS via REST/JSON, Jack Henry via jXchange SOAP |
@@ -542,9 +549,14 @@ openfednow/
 │   │   ├── RtpClient.java · HttpRtpClient.java · SandboxRtpClient.java · RtpClientConfig.java
 │   │   ├── FedNowClient.java · HttpFedNowClient.java · SandboxFedNowClient.java · FedNowClientConfig.java
 │   │   ├── CertificateManager.java   # Fed PKI + TCH PKI validation (no-op in sandbox)
-│   │   ├── MessageRouter.java
-│   │   ├── FedNowGatewayValidation.java  # ISO 20022 field validation + structured error handler
-│   │   └── AdminController.java     # /admin/reconcile (HTTP Basic: admin/changeme)
+│   │   ├── MessageRouter.java                  # Routes both rails; tracks source Rail on every saga
+│   │   ├── FedNowGatewayValidation.java        # ISO 20022 field validation + structured error handler
+│   │   ├── AdminController.java                # /admin endpoints (HTTP Basic + ADMIN role)
+│   │   │                                       #   POST /admin/reconcile · /admin/reconciliation-runs
+│   │   │                                       #   GET  /admin/sagas[/{txId}] · /admin/audit-log
+│   │   │                                       #   GET  /admin/accounts/{id}/balance · /admin/reconciliation-runs[/{id}]
+│   │   │                                       #   POST /admin/shadow-ledger/seed
+│   │   └── ratelimit/RateLimitFilter.java      # 429 + Retry-After on /fednow & /rtp; gateway.rate_limited metric
 │   ├── acl/                  # Layer 2 — Anti-Corruption Layer
 │   │   ├── core/
 │   │   │   ├── CoreBankingAdapter.java      # Interface (4 methods)

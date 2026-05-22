@@ -99,6 +99,8 @@ The `FedNowClientConfig` bean is conditional: `HttpFedNowClient` is only created
 
 Layer 1 (inbound XML parsing, outbound XML serialization, certificate-validation hook, conditional HTTP transport) is implemented and tested in reference mode and is symmetric with the FedNow rail at the framework level. Layers 2–4 require no changes — they are rail-agnostic. See [rtp-compatibility.md](rtp-compatibility.md) and [ADR-0005](adr/0005-dual-rail-architecture-fednow-rtp.md).
 
+Inbound source rail (FedNow vs. RTP) is now persisted on every `saga_state` row via the `source_rail` column (V5 migration). Asynchronous response paths can therefore dispatch through the correct gateway. The wiring for those asynchronous paths — reconciliation-time pacs.002 notifications and compensation-time pacs.004 returns to the originating rail — is still pending.
+
 ---
 
 ### 10. Cancellation message flow (camt.056 / camt.029) is modeled but not wired
@@ -110,6 +112,41 @@ The ISO 20022 message classes `Camt056Message` (payment cancellation request) an
 ### Kafka event bus (optional, available)
 
 An optional Kafka event bus is available via the `PaymentEventPublisher` interface. When Kafka is configured, `KafkaPaymentEventPublisher` is activated; otherwise `NoOpPaymentEventPublisher` is used by default. Six event types are published: `INBOUND_CREDIT_APPLIED`, `INBOUND_PAYMENT_REJECTED`, `INBOUND_QUEUED_FOR_BRIDGE`, `OUTBOUND_PAYMENT_COMPLETED`, `OUTBOUND_PAYMENT_REJECTED`, and `OUTBOUND_PAYMENT_PENDING`. No Kafka dependency is required to run the framework.
+
+---
+
+## Operational capabilities now available
+
+These are implemented and worth calling out so deployers know what they get without further engineering.
+
+### Saga lifecycle resilience
+
+- **Saga recovery on restart.** `SagaRecoveryService` listens to `ApplicationReadyEvent` and dispatches every non-terminal saga to a terminal state on startup. `INITIATED` / `FUNDS_RESERVED` / `CORE_SUBMITTED` sagas are compensated (reason `NARR`); `FEDNOW_CONFIRMED` advances to `COMPLETED`; `COMPENSATING` is finalized to `FAILED` preserving the original reason code.
+- **Saga timeout monitor.** `SagaTimeoutMonitor` runs on a fixed schedule (`openfednow.saga.timeout-check-interval-seconds`, default 10) and compensates any saga in a forward-progress state whose `created_at` is older than `openfednow.saga.timeout-seconds` (default 30). Reason code `XPIR` (ISO 20022 Expired) distinguishes timeout-driven failures from restart-recovery failures. Each timeout increments the `saga.timeout` Micrometer counter visible at `/actuator/metrics`.
+
+### Operator endpoints under `/admin`
+
+All `/admin/**` endpoints require HTTP Basic with the `ADMIN` role (`SecurityConfig`). All access — granted, denied, rejected, or error — is recorded in `admin_audit_log` by `AdminAccessAuditFilter`.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `POST /admin/reconcile` and `POST /admin/reconciliation-runs` | Trigger a manual reconciliation cycle (resource-style alias) |
+| `GET /admin/reconciliation-runs[?limit=&offset=]` | Paginated reconciliation history; cap 200 per page |
+| `GET /admin/reconciliation-runs/{runId}` | Single reconciliation run; 404 if missing |
+| `GET /admin/sagas` | List non-terminal sagas (oldest first) |
+| `GET /admin/sagas/{transactionId}` | Saga snapshot by ISO 20022 transaction ID |
+| `GET /admin/accounts/{accountId}/balance` | Live Redis balance + unconfirmed-DEBIT total + last transaction timestamp |
+| `POST /admin/shadow-ledger/seed` | Re-seed configured accounts from the core (unconditional overwrite) |
+| `GET /admin/audit-log[?limit=&offset=]` | Paginated admin access history; cap 500 per page |
+
+### Throughput controls
+
+- **Rate limiting** on `POST /fednow/**` and `POST /rtp/**` via `RateLimitFilter`. Per-client buckets keyed on `X-Forwarded-For` (first hop) or remote address, refreshed every second. Default 100 transfers/sec/client (`openfednow.rate-limit.transfers-per-second`). Rejected requests get HTTP 429 with `Retry-After: 1` and increment `gateway.rate_limited`.
+- **Idempotency record retention** is configurable via `openfednow.idempotency.ttl-hours` (default 48); `IdempotencyCleanupService` sweeps expired rows on `openfednow.idempotency.cleanup-interval-minutes` (default 60).
+
+### Balance seeding
+
+`BalanceSeedService` reads `openfednow.shadow-ledger.seed-accounts` (comma-separated). On `ApplicationReadyEvent` it loads each account's balance from the core adapter into Redis using `SETNX` so a recycled middleware pod never clobbers live balances. The on-demand `POST /admin/shadow-ledger/seed` endpoint uses unconditional overwrite for explicit resyncs.
 
 ---
 

@@ -130,6 +130,14 @@ openfednow:
   gateway:
     response-timeout-seconds: 18   # must be < FedNow's / TCH's 20-second window
 
+  # Per-client rate limiting on the FedNow / RTP transfer endpoints. Each
+  # client identity (X-Forwarded-For first hop, else remote address) gets its
+  # own one-second bucket of permits; requests beyond the bucket get 429 plus
+  # Retry-After: 1. Set to a high value or disable at the Ingress layer if your
+  # load-test traffic should not be throttled.
+  rate-limit:
+    transfers-per-second: ${RATE_LIMIT_TRANSFERS_PER_SECOND:100}
+
   # Payment saga settings
   saga:
     # Sagas in a forward-progress state (INITIATED, FUNDS_RESERVED, CORE_SUBMITTED)
