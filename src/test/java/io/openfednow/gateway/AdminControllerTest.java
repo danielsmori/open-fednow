@@ -5,6 +5,9 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.openfednow.processing.saga.PaymentSaga;
 import io.openfednow.processing.saga.SagaOrchestrator;
 import io.openfednow.processing.saga.SagaSnapshot;
+import io.openfednow.security.audit.AdminAuditEntry;
+import io.openfednow.security.audit.AdminAuditLogService;
+import io.openfednow.security.audit.AuditResult;
 import io.openfednow.shadowledger.AccountBalanceView;
 import io.openfednow.shadowledger.ReconciliationRunSummary;
 import io.openfednow.shadowledger.ReconciliationService;
@@ -46,15 +49,17 @@ class AdminControllerTest {
     private SagaOrchestrator sagaOrchestrator;
     private ShadowLedger shadowLedger;
     private ReconciliationService reconciliationService;
+    private AdminAuditLogService adminAuditLogService;
 
     @BeforeEach
     void setUp() {
         sagaOrchestrator = mock(SagaOrchestrator.class);
         shadowLedger = mock(ShadowLedger.class);
         reconciliationService = mock(ReconciliationService.class);
+        adminAuditLogService = mock(AdminAuditLogService.class);
 
         AdminController controller = new AdminController(
-                reconciliationService, sagaOrchestrator, shadowLedger);
+                reconciliationService, sagaOrchestrator, shadowLedger, adminAuditLogService);
 
         ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
         MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter(mapper);
@@ -305,6 +310,64 @@ class AdminControllerTest {
                 .andExpect(jsonPath("$.reconciliationSuccessful").value(true));
 
         verify(reconciliationService).reconcile();
+    }
+
+    // ── GET /admin/audit-log (issue #50) ──────────────────────────────────────
+
+    @Test
+    void listAuditLog_returnsEmptyWhenNoEntries() throws Exception {
+        when(adminAuditLogService.listRecent(anyInt(), anyInt())).thenReturn(List.of());
+
+        mockMvc.perform(get("/admin/audit-log"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]"));
+    }
+
+    @Test
+    void listAuditLog_returnsEntries() throws Exception {
+        AdminAuditEntry entry = new AdminAuditEntry(
+                1L, Instant.parse("2026-05-19T10:00:00Z"),
+                "admin", "POST", "/admin/reconcile", null,
+                AuditResult.GRANTED, 200, "req-abc");
+        when(adminAuditLogService.listRecent(anyInt(), anyInt())).thenReturn(List.of(entry));
+
+        mockMvc.perform(get("/admin/audit-log"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[0].principal").value("admin"))
+                .andExpect(jsonPath("$[0].httpMethod").value("POST"))
+                .andExpect(jsonPath("$[0].result").value("GRANTED"))
+                .andExpect(jsonPath("$[0].statusCode").value(200));
+    }
+
+    @Test
+    void listAuditLog_appliesDefaultLimitAndOffset() throws Exception {
+        when(adminAuditLogService.listRecent(100, 0)).thenReturn(List.of());
+
+        mockMvc.perform(get("/admin/audit-log")).andExpect(status().isOk());
+
+        verify(adminAuditLogService).listRecent(100, 0);
+    }
+
+    @Test
+    void listAuditLog_clampsLimitToMaximum() throws Exception {
+        when(adminAuditLogService.listRecent(eq(AdminController.AUDIT_LOG_MAX_LIMIT), anyInt()))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/admin/audit-log?limit=10000"))
+                .andExpect(status().isOk());
+
+        verify(adminAuditLogService).listRecent(AdminController.AUDIT_LOG_MAX_LIMIT, 0);
+    }
+
+    @Test
+    void listAuditLog_passesExplicitPaginationThrough() throws Exception {
+        when(adminAuditLogService.listRecent(20, 40)).thenReturn(List.of());
+
+        mockMvc.perform(get("/admin/audit-log?limit=20&offset=40"))
+                .andExpect(status().isOk());
+
+        verify(adminAuditLogService).listRecent(20, 40);
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────

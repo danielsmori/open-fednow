@@ -68,13 +68,13 @@ class FlywayMigrationTest {
     }
 
     @Test
-    void exactlyFiveMigrationsArePresent() {
+    void exactlySixMigrationsArePresent() {
         Flyway flyway = Flyway.configure()
                 .dataSource(dataSource)
                 .locations("classpath:db/migration")
                 .load();
 
-        assertThat(flyway.info().all()).hasSize(5);
+        assertThat(flyway.info().all()).hasSize(6);
     }
 
     // --- V1: shadow_ledger_transaction_log ---
@@ -286,6 +286,45 @@ class FlywayMigrationTest {
                     VALUES (10, -1, 'SCHEDULED')
                     """);
             assertThat(false).as("Expected constraint violation for negative discrepancies_detected").isTrue();
+        } catch (Exception e) {
+            assertThat(e.getMessage()).containsIgnoringCase("constraint");
+        }
+    }
+
+    // --- V6: admin_audit_log ---
+
+    @Test
+    void adminAuditLogTableExists() {
+        assertThat(tableExists("admin_audit_log")).isTrue();
+    }
+
+    @Test
+    void adminAuditLogAcceptsAllResultValues() {
+        int before = rowCount("admin_audit_log");
+
+        String[] results = {"GRANTED", "DENIED", "REJECTED", "ERROR"};
+        for (int i = 0; i < results.length; i++) {
+            jdbc.update("""
+                    INSERT INTO admin_audit_log
+                        (principal, http_method, request_path, result, status_code)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    "user-" + i, "GET", "/admin/test", results[i], 200);
+        }
+
+        assertThat(rowCount("admin_audit_log")).isEqualTo(before + results.length);
+    }
+
+    @Test
+    void adminAuditLogRejectsInvalidResultValue() {
+        try {
+            jdbc.update("""
+                    INSERT INTO admin_audit_log
+                        (principal, http_method, request_path, result, status_code)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    "user-bad", "GET", "/admin/test", "INVALID", 200);
+            assertThat(false).as("Expected constraint violation for invalid result").isTrue();
         } catch (Exception e) {
             assertThat(e.getMessage()).containsIgnoringCase("constraint");
         }

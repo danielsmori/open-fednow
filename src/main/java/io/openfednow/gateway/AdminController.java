@@ -2,6 +2,8 @@ package io.openfednow.gateway;
 
 import io.openfednow.processing.saga.SagaOrchestrator;
 import io.openfednow.processing.saga.SagaSnapshot;
+import io.openfednow.security.audit.AdminAuditEntry;
+import io.openfednow.security.audit.AdminAuditLogService;
 import io.openfednow.shadowledger.AccountBalanceView;
 import io.openfednow.shadowledger.ReconciliationRunSummary;
 import io.openfednow.shadowledger.ReconciliationService;
@@ -44,13 +46,16 @@ public class AdminController {
     private final ReconciliationService reconciliationService;
     private final SagaOrchestrator sagaOrchestrator;
     private final ShadowLedger shadowLedger;
+    private final AdminAuditLogService adminAuditLogService;
 
     public AdminController(ReconciliationService reconciliationService,
                            SagaOrchestrator sagaOrchestrator,
-                           ShadowLedger shadowLedger) {
+                           ShadowLedger shadowLedger,
+                           AdminAuditLogService adminAuditLogService) {
         this.reconciliationService = reconciliationService;
         this.sagaOrchestrator = sagaOrchestrator;
         this.shadowLedger = shadowLedger;
+        this.adminAuditLogService = adminAuditLogService;
     }
 
     /**
@@ -254,5 +259,40 @@ public class AdminController {
     )
     public ResponseEntity<ReconciliationService.ReconciliationReport> triggerReconciliationRun() {
         return ResponseEntity.ok(reconciliationService.reconcile());
+    }
+
+    // ── Admin audit log (issue #50) ───────────────────────────────────────────
+
+    /** Hard ceiling on a single page of audit entries. */
+    static final int AUDIT_LOG_MAX_LIMIT = 500;
+
+    /**
+     * Lists recent {@code /admin/**} access attempts in newest-first order.
+     *
+     * <p>Every request to the admin namespace — whether GRANTED, DENIED,
+     * REJECTED, or ERROR — is recorded by {@code AdminAccessAuditFilter}.
+     * This endpoint is the operator-facing view of that log.
+     */
+    @GetMapping("/audit-log")
+    @Operation(
+        summary = "List admin endpoint access history",
+        description = """
+            Returns audit entries for /admin/** access in newest-first order. \
+            Every request — successful or failed — is recorded with principal, \
+            method, path, status code, and result classification. limit defaults \
+            to 100 and is capped at 500; offset defaults to 0."""
+    )
+    @ApiResponse(responseCode = "200", description = "Paginated admin access history",
+        content = @Content(mediaType = "application/json",
+                           array = @io.swagger.v3.oas.annotations.media.ArraySchema(
+                                   schema = @Schema(implementation = AdminAuditEntry.class))))
+    public ResponseEntity<List<AdminAuditEntry>> listAuditLog(
+            @Parameter(description = "Max rows to return (default 100, max 500)")
+            @RequestParam(value = "limit", defaultValue = "100") int limit,
+            @Parameter(description = "Rows to skip from the newest end")
+            @RequestParam(value = "offset", defaultValue = "0") int offset) {
+        int boundedLimit = Math.max(1, Math.min(limit, AUDIT_LOG_MAX_LIMIT));
+        int boundedOffset = Math.max(0, offset);
+        return ResponseEntity.ok(adminAuditLogService.listRecent(boundedLimit, boundedOffset));
     }
 }
