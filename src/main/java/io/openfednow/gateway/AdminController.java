@@ -3,6 +3,7 @@ package io.openfednow.gateway;
 import io.openfednow.processing.saga.SagaOrchestrator;
 import io.openfednow.processing.saga.SagaSnapshot;
 import io.openfednow.shadowledger.AccountBalanceView;
+import io.openfednow.shadowledger.ReconciliationRunSummary;
 import io.openfednow.shadowledger.ReconciliationService;
 import io.openfednow.shadowledger.ShadowLedger;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -159,5 +161,98 @@ public class AdminController {
                        example = "ACC-001")
             @PathVariable String accountId) {
         return ResponseEntity.ok(shadowLedger.getBalanceView(accountId));
+    }
+
+    // ── Reconciliation audit (issue #41) ──────────────────────────────────────
+
+    /** Hard ceiling on a single page of reconciliation runs. */
+    static final int RECON_RUNS_MAX_LIMIT = 200;
+    /** Default page size when {@code limit} is omitted. */
+    static final int RECON_RUNS_DEFAULT_LIMIT = 50;
+
+    /**
+     * Lists past reconciliation runs in newest-first order, paginated.
+     *
+     * <p>Each entry includes the run identifier, start and completion timestamps,
+     * counts of replayed transactions and detected discrepancies, the
+     * success flag, the summary text, and whether the run was triggered
+     * by the scheduler or manually.
+     */
+    @GetMapping("/reconciliation-runs")
+    @Operation(
+        summary = "List reconciliation runs",
+        description = """
+            Returns reconciliation runs ordered newest first. \
+            limit defaults to 50 and is capped at 200; offset defaults to 0. \
+            Each entry has the run id, started_at, completed_at, replay and \
+            discrepancy counts, success flag, summary, and triggered_by \
+            (SCHEDULED or MANUAL)."""
+    )
+    @ApiResponse(responseCode = "200", description = "Paginated reconciliation history",
+        content = @Content(mediaType = "application/json",
+                           array = @io.swagger.v3.oas.annotations.media.ArraySchema(
+                                   schema = @Schema(implementation = ReconciliationRunSummary.class))))
+    public ResponseEntity<List<ReconciliationRunSummary>> listReconciliationRuns(
+            @Parameter(description = "Max rows to return (default 50, max 200)")
+            @RequestParam(value = "limit", defaultValue = "50") int limit,
+            @Parameter(description = "Rows to skip from the newest end")
+            @RequestParam(value = "offset", defaultValue = "0") int offset) {
+        int boundedLimit = Math.max(1, Math.min(limit, RECON_RUNS_MAX_LIMIT));
+        int boundedOffset = Math.max(0, offset);
+        return ResponseEntity.ok(reconciliationService.listRecentRuns(boundedLimit, boundedOffset));
+    }
+
+    /**
+     * Returns a single reconciliation run by its surrogate id.
+     *
+     * <p>404 if the id does not match any row. The schema does not store
+     * individual per-transaction discrepancy records — only the count and a
+     * free-text summary — so the returned payload mirrors what the list
+     * endpoint surfaces, scoped to one run.
+     */
+    @GetMapping("/reconciliation-runs/{runId}")
+    @Operation(
+        summary = "Look up a reconciliation run by id",
+        description = """
+            Returns the full run summary for a reconciliation_run row, or 404 \
+            if no row matches. Use this after spotting an interesting run in the \
+            list endpoint to inspect its summary text and timestamps."""
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Reconciliation run summary",
+            content = @Content(mediaType = "application/json",
+                               schema = @Schema(implementation = ReconciliationRunSummary.class))),
+        @ApiResponse(responseCode = "404",
+            description = "No reconciliation run exists with the given id")
+    })
+    public ResponseEntity<ReconciliationRunSummary> getReconciliationRun(
+            @Parameter(description = "Surrogate id from the reconciliation_run table",
+                       example = "42")
+            @PathVariable long runId) {
+        return reconciliationService.findRunById(runId)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Triggers a reconciliation cycle on demand.
+     *
+     * <p>Resource-style alias for {@link #reconcile()}. Both endpoints invoke
+     * the same {@link ReconciliationService#reconcile()} method; both return
+     * a {@link ReconciliationService.ReconciliationReport} summarizing the run
+     * just performed.
+     */
+    @PostMapping("/reconciliation-runs")
+    @Operation(
+        summary = "Trigger a reconciliation run",
+        description = """
+            Starts a synchronous reconciliation cycle and returns its report. \
+            Behaviorally identical to POST /admin/reconcile — both invoke \
+            ReconciliationService.reconcile(). This resource-style variant is \
+            offered alongside the legacy verb-style endpoint so REST clients \
+            can use whichever convention they prefer."""
+    )
+    public ResponseEntity<ReconciliationService.ReconciliationReport> triggerReconciliationRun() {
+        return ResponseEntity.ok(reconciliationService.reconcile());
     }
 }

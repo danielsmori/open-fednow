@@ -10,8 +10,12 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Layer 4 — Reconciliation Service
@@ -161,6 +165,62 @@ public class ReconciliationService {
                 log.error("Failed to confirm transaction transactionId={}", transactionId, e);
             }
         }
+    }
+
+    /**
+     * Returns the most recent reconciliation runs in newest-first order.
+     *
+     * <p>Backed by {@code idx_recon_started_at}. Used by the admin audit endpoint
+     * to surface operational history without exposing direct DB access.
+     *
+     * @param limit  maximum number of runs to return; callers should clamp this
+     *               at the controller boundary (typical default 50, ceiling 200)
+     * @param offset number of rows to skip from the most-recent end; used for
+     *               page-by-page navigation
+     */
+    public List<ReconciliationRunSummary> listRecentRuns(int limit, int offset) {
+        return jdbc.query(
+                """
+                SELECT id, started_at, completed_at, transactions_replayed,
+                       discrepancies_detected, successful, summary, triggered_by
+                FROM reconciliation_run
+                ORDER BY started_at DESC, id DESC
+                LIMIT ? OFFSET ?
+                """,
+                this::mapRunSummary,
+                limit, offset);
+    }
+
+    /**
+     * Looks up a single reconciliation run by its primary key.
+     *
+     * @return the run summary, or {@link Optional#empty()} if no row exists
+     */
+    public Optional<ReconciliationRunSummary> findRunById(long runId) {
+        return jdbc.query(
+                """
+                SELECT id, started_at, completed_at, transactions_replayed,
+                       discrepancies_detected, successful, summary, triggered_by
+                FROM reconciliation_run
+                WHERE id = ?
+                """,
+                this::mapRunSummary,
+                runId).stream().findFirst();
+    }
+
+    private ReconciliationRunSummary mapRunSummary(ResultSet rs, int rowNum) throws SQLException {
+        Timestamp startedAt = rs.getTimestamp("started_at");
+        Timestamp completedAt = rs.getTimestamp("completed_at");
+        Boolean successful = rs.getObject("successful") == null ? null : rs.getBoolean("successful");
+        return new ReconciliationRunSummary(
+                rs.getLong("id"),
+                startedAt != null ? startedAt.toInstant() : null,
+                completedAt != null ? completedAt.toInstant() : null,
+                rs.getInt("transactions_replayed"),
+                rs.getInt("discrepancies_detected"),
+                successful,
+                rs.getString("summary"),
+                rs.getString("triggered_by"));
     }
 
     // ── Internal helpers ───────────────────────────────────────────────────────
