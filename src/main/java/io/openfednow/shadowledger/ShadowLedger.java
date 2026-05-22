@@ -67,6 +67,48 @@ public class ShadowLedger {
     }
 
     /**
+     * Returns a richer operator-facing snapshot of an account's Shadow Ledger state.
+     *
+     * <p>Combines the live Redis balance with the unconfirmed-DEBIT total from the
+     * transaction log and the most-recent {@code applied_at} timestamp. Backed by
+     * {@code idx_sltl_account_id} so cost scales with rows for the account, not
+     * with the size of the log.
+     *
+     * @param accountId institution-internal account identifier
+     * @return a {@link AccountBalanceView} — fields are zero / null if the account
+     *         has not been seeded or has no transaction history
+     */
+    public AccountBalanceView getBalanceView(String accountId) {
+        BigDecimal available = getAvailableBalance(accountId);
+
+        BigDecimal reservedPendingCore = jdbc.queryForObject(
+                """
+                SELECT COALESCE(SUM(amount), 0)
+                FROM shadow_ledger_transaction_log
+                WHERE account_id = ?
+                  AND transaction_type = 'DEBIT'
+                  AND core_confirmed = FALSE
+                """,
+                BigDecimal.class,
+                accountId);
+
+        java.sql.Timestamp lastApplied = jdbc.queryForObject(
+                """
+                SELECT MAX(applied_at)
+                FROM shadow_ledger_transaction_log
+                WHERE account_id = ?
+                """,
+                java.sql.Timestamp.class,
+                accountId);
+
+        return new AccountBalanceView(
+                accountId,
+                available,
+                reservedPendingCore != null ? reservedPendingCore : BigDecimal.ZERO,
+                lastApplied != null ? lastApplied.toInstant() : null);
+    }
+
+    /**
      * Applies a debit to an account using optimistic locking.
      *
      * <p>Uses Redis WATCH/MULTI/EXEC to atomically check the balance and

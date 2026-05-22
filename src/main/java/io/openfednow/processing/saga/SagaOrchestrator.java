@@ -89,6 +89,58 @@ public class SagaOrchestrator {
     }
 
     /**
+     * Returns all sagas that have not yet reached a terminal state, ordered oldest first.
+     *
+     * <p>Used by admin endpoints and operational dashboards to surface in-flight
+     * payment work. The terminal states ({@code COMPLETED}, {@code FAILED}) are
+     * excluded so the result reflects what an operator might need to act on.
+     */
+    public java.util.List<SagaSnapshot> listInflight() {
+        return jdbc.query(
+                """
+                SELECT saga_id, transaction_id, end_to_end_id, state, source_rail,
+                       return_reason_code, failure_description, created_at, updated_at
+                FROM saga_state
+                WHERE state NOT IN ('COMPLETED', 'FAILED')
+                ORDER BY created_at ASC
+                """,
+                this::mapSnapshot);
+    }
+
+    /**
+     * Looks up the full saga snapshot for a given ISO 20022 transaction ID.
+     *
+     * @return the snapshot, or {@link java.util.Optional#empty()} if no saga exists
+     *         for that transaction
+     */
+    public java.util.Optional<SagaSnapshot> findByTransactionId(String transactionId) {
+        return jdbc.query(
+                """
+                SELECT saga_id, transaction_id, end_to_end_id, state, source_rail,
+                       return_reason_code, failure_description, created_at, updated_at
+                FROM saga_state
+                WHERE transaction_id = ?
+                """,
+                this::mapSnapshot,
+                transactionId).stream().findFirst();
+    }
+
+    private SagaSnapshot mapSnapshot(java.sql.ResultSet rs, int rowNum) throws java.sql.SQLException {
+        java.sql.Timestamp createdAt = rs.getTimestamp("created_at");
+        java.sql.Timestamp updatedAt = rs.getTimestamp("updated_at");
+        return new SagaSnapshot(
+                rs.getString("saga_id"),
+                rs.getString("transaction_id"),
+                rs.getString("end_to_end_id"),
+                PaymentSaga.SagaState.valueOf(rs.getString("state")),
+                Rail.valueOf(rs.getString("source_rail")),
+                rs.getString("return_reason_code"),
+                rs.getString("failure_description"),
+                createdAt != null ? createdAt.toInstant() : null,
+                updatedAt != null ? updatedAt.toInstant() : null);
+    }
+
+    /**
      * Triggers the compensation sequence for a saga that has failed.
      *
      * <p>Loads the saga, determines which steps have been completed, and

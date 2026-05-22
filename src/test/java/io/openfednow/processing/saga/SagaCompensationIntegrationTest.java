@@ -241,6 +241,47 @@ class SagaCompensationIntegrationTest extends AbstractInfrastructureIntegrationT
         assertThat(state).isEqualTo("FAILED");
     }
 
+    // ── Query methods (admin endpoints) ───────────────────────────────────────
+
+    @Test
+    void listInflightReturnsOnlyNonTerminalSagas() {
+        PaymentSaga inflight = orchestrator.initiate(
+                message("TXN-Q-INFLIGHT", "E2E-Q-INFLIGHT"), Rail.FEDNOW);
+        PaymentSaga completed = orchestrator.initiate(
+                message("TXN-Q-DONE", "E2E-Q-DONE"), Rail.FEDNOW);
+        orchestrator.advance(completed, PaymentSaga.SagaState.FUNDS_RESERVED);
+        orchestrator.advance(completed, PaymentSaga.SagaState.CORE_SUBMITTED);
+        orchestrator.advance(completed, PaymentSaga.SagaState.FEDNOW_CONFIRMED);
+        orchestrator.advance(completed, PaymentSaga.SagaState.COMPLETED);
+
+        java.util.List<SagaSnapshot> inflightOnly = orchestrator.listInflight();
+
+        assertThat(inflightOnly)
+                .extracting(SagaSnapshot::sagaId)
+                .containsExactly(inflight.getSagaId())
+                .doesNotContain(completed.getSagaId());
+    }
+
+    @Test
+    void findByTransactionIdReturnsFullSnapshot() {
+        PaymentSaga saga = orchestrator.initiate(
+                message("TXN-Q-LOOKUP", "E2E-Q-LOOKUP"), Rail.RTP);
+
+        SagaSnapshot snap = orchestrator.findByTransactionId("TXN-Q-LOOKUP").orElseThrow();
+
+        assertThat(snap.sagaId()).isEqualTo(saga.getSagaId());
+        assertThat(snap.endToEndId()).isEqualTo("E2E-Q-LOOKUP");
+        assertThat(snap.sourceRail()).isEqualTo(Rail.RTP);
+        assertThat(snap.state()).isEqualTo(PaymentSaga.SagaState.INITIATED);
+        assertThat(snap.createdAt()).isNotNull();
+        assertThat(snap.updatedAt()).isNotNull();
+    }
+
+    @Test
+    void findByTransactionIdReturnsEmptyForUnknownId() {
+        assertThat(orchestrator.findByTransactionId("TXN-DOES-NOT-EXIST")).isEmpty();
+    }
+
     // ── Helper ────────────────────────────────────────────────────────────────
 
     private static Pacs008Message message(String transactionId, String endToEndId) {
