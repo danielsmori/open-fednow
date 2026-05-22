@@ -180,7 +180,7 @@ public class MessageRouter {
     // ── Internal helpers ───────────────────────────────────────────────────────
 
     private PaymentEvent event(Pacs008Message message, EventType type, String rejectReasonCode) {
-        return new PaymentEvent(
+        return PaymentEvent.create(
                 type,
                 message.getTransactionId(),
                 message.getEndToEndId(),

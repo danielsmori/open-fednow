@@ -41,6 +41,7 @@
 | Dual-rail architecture (FedNow + RTP) | ✅ ISO 20022 foundation; Layer 1 varies, Layers 2–4 rail-agnostic; source rail persisted on `saga_state` |
 | RTP Layer 1 — inbound XML, outbound XML, TCH cert validation hook, sandbox + HTTP client | ✅ Implemented and tested in reference mode; symmetric with FedNow Layer 1 |
 | Optional Kafka event bus — `PaymentEventPublisher`, 6 event types | ✅ Implemented (disabled by default; no Kafka required) |
+| Event schema versioning — `schemaVersion` field + `X-Schema-Version` / `X-Event-Type` headers | ✅ Implemented; JSON Schema in `docs/event-schemas/`; strategy documented in [ADR-0006](docs/adr/0006-event-schema-versioning.md) |
 | Vendor adapters (Fiserv, FIS, Jack Henry) | ✅ All three implemented (OAuth 2.0, ISO 20022 code mapping, WireMock tests); Fiserv + FIS via REST/JSON, Jack Henry via jXchange SOAP |
 | Live FedNow connectivity (Fed PKI, mTLS, message signing) | 🔲 Credential/certification-dependent; simulator-compatible HTTP client implemented |
 | Live RTP connectivity (TCH network, TCH PKI certificates) | 🔲 TCH onboarding/certification-dependent; `HttpRtpClient` and full XML pipeline implemented |

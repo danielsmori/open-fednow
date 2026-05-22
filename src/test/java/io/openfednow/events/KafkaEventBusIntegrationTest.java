@@ -192,6 +192,58 @@ class KafkaEventBusIntegrationTest extends AbstractInfrastructureIntegrationTest
                 .isNotEmpty();
     }
 
+    // ── Schema versioning (issue #49) ─────────────────────────────────────────
+
+    @Test
+    void publishedEvent_carriesSchemaVersionHeader() {
+        messageRouter.routeInbound(inbound("TXN-KFK-VER-001", "E2E-KFK-VER-001", "75.00"), io.openfednow.gateway.Rail.FEDNOW);
+
+        List<ConsumerRecord<String, String>> records = poll();
+
+        assertThat(records)
+                .filteredOn(r -> "TXN-KFK-VER-001".equals(r.key()))
+                .isNotEmpty()
+                .allSatisfy(r -> {
+                    org.apache.kafka.common.header.Header schemaVersion =
+                            r.headers().lastHeader(io.openfednow.events.KafkaPaymentEventPublisher.SCHEMA_VERSION_HEADER);
+                    assertThat(schemaVersion).isNotNull();
+                    assertThat(new String(schemaVersion.value(), java.nio.charset.StandardCharsets.UTF_8))
+                            .isEqualTo(io.openfednow.events.PaymentEvent.CURRENT_SCHEMA_VERSION);
+                });
+    }
+
+    @Test
+    void publishedEvent_carriesEventTypeHeader() {
+        messageRouter.routeInbound(inbound("TXN-KFK-TYPE-001", "E2E-KFK-TYPE-001", "50.00"), io.openfednow.gateway.Rail.FEDNOW);
+
+        List<ConsumerRecord<String, String>> records = poll();
+
+        assertThat(records)
+                .filteredOn(r -> "TXN-KFK-TYPE-001".equals(r.key()))
+                .isNotEmpty()
+                .allSatisfy(r -> {
+                    org.apache.kafka.common.header.Header eventType =
+                            r.headers().lastHeader(io.openfednow.events.KafkaPaymentEventPublisher.EVENT_TYPE_HEADER);
+                    assertThat(eventType).isNotNull();
+                    String value = new String(eventType.value(), java.nio.charset.StandardCharsets.UTF_8);
+                    // INBOUND_CREDIT_APPLIED on the happy path
+                    assertThat(value).isEqualTo("INBOUND_CREDIT_APPLIED");
+                });
+    }
+
+    @Test
+    void publishedEvent_payloadIncludesSchemaVersionField() {
+        messageRouter.routeInbound(inbound("TXN-KFK-PFLD-001", "E2E-KFK-PFLD-001", "100.00"), io.openfednow.gateway.Rail.FEDNOW);
+
+        List<ConsumerRecord<String, String>> records = poll();
+
+        assertThat(records)
+                .filteredOn(r -> "TXN-KFK-PFLD-001".equals(r.key()))
+                .isNotEmpty()
+                .allSatisfy(r -> assertThat(r.value())
+                        .contains("\"schemaVersion\":\"" + io.openfednow.events.PaymentEvent.CURRENT_SCHEMA_VERSION + "\""));
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private Pacs008Message inbound(String transactionId, String endToEndId, String amount) {

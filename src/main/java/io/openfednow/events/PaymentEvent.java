@@ -14,10 +14,19 @@ import java.time.Instant;
  * RabbitMQ handles the sync→async deferral of payments during core-offline windows;
  * Kafka carries the event stream for real-time observability and integration.
  *
+ * <h2>Schema versioning</h2>
+ * Every event carries a {@link #schemaVersion} field set to {@link #CURRENT_SCHEMA_VERSION} at
+ * the point of publication, and the publisher additionally stamps the same value into the
+ * {@code X-Schema-Version} Kafka message header. Consumers can read either source: the
+ * payload field is the durable record; the header lets routing layers filter without
+ * deserializing the body. See
+ * <a href="../../../../../docs/adr/0006-event-schema-versioning.md">ADR-0006</a>.
+ *
  * @see PaymentEventPublisher
  * @see KafkaPaymentEventPublisher
  */
 public record PaymentEvent(
+        String schemaVersion,
         EventType eventType,
         String transactionId,
         String endToEndId,
@@ -26,6 +35,39 @@ public record PaymentEvent(
         String rejectReasonCode,
         Instant occurredAt
 ) {
+
+    /**
+     * Authoritative schema version for events created by this build.
+     *
+     * <p>Bump this when the wire format changes in a way that a consumer might care about:
+     * <ul>
+     *   <li>Minor bump (1.0 → 1.1): new optional fields, new enum values</li>
+     *   <li>Major bump (1.x → 2.0): renamed / removed fields, semantic changes</li>
+     * </ul>
+     * Consumers that read the {@code X-Schema-Version} header can route accordingly.
+     */
+    public static final String CURRENT_SCHEMA_VERSION = "1.0";
+
+    /**
+     * Static factory that stamps the current schema version onto a new event. Call sites
+     * that build events from in-process state should use this rather than the canonical
+     * record constructor — the latter is reserved for deserialization, where the version
+     * must be preserved verbatim from the source payload.
+     */
+    public static PaymentEvent create(
+            EventType eventType,
+            String transactionId,
+            String endToEndId,
+            BigDecimal amount,
+            String currency,
+            String rejectReasonCode,
+            Instant occurredAt
+    ) {
+        return new PaymentEvent(
+                CURRENT_SCHEMA_VERSION,
+                eventType, transactionId, endToEndId,
+                amount, currency, rejectReasonCode, occurredAt);
+    }
 
     /**
      * Classifies what happened to the payment at this point in its lifecycle.

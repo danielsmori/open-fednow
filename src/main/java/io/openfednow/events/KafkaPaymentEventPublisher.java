@@ -3,12 +3,16 @@ package io.openfednow.events;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.header.internals.RecordHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+
+import java.nio.charset.StandardCharsets;
 
 /**
  * Kafka-backed {@link PaymentEventPublisher}.
@@ -44,6 +48,12 @@ public class KafkaPaymentEventPublisher implements PaymentEventPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(KafkaPaymentEventPublisher.class);
 
+    /** Kafka message header advertising the schema version of the payload. */
+    public static final String SCHEMA_VERSION_HEADER = "X-Schema-Version";
+
+    /** Kafka message header carrying the event type for header-only routing without payload deserialization. */
+    public static final String EVENT_TYPE_HEADER = "X-Event-Type";
+
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
     private final String topic;
@@ -69,14 +79,23 @@ public class KafkaPaymentEventPublisher implements PaymentEventPublisher {
             return;
         }
 
-        kafkaTemplate.send(topic, event.transactionId(), payload)
+        ProducerRecord<String, String> record = new ProducerRecord<>(
+                topic, null, event.transactionId(), payload);
+        // The payload also carries schemaVersion (since #49) — the header is duplicated so
+        // routing layers can filter on version without deserializing the body.
+        record.headers().add(new RecordHeader(SCHEMA_VERSION_HEADER,
+                event.schemaVersion().getBytes(StandardCharsets.UTF_8)));
+        record.headers().add(new RecordHeader(EVENT_TYPE_HEADER,
+                event.eventType().name().getBytes(StandardCharsets.UTF_8)));
+
+        kafkaTemplate.send(record)
                 .whenComplete((result, ex) -> {
                     if (ex != null) {
                         log.warn("Kafka publish failed type={} txn={} topic={}",
                                 event.eventType(), event.transactionId(), topic, ex);
                     } else {
-                        log.debug("PaymentEvent published type={} txn={} partition={} offset={}",
-                                event.eventType(), event.transactionId(),
+                        log.debug("PaymentEvent published type={} txn={} schemaVersion={} partition={} offset={}",
+                                event.eventType(), event.transactionId(), event.schemaVersion(),
                                 result.getRecordMetadata().partition(),
                                 result.getRecordMetadata().offset());
                     }

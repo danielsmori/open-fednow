@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/danielsmori/open-fednow/blob/main/docs/event-schemas/payment-event.schema.json",
+  "title": "PaymentEvent",
+  "description": "Domain event emitted by the OpenFedNow Kafka event bus when a payment changes lifecycle state. See ADR-0006 for the versioning strategy.",
+  "type": "object",
+  "required": ["schemaVersion", "eventType", "transactionId", "endToEndId", "amount", "currency", "occurredAt"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "description": "Schema version of this event. Duplicated in the Kafka X-Schema-Version header. Producers stamp this from PaymentEvent.CURRENT_SCHEMA_VERSION at publish time.",
+      "pattern": "^\\d+\\.\\d+$",
+      "examples": ["1.0"]
+    },
+    "eventType": {
+      "type": "string",
+      "description": "Discriminator for which lifecycle transition this event represents. New values may be added in minor versions; consumers must treat unknown values as 'skip and alert' rather than fatal.",
+      "enum": [
+        "INBOUND_CREDIT_APPLIED",
+        "INBOUND_PAYMENT_REJECTED",
+        "INBOUND_QUEUED_FOR_BRIDGE",
+        "OUTBOUND_PAYMENT_COMPLETED",
+        "OUTBOUND_PAYMENT_REJECTED",
+        "OUTBOUND_PAYMENT_PENDING"
+      ]
+    },
+    "transactionId": {
+      "type": "string",
+      "description": "ISO 20022 TransactionId from the originating pacs.008. Used as the Kafka partition key so events for the same payment land in order on a single partition.",
+      "maxLength": 35
+    },
+    "endToEndId": {
+      "type": "string",
+      "description": "ISO 20022 EndToEndId — the deduplication identifier assigned by the originating institution.",
+      "maxLength": 35
+    },
+    "amount": {
+      "type": "string",
+      "description": "Interbank settlement amount serialized as a decimal string (e.g. '100.00') to preserve precision. Always positive; direction is implied by eventType.",
+      "pattern": "^\\d+(\\.\\d{1,2})?$"
+    },
+    "currency": {
+      "type": "string",
+      "description": "ISO 4217 currency code of the settlement amount. USD for FedNow and RTP.",
+      "minLength": 3,
+      "maxLength": 3
+    },
+    "rejectReasonCode": {
+      "type": ["string", "null"],
+      "description": "ISO 20022 reason code populated only on rejection events (INBOUND_PAYMENT_REJECTED, OUTBOUND_PAYMENT_REJECTED). Examples: AM04 (insufficient funds), AC01 (invalid account), AC04 (closed account), NARR (narrative), XPIR (expired/timeout).",
+      "examples": ["AM04", "AC04", "NARR", "XPIR"]
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 instant at which the lifecycle transition was recorded by the framework, in UTC."
+    }
+  }
+}
