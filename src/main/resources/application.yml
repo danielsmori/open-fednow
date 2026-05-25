@@ -138,6 +138,25 @@ openfednow:
   rate-limit:
     transfers-per-second: ${RATE_LIMIT_TRANSFERS_PER_SECOND:100}
 
+  # Fraud pre-screening. Default-disabled so a fresh sandbox runs unscreened.
+  # When openfednow.fraud.enabled=true the DefaultFraudScreeningService applies:
+  #   1. Account denylist (creditor or debtor present) → BLOCK
+  #   2. Amount above max-single-transfer-amount → BLOCK
+  #   3. Debtor velocity above max-per-window / window-seconds → BLOCK
+  #   4. Amount at or above 50% of the cap → REVIEW (proceed but flag)
+  # Production institutions are expected to provide their own FraudScreeningPort
+  # implementation that calls into a scoring service or rules engine — the
+  # NoOpFraudScreeningService falls back automatically when no other bean is registered.
+  fraud:
+    enabled: ${FRAUD_ENABLED:false}
+    max-single-transfer-amount: ${FRAUD_MAX_AMOUNT:25000.00}
+    velocity:
+      max-per-window: ${FRAUD_VELOCITY_MAX:10}
+      window-seconds: ${FRAUD_VELOCITY_WINDOW_SECONDS:60}
+    # Comma-separated list of account IDs (debtor OR creditor) to block outright.
+    # Empty by default.
+    account-denylist: ${FRAUD_ACCOUNT_DENYLIST:}
+
   # Payment saga settings
   saga:
     # Sagas in a forward-progress state (INITIATED, FUNDS_RESERVED, CORE_SUBMITTED)

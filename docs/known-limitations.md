@@ -148,6 +148,14 @@ All `/admin/**` endpoints require HTTP Basic with the `ADMIN` role (`SecurityCon
 
 `BalanceSeedService` reads `openfednow.shadow-ledger.seed-accounts` (comma-separated). On `ApplicationReadyEvent` it loads each account's balance from the core adapter into Redis using `SETNX` so a recycled middleware pod never clobbers live balances. The on-demand `POST /admin/shadow-ledger/seed` endpoint uses unconditional overwrite for explicit resyncs.
 
+### Fraud pre-screening
+
+`FraudScreeningPort` is the extensibility seam — one method, one structured result, called by `MessageRouter` on every inbound and outbound credit transfer before any side effects.
+
+The default implementation (`DefaultFraudScreeningService`) is opt-in via `openfednow.fraud.enabled=true` and applies four rules in priority order: account denylist (BLOCK), amount cap (BLOCK), debtor velocity via Redis `INCR` + `EXPIRE` (BLOCK), and elevated-amount review at ≥ 50% of the cap (REVIEW — proceeds but flagged in `fraud.reviewed` counter and WARN log). When disabled, `NoOpFraudScreeningService` passes everything through.
+
+Institutions with mature fraud programs are expected to replace the default implementation with their own port implementation calling into a hosted scoring service or ML model. The contract is intentionally narrow so swapping doesn't touch router or message-model code. See [ADR-0008](adr/0008-fraud-screening.md) for the full decision and consequences.
+
 ### Cancellation handling (camt.056 / camt.029)
 
 `CancellationService` handles inbound camt.056 cancellation requests on both rails. `POST /fednow/cancellation` and `POST /rtp/cancellation` accept the camt.056 and return the camt.029 synchronously. Decision logic is keyed on the saga state of the original payment:

@@ -9,6 +9,8 @@ import io.openfednow.events.PaymentEvent.EventType;
 import io.openfednow.events.PaymentEventPublisher;
 import io.openfednow.iso20022.Pacs002Message;
 import io.openfednow.iso20022.Pacs008Message;
+import io.openfednow.processing.fraud.FraudScreeningPort;
+import io.openfednow.processing.fraud.ScreeningResult;
 import io.openfednow.processing.idempotency.IdempotencyService;
 import io.openfednow.processing.saga.PaymentSaga;
 import io.openfednow.processing.saga.SagaOrchestrator;
@@ -59,6 +61,7 @@ public class MessageRouter {
     private final ShadowLedger shadowLedger;
     private final SagaOrchestrator sagaOrchestrator;
     private final PaymentEventPublisher eventPublisher;
+    private final FraudScreeningPort fraudScreeningPort;
 
     public MessageRouter(FedNowClient fedNowClient,
                          CoreBankingAdapter coreBankingAdapter,
@@ -68,7 +71,8 @@ public class MessageRouter {
                          ObjectMapper objectMapper,
                          ShadowLedger shadowLedger,
                          SagaOrchestrator sagaOrchestrator,
-                         PaymentEventPublisher eventPublisher) {
+                         PaymentEventPublisher eventPublisher,
+                         FraudScreeningPort fraudScreeningPort) {
         this.fedNowClient = fedNowClient;
         this.coreBankingAdapter = coreBankingAdapter;
         this.idempotencyService = idempotencyService;
@@ -78,6 +82,7 @@ public class MessageRouter {
         this.shadowLedger = shadowLedger;
         this.sagaOrchestrator = sagaOrchestrator;
         this.eventPublisher = eventPublisher;
+        this.fraudScreeningPort = fraudScreeningPort;
     }
 
     /**
@@ -115,6 +120,19 @@ public class MessageRouter {
         if (cached.isPresent()) {
             log.info("Duplicate inbound payment suppressed e2e={}", message.getEndToEndId());
             return ResponseEntity.ok(cached.get());
+        }
+
+        // Step 1.5 — fraud pre-screening before any side effects.
+        // A BLOCK short-circuits with an RJCT FRAD pacs.002 so the originator
+        // can see exactly why; no saga is initiated, no funds are touched.
+        ScreeningResult screening = fraudScreeningPort.screen(message);
+        if (screening.decision() == ScreeningResult.Decision.BLOCK) {
+            Pacs002Message rjct = Pacs002Message.rejected(
+                    message.getEndToEndId(), message.getTransactionId(),
+                    screening.reasonCode(), "Blocked by fraud pre-screening: " + screening.description());
+            idempotencyService.recordOutcome(message.getEndToEndId(), rjct);
+            eventPublisher.publish(event(message, EventType.INBOUND_PAYMENT_REJECTED, screening.reasonCode()));
+            return ResponseEntity.ok(rjct);
         }
 
         // Step 2 — initiate saga (durable record of this payment's lifecycle)
@@ -232,6 +250,19 @@ public class MessageRouter {
         if (cached.isPresent()) {
             log.info("Duplicate outbound payment suppressed e2e={}", message.getEndToEndId());
             return ResponseEntity.ok(cached.get());
+        }
+
+        // Step 1.5 — fraud pre-screening before any side effects.
+        // For outbound we screen before the funds check so an outright fraud signal
+        // doesn't get masked as "insufficient funds".
+        ScreeningResult screening = fraudScreeningPort.screen(message);
+        if (screening.decision() == ScreeningResult.Decision.BLOCK) {
+            Pacs002Message rjct = Pacs002Message.rejected(
+                    message.getEndToEndId(), message.getTransactionId(),
+                    screening.reasonCode(), "Blocked by fraud pre-screening: " + screening.description());
+            idempotencyService.recordOutcome(message.getEndToEndId(), rjct);
+            eventPublisher.publish(event(message, EventType.OUTBOUND_PAYMENT_REJECTED, screening.reasonCode()));
+            return ResponseEntity.ok(rjct);
         }
 
         // Step 2 — sufficient-funds check (fail fast before saga is created)

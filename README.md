@@ -20,6 +20,7 @@
 | Five-layer architecture | ✅ Implemented |
 | ISO 20022 message models (pacs.008, pacs.002, pacs.004, camt.056/029) | ✅ Implemented |
 | Cancellation handling — inbound camt.056 → camt.029 with state-keyed decision matrix | ✅ Implemented on both rails; CNCL reverses Shadow Ledger credit and terminates saga. See [ADR-0007](docs/adr/0007-camt056-cancellation-lifecycle.md) |
+| Fraud pre-screening — `FraudScreeningPort` with rule-based default (amount cap, debtor velocity, denylist) | ✅ Disabled by default; opt-in via `openfednow.fraud.enabled=true`. BLOCK returns RJCT FRAD before any side effects. Institutions swap in their own port for production. See [ADR-0008](docs/adr/0008-fraud-screening.md) |
 | SandboxAdapter — all scenarios: ACSC, RJCT, ACSP, timeout | ✅ Implemented |
 | MockVendorAdapter — in-memory balance ledger, configurable failure modes | ✅ Implemented; `CoreBankingAdapterContractTest` enforces adapter contract |
 | `CoreBankingAdapter` contract | ✅ Implemented |
