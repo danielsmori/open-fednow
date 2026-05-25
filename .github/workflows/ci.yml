@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build & Test
+    name: Build & Unit Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -25,15 +25,56 @@ jobs:
       - name: Build with Maven
         run: mvn -B clean compile --no-transfer-progress
 
-      - name: Run tests
-        # Runs the unit test suite. Integration tests (tagged "integration") require
-        # Testcontainers / Docker and are excluded by the Maven Surefire configuration
-        # in pom.xml. Run them locally with: mvn test -Dgroups=integration
+      - name: Run unit tests
+        # Runs the default test suite. Integration tests (tagged "integration") require
+        # Testcontainers / Docker and are excluded here — see the integration-tests job
+        # below. Run integration tests locally with: mvn test -Dgroups=integration
         run: mvn -B test --no-transfer-progress
 
-      - name: Upload test results
+      - name: Upload unit test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
+          name: unit-test-results
+          path: target/surefire-reports/
+
+  integration-tests:
+    name: Integration Tests (Testcontainers)
+    runs-on: ubuntu-latest
+    # Run after unit tests so a unit-test break fails fast and doesn't burn the
+    # slower integration runner.
+    needs: build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      # Docker is preinstalled on ubuntu-latest GitHub runners, so Testcontainers
+      # works out of the box. The Reuse env var keeps the same containers across
+      # @SpringBootTest classes within a single mvn invocation; combined with
+      # Surefire's default forking model this materially reduces test time.
+      - name: Verify Docker availability
+        run: docker version
+
+      - name: Run integration tests
+        env:
+          TESTCONTAINERS_REUSE_ENABLE: "true"
+          # Skip Ryuk because GitHub runners already clean up the VM after the
+          # job finishes, and Ryuk occasionally fails on the first container
+          # creation on a cold runner.
+          TESTCONTAINERS_RYUK_DISABLED: "true"
+        run: mvn -B test -Dgroups=integration --no-transfer-progress
+
+      - name: Upload integration test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
           path: target/surefire-reports/

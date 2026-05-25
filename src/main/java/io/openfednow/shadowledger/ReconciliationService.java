@@ -8,6 +8,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.sql.PreparedStatement;
@@ -43,10 +45,12 @@ public class ReconciliationService {
     private final JdbcTemplate jdbc;
     private final CoreBankingAdapter coreBankingAdapter;
     private final int batchSize;
+    private final TransactionTemplate perAccountTx;
 
     public ReconciliationService(ShadowLedger shadowLedger,
                                  JdbcTemplate jdbc,
                                  CoreBankingAdapter coreBankingAdapter,
+                                 PlatformTransactionManager txManager,
                                  @Value("${openfednow.reconciliation.batch-size:500}") int batchSize) {
         if (batchSize <= 0) {
             throw new IllegalArgumentException(
@@ -56,6 +60,13 @@ public class ReconciliationService {
         this.jdbc = jdbc;
         this.coreBankingAdapter = coreBankingAdapter;
         this.batchSize = batchSize;
+        // Per-account work runs inside its own transaction so a discrepancy correction
+        // and the "mark unconfirmed rows confirmed" UPDATE commit together. If either
+        // fails, neither persists — the account is reprocessed on the next cycle.
+        // TransactionTemplate is used (rather than @Transactional) to avoid Spring's
+        // self-invocation pitfall: the reconcile() loop calls a private helper, and
+        // @Transactional only proxies cross-bean calls.
+        this.perAccountTx = new TransactionTemplate(txManager);
     }
 
     /** Visible to tests. */
@@ -106,24 +117,9 @@ public class ReconciliationService {
 
                 for (String accountId : batch) {
                     try {
-                        BigDecimal coreBalance = coreBankingAdapter.getAvailableBalance(accountId);
-                        BigDecimal shadowBalance = shadowLedger.getAvailableBalance(accountId);
-
-                        if (coreBalance.compareTo(shadowBalance) != 0) {
-                            discrepanciesDetected++;
-                            log.warn("Balance discrepancy account={} shadow={} core={}",
-                                    accountId, shadowBalance, coreBalance);
-                            shadowLedger.reconcile(accountId, coreBalance);
-                        }
-
-                        // Mark this account's unconfirmed entries as confirmed
-                        int confirmed = jdbc.update(
-                                "UPDATE shadow_ledger_transaction_log " +
-                                "SET core_confirmed = TRUE " +
-                                "WHERE account_id = ? AND core_confirmed = FALSE",
-                                accountId);
-                        transactionsReplayed += confirmed;
-
+                        int[] outcome = reconcileOneAccount(accountId);
+                        transactionsReplayed += outcome[0];
+                        discrepanciesDetected += outcome[1];
                     } catch (Exception e) {
                         log.error("Reconciliation failed for account={}", accountId, e);
                         discrepanciesDetected++;
@@ -250,6 +246,42 @@ public class ReconciliationService {
                 successful,
                 rs.getString("summary"),
                 rs.getString("triggered_by"));
+    }
+
+    /**
+     * Reconciles a single account inside its own transaction.
+     *
+     * <p>The Postgres-side writes — the optional RECONCILIATION audit row from
+     * {@link ShadowLedger#reconcile} and the "mark unconfirmed rows confirmed"
+     * UPDATE — commit or roll back together. The Redis update inside
+     * {@code shadowLedger.reconcile} is outside this transaction (different
+     * system); if Postgres rolls back after Redis has been updated, the
+     * subsequent cycle will detect the residual discrepancy and write the
+     * correction afresh.
+     *
+     * @return a two-element array {@code [transactionsConfirmed, discrepancyDetected]}
+     */
+    private int[] reconcileOneAccount(String accountId) {
+        return perAccountTx.execute(status -> {
+            int confirmed = 0;
+            int discrepancyDetected = 0;
+            BigDecimal coreBalance = coreBankingAdapter.getAvailableBalance(accountId);
+            BigDecimal shadowBalance = shadowLedger.getAvailableBalance(accountId);
+
+            if (coreBalance.compareTo(shadowBalance) != 0) {
+                discrepancyDetected = 1;
+                log.warn("Balance discrepancy account={} shadow={} core={}",
+                        accountId, shadowBalance, coreBalance);
+                shadowLedger.reconcile(accountId, coreBalance);
+            }
+
+            confirmed = jdbc.update(
+                    "UPDATE shadow_ledger_transaction_log " +
+                    "SET core_confirmed = TRUE " +
+                    "WHERE account_id = ? AND core_confirmed = FALSE",
+                    accountId);
+            return new int[] { confirmed, discrepancyDetected };
+        });
     }
 
     // ── Internal helpers ───────────────────────────────────────────────────────

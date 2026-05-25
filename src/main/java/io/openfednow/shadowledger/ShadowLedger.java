@@ -187,8 +187,19 @@ public class ShadowLedger {
     /**
      * Reverses a previously applied debit by looking up the original DEBIT entry
      * in the transaction log and crediting the same amount back.
+     *
+     * <p><strong>Idempotent.</strong> If a {@code REVERSAL} row already exists for this
+     * {@code transactionId} the method is a no-op. This makes the operation safe to
+     * retry — saga recovery, timeout-driven compensation, and per-saga compensation
+     * paths can all invoke it more than once without double-crediting the account.
      */
     public void reverseDebit(String transactionId) {
+        if (reversalAlreadyExists(transactionId)) {
+            log.debug("Shadow Ledger reversal already recorded — skipping transactionId={}",
+                    transactionId);
+            return;
+        }
+
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "SELECT account_id, amount FROM shadow_ledger_transaction_log " +
                 "WHERE transaction_id = ? AND transaction_type = 'DEBIT' " +
@@ -219,6 +230,19 @@ public class ShadowLedger {
     }
 
     /**
+     * Returns true if any REVERSAL row already exists for the given transactionId.
+     * Used by {@link #reverseDebit(String)} and {@link #reverseCredit(String)} to
+     * guarantee idempotency under retry.
+     */
+    private boolean reversalAlreadyExists(String transactionId) {
+        Integer count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM shadow_ledger_transaction_log " +
+                "WHERE transaction_id = ? AND transaction_type = 'REVERSAL'",
+                Integer.class, transactionId);
+        return count != null && count > 0;
+    }
+
+    /**
      * Reverses a previously applied credit by looking up the original CREDIT entry
      * in the transaction log and debiting the same amount back.
      *
@@ -229,8 +253,18 @@ public class ShadowLedger {
      * <p>The reversal is recorded as a {@code REVERSAL} row in the audit log so the
      * reconciliation cycle can match the action against the core's view of the
      * cancelled transaction.
+     *
+     * <p><strong>Idempotent.</strong> If a {@code REVERSAL} row already exists for
+     * this {@code transactionId} the method is a no-op — safe to retry from
+     * recovery, timeout, or per-saga compensation paths without double-debiting.
      */
     public void reverseCredit(String transactionId) {
+        if (reversalAlreadyExists(transactionId)) {
+            log.debug("Shadow Ledger reversal already recorded — skipping transactionId={}",
+                    transactionId);
+            return;
+        }
+
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "SELECT account_id, amount FROM shadow_ledger_transaction_log " +
                 "WHERE transaction_id = ? AND transaction_type = 'CREDIT' " +

@@ -7,6 +7,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
@@ -190,6 +192,7 @@ public class SagaOrchestrator {
      * @param sagaId the identifier of the failed saga
      * @param reason ISO 20022 reason code for the failure (e.g. AM04, AC01)
      */
+    @Transactional(rollbackFor = Exception.class)
     public void compensate(String sagaId, String reason) {
         PaymentSaga saga = resume(sagaId);
 
@@ -245,6 +248,7 @@ public class SagaOrchestrator {
      * @param sagaId      identifier of the saga to cancel
      * @param reasonCode  ISO 20022 reason code from the camt.056 (e.g., DUPL, FRAUD, CUST)
      */
+    @Transactional(rollbackFor = Exception.class)
     public void cancelInboundSaga(String sagaId, String reasonCode) {
         PaymentSaga saga = resume(sagaId);
 
