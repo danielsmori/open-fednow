@@ -1,7 +1,10 @@
 package io.openfednow.gateway;
 
+import io.openfednow.iso20022.Camt029Message;
+import io.openfednow.iso20022.Camt056Message;
 import io.openfednow.iso20022.Pacs002Message;
 import io.openfednow.iso20022.Pacs008Message;
+import io.openfednow.processing.cancellation.CancellationService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -42,10 +45,14 @@ public class FedNowGateway {
 
     private final MessageRouter messageRouter;
     private final CertificateManager certificateManager;
+    private final CancellationService cancellationService;
 
-    public FedNowGateway(MessageRouter messageRouter, CertificateManager certificateManager) {
+    public FedNowGateway(MessageRouter messageRouter,
+                         CertificateManager certificateManager,
+                         CancellationService cancellationService) {
         this.messageRouter = messageRouter;
         this.certificateManager = certificateManager;
+        this.cancellationService = cancellationService;
     }
 
     /**
@@ -114,6 +121,40 @@ public class FedNowGateway {
     })
     public ResponseEntity<Pacs002Message> sendTransfer(@Valid @RequestBody Pacs008Message message) {
         return messageRouter.routeOutbound(message);
+    }
+
+    /**
+     * Receives an inbound camt.056 payment cancellation request from FedNow and
+     * returns a camt.029 resolution describing the outcome.
+     *
+     * <p>The framework's response is always synchronous: the camt.029 returned in
+     * the HTTP response body is the same message FedNow expects. Decision logic
+     * lives in {@link CancellationService} — see ADR-0007 for the full state-to-
+     * response matrix.
+     */
+    @PostMapping("/cancellation")
+    @Operation(
+        summary = "Receive inbound cancellation request (camt.056)",
+        description = """
+            Accepts an inbound camt.056 cancellation request for a payment we previously \
+            received. Returns the corresponding camt.029 resolution: \
+            CNCL if the payment is still cancellable and was successfully reversed; \
+            RJCR/ARDT if the payment already settled and must be returned via pacs.004; \
+            RJCR/NOOR if no matching transaction is on record; \
+            PDCR if the cancellation outcome cannot yet be determined (core call in flight)."""
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "Cancellation outcome — inspect resolutionStatus for CNCL, RJCR, or PDCR",
+            content = @Content(mediaType = "application/json",
+                               schema = @Schema(implementation = Camt029Message.class))),
+        @ApiResponse(responseCode = "400",
+            description = "Malformed or schema-invalid camt.056 message")
+    })
+    public ResponseEntity<Camt029Message> receiveCancellation(@Valid @RequestBody Camt056Message request) {
+        certificateManager.validateClientCertificate();
+        return ResponseEntity.ok(cancellationService.handleCancellationRequest(request));
     }
 
     /**

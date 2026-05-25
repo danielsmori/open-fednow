@@ -219,6 +219,48 @@ public class ShadowLedger {
     }
 
     /**
+     * Reverses a previously applied credit by looking up the original CREDIT entry
+     * in the transaction log and debiting the same amount back.
+     *
+     * <p>Mirror of {@link #reverseDebit(String)} for the inbound-payment cancellation
+     * path: an inbound credit was applied to the creditor's Shadow Ledger balance,
+     * and a downstream cancellation requires that credit to be undone.
+     *
+     * <p>The reversal is recorded as a {@code REVERSAL} row in the audit log so the
+     * reconciliation cycle can match the action against the core's view of the
+     * cancelled transaction.
+     */
+    public void reverseCredit(String transactionId) {
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT account_id, amount FROM shadow_ledger_transaction_log " +
+                "WHERE transaction_id = ? AND transaction_type = 'CREDIT' " +
+                "ORDER BY applied_at LIMIT 1",
+                transactionId);
+
+        if (rows.isEmpty()) {
+            log.warn("Shadow Ledger: no CREDIT found for reversal transactionId={}", transactionId);
+            return;
+        }
+
+        String accountId = (String) rows.get(0).get("account_id");
+        BigDecimal amount = (BigDecimal) rows.get(0).get("amount");
+        String key = BALANCE_KEY_PREFIX + accountId;
+        long amountCents = dollarsToCents(amount);
+
+        Long newCents = redis.opsForValue().increment(key, -amountCents);
+        if (newCents == null) {
+            log.warn("Shadow Ledger reversal decrement returned null for account={}", accountId);
+            return;
+        }
+
+        long balanceBeforeCents = newCents + amountCents;
+        logTransaction(transactionId, transactionId, accountId, "REVERSAL",
+                amount, centsToDollars(balanceBeforeCents), centsToDollars(newCents));
+        log.info("Shadow Ledger credit reversal applied account={} amount={} balanceAfter={}",
+                accountId, amount, centsToDollars(newCents));
+    }
+
+    /**
      * Seeds the Shadow Ledger balance only when Redis has no entry for the account.
      *
      * <p>Used at application startup by {@link BalanceSeedService} so a fresh deployment

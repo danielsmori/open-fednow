@@ -232,6 +232,60 @@ public class SagaOrchestrator {
     }
 
     /**
+     * Cancels an inbound payment saga in response to a camt.056 cancellation request.
+     *
+     * <p>Mirrors {@link #compensate(String, String)} for the inbound case — reverses the
+     * Shadow Ledger <em>credit</em> (since inbound payments apply credits, not debits)
+     * if funds were already reserved, and advances the saga to {@code FAILED}.
+     *
+     * <p>The caller is responsible for verifying that the saga is in a cancellable state
+     * before invoking. The guard here only prevents re-cancellation of an already
+     * terminal saga.
+     *
+     * @param sagaId      identifier of the saga to cancel
+     * @param reasonCode  ISO 20022 reason code from the camt.056 (e.g., DUPL, FRAUD, CUST)
+     */
+    public void cancelInboundSaga(String sagaId, String reasonCode) {
+        PaymentSaga saga = resume(sagaId);
+
+        if (saga.getState() == PaymentSaga.SagaState.FAILED
+                || saga.getState() == PaymentSaga.SagaState.COMPLETED) {
+            log.warn("Inbound saga already in terminal state — cancellation skipped sagaId={} state={}",
+                    sagaId, saga.getState());
+            return;
+        }
+
+        log.info("Inbound saga cancellation starting sagaId={} fromState={} reason={}",
+                sagaId, saga.getState(), reasonCode);
+
+        // Reverse the Shadow Ledger credit if it was applied. INITIATED means no funds
+        // were credited yet, so no reversal is required — the saga simply terminates.
+        PaymentSaga.SagaState current = saga.getState();
+        boolean creditWasApplied = current == PaymentSaga.SagaState.FUNDS_RESERVED
+                || current == PaymentSaga.SagaState.CORE_SUBMITTED
+                || current == PaymentSaga.SagaState.FEDNOW_CONFIRMED;
+        if (creditWasApplied) {
+            try {
+                shadowLedger.reverseCredit(saga.getTransactionId());
+                log.info("Shadow Ledger credit reversed sagaId={} transactionId={}",
+                        sagaId, saga.getTransactionId());
+            } catch (Exception e) {
+                log.error("Shadow Ledger credit reversal failed sagaId={}", sagaId, e);
+            }
+        }
+
+        // COMPENSATING is allowed as a passthrough — recovery already moved us here.
+        if (current != PaymentSaga.SagaState.COMPENSATING) {
+            saga.compensate(saga.getState(), reasonCode);
+            persistState(saga, reasonCode, "Cancelled via camt.056");
+        }
+        saga.advance(PaymentSaga.SagaState.FAILED);
+        persistState(saga, reasonCode, "Cancelled via camt.056");
+
+        log.info("Inbound saga cancellation complete sagaId={}", sagaId);
+    }
+
+    /**
      * Advances a saga's state and persists the transition to the database.
      * Called by processing components after each successful step.
      */

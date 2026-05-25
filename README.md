@@ -19,6 +19,7 @@
 |-----------|--------|
 | Five-layer architecture | ✅ Implemented |
 | ISO 20022 message models (pacs.008, pacs.002, pacs.004, camt.056/029) | ✅ Implemented |
+| Cancellation handling — inbound camt.056 → camt.029 with state-keyed decision matrix | ✅ Implemented on both rails; CNCL reverses Shadow Ledger credit and terminates saga. See [ADR-0007](docs/adr/0007-camt056-cancellation-lifecycle.md) |
 | SandboxAdapter — all scenarios: ACSC, RJCT, ACSP, timeout | ✅ Implemented |
 | MockVendorAdapter — in-memory balance ledger, configurable failure modes | ✅ Implemented; `CoreBankingAdapterContractTest` enforces adapter contract |
 | `CoreBankingAdapter` contract | ✅ Implemented |

@@ -1,7 +1,10 @@
 package io.openfednow.gateway;
 
+import io.openfednow.iso20022.Camt029Message;
+import io.openfednow.iso20022.Camt056Message;
 import io.openfednow.iso20022.Pacs002Message;
 import io.openfednow.iso20022.Pacs008Message;
+import io.openfednow.processing.cancellation.CancellationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -70,15 +73,17 @@ public class RtpGateway {
     private final RtpXmlParser rtpXmlParser;
     private final RtpXmlSerializer rtpXmlSerializer;
     private final RtpClient rtpClient;
+    private final CancellationService cancellationService;
 
     public RtpGateway(MessageRouter messageRouter, CertificateManager certificateManager,
                       RtpXmlParser rtpXmlParser, RtpXmlSerializer rtpXmlSerializer,
-                      RtpClient rtpClient) {
+                      RtpClient rtpClient, CancellationService cancellationService) {
         this.messageRouter = messageRouter;
         this.certificateManager = certificateManager;
         this.rtpXmlParser = rtpXmlParser;
         this.rtpXmlSerializer = rtpXmlSerializer;
         this.rtpClient = rtpClient;
+        this.cancellationService = cancellationService;
     }
 
     /**
@@ -188,6 +193,36 @@ public class RtpGateway {
         certificateManager.validateTchClientCertificate();
         Pacs002Message result = rtpClient.submitCreditTransfer(message);
         return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Receives an inbound camt.056 cancellation request via the RTP rail and
+     * returns a camt.029 resolution.
+     *
+     * <p>Rail-agnostic — the same {@link CancellationService} handles RTP and
+     * FedNow cancellations because the saga lookup and lifecycle decisions are
+     * identical. See ADR-0007 for the decision matrix.
+     */
+    @PostMapping("/cancellation")
+    @Operation(
+        summary = "Receive inbound cancellation request (camt.056) — RTP rail",
+        description = """
+            Accepts an inbound camt.056 cancellation request received via the RTP \
+            network and returns the corresponding camt.029 resolution. \
+            Decision logic and outcomes match the FedNow rail — see ADR-0007."""
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "Cancellation outcome",
+            content = @Content(mediaType = "application/json",
+                               schema = @Schema(implementation = Camt029Message.class))),
+        @ApiResponse(responseCode = "401",
+            description = "Client certificate absent or not issued by TCH PKI")
+    })
+    public ResponseEntity<Camt029Message> receiveCancellation(@RequestBody Camt056Message request) {
+        certificateManager.validateTchClientCertificate();
+        return ResponseEntity.ok(cancellationService.handleCancellationRequest(request));
     }
 
     /**

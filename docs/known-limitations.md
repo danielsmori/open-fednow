@@ -103,9 +103,9 @@ Inbound source rail (FedNow vs. RTP) is now persisted on every `saga_state` row 
 
 ---
 
-### 10. Cancellation message flow (camt.056 / camt.029) is modeled but not wired
+### 10. Outbound camt.056 is not wired
 
-The ISO 20022 message classes `Camt056Message` (payment cancellation request) and `Camt029Message` (resolution of investigation) are implemented with their field mappings. There is no endpoint, handler, or service that processes an inbound camt.056 or generates an outbound camt.029.
+Inbound cancellation handling is now implemented — see "Cancellation handling" below in the operational capabilities section. The remaining gap is **outbound** cancellation: the institution wanting to recall its own payment via a camt.056 it constructs and submits to FedNow. `Camt056Message.forPaymentCancellation()` builds a valid message, but there is no admin endpoint, no `FedNowClient.submitCancellation()` method, and no async tracking of the resulting camt.029. Tracked as future work.
 
 ---
 
@@ -147,6 +147,17 @@ All `/admin/**` endpoints require HTTP Basic with the `ADMIN` role (`SecurityCon
 ### Balance seeding
 
 `BalanceSeedService` reads `openfednow.shadow-ledger.seed-accounts` (comma-separated). On `ApplicationReadyEvent` it loads each account's balance from the core adapter into Redis using `SETNX` so a recycled middleware pod never clobbers live balances. The on-demand `POST /admin/shadow-ledger/seed` endpoint uses unconditional overwrite for explicit resyncs.
+
+### Cancellation handling (camt.056 / camt.029)
+
+`CancellationService` handles inbound camt.056 cancellation requests on both rails. `POST /fednow/cancellation` and `POST /rtp/cancellation` accept the camt.056 and return the camt.029 synchronously. Decision logic is keyed on the saga state of the original payment:
+
+- INITIATED / FUNDS_RESERVED → CNCL (Shadow Ledger credit reversed if applied; saga moves to FAILED carrying the camt.056 reason code)
+- CORE_SUBMITTED / COMPENSATING → PDCR (outcome can't be determined synchronously; operator follow-up may be needed)
+- FEDNOW_CONFIRMED / COMPLETED → RJCR / ARDT (settlement is committed; originator must use pacs.004 return)
+- FAILED or no saga → RJCR / NOOR
+
+The full decision matrix and design tradeoffs are documented in [ADR-0007](adr/0007-camt056-cancellation-lifecycle.md).
 
 ---
 

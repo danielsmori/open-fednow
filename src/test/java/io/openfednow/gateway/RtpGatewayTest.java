@@ -53,7 +53,8 @@ class RtpGatewayTest {
         messageRouter = mock(MessageRouter.class);
         certificateManager = mock(CertificateManager.class);
         rtpClient = mock(RtpClient.class);
-        gateway = new RtpGateway(messageRouter, certificateManager, xmlParser, xmlSerializer, rtpClient);
+        gateway = new RtpGateway(messageRouter, certificateManager, xmlParser, xmlSerializer, rtpClient,
+                mock(io.openfednow.processing.cancellation.CancellationService.class));
     }
 
     // ── health ───────────────────────────────────────────────────────────────
