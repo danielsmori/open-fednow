@@ -178,6 +178,21 @@ openfednow:
     # the screening service's own alerting catches its unavailability.
     screening-timeout-millis: ${FRAUD_SCREENING_TIMEOUT_MS:1500}
 
+  # Admin audit log retention (audit #15). Default 365 days — long enough for
+  # typical compliance review windows. The sweep runs daily.
+  admin-audit:
+    retention-days: ${ADMIN_AUDIT_RETENTION_DAYS:365}
+    cleanup-interval-hours: ${ADMIN_AUDIT_CLEANUP_INTERVAL_HOURS:24}
+
+  # Compensation retry sweep (audit #24). When a saga reaches FAILED but the
+  # Shadow Ledger reversal failed (Redis blip, etc.), the underlying balance
+  # stays out of sync. This @Scheduled sweep finds those orphaned reversals
+  # and retries them. Idempotent — the reversal methods skip on existing
+  # REVERSAL rows, so a retry is cheap and safe.
+  compensation-retry:
+    interval-seconds: ${COMPENSATION_RETRY_INTERVAL_SECONDS:300}
+    batch-size: ${COMPENSATION_RETRY_BATCH_SIZE:200}
+
   # Payment saga settings
   saga:
     # Sagas in a forward-progress state (INITIATED, FUNDS_RESERVED, CORE_SUBMITTED)

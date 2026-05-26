@@ -88,6 +88,18 @@ openfednow:
     # that hangs must not block the payment thread past the FedNow SLA window.
     screeningTimeoutMillis: 1500
 
+  # Admin audit log retention (audit #15) — sweeps admin_audit_log on the
+  # configured cadence. Default 365 days retention.
+  adminAudit:
+    retentionDays: 365
+    cleanupIntervalHours: 24
+
+  # Compensation retry sweep (audit #24) — retries Shadow Ledger reversals
+  # that failed inside saga compensation. Idempotent under retry.
+  compensationRetry:
+    intervalSeconds: 300
+    batchSize: 200
+
 # ── HikariCP database connection pool ─────────────────────────────────────
 # Defaults are sized for moderate FedNow throughput. Tune to observed
 # utilization once you have production traffic.
