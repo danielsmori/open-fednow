@@ -1,0 +1,46 @@
+# Dependabot keeps Maven dependencies and GitHub Actions versions current
+# so CVE patches land via PR rather than via manual sweeps. PRs are opened
+# weekly, grouped by ecosystem so a single update day's review burden is
+# bounded.
+
+version: 2
+updates:
+  # ── Maven ─────────────────────────────────────────────────────────────
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "maven"
+    # Group routine version bumps so review cost scales with the *number*
+    # of meaningful changes, not the number of individual packages.
+    groups:
+      spring-boot:
+        patterns:
+          - "org.springframework.boot:*"
+          - "org.springframework:*"
+      testcontainers:
+        patterns:
+          - "org.testcontainers:*"
+      resilience4j:
+        patterns:
+          - "io.github.resilience4j:*"
+    # Major-version bumps for Spring Boot are not auto-PR'd — those are
+    # release decisions, not dependency hygiene.
+    ignore:
+      - dependency-name: "org.springframework.boot:*"
+        update-types: ["version-update:semver-major"]
+
+  # ── GitHub Actions ────────────────────────────────────────────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"

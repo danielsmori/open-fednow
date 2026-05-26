@@ -1,0 +1,62 @@
+name: OWASP Dependency Check
+
+# Runs the OWASP dependency-check Maven plugin against the project's
+# transitive dependency graph. The job is scheduled weekly because the
+# scan is slow (initial NVD download takes 5–10 minutes on a cold runner)
+# and also runs on pull requests that touch pom.xml so a new dependency
+# can't sneak in with an unaddressed CVE.
+
+on:
+  schedule:
+    # Mondays 04:00 UTC — pairs with the Dependabot weekly cadence so that
+    # by mid-week the team is reviewing the union of "dependencies updated"
+    # PRs and "CVEs detected" reports.
+    - cron: "0 4 * * 1"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "pom.xml"
+      - ".github/workflows/dependency-check.yml"
+  workflow_dispatch:
+
+jobs:
+  scan:
+    name: Scan for known vulnerabilities
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      # The dependency-check plugin downloads the NVD CVE feed on first run
+      # (~250MB). Cache it so subsequent runs only fetch the daily delta.
+      - name: Cache NVD database
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: dependency-check-data-${{ runner.os }}
+
+      - name: Run dependency-check
+        # failBuildOnCVSS=7 trips the build on any High or Critical CVE
+        # (CVSS 7.0–10.0). Medium and Low are reported but don't fail —
+        # avoids alert fatigue while still catching the actually-dangerous
+        # ones. format=HTML so reviewers can open the report directly.
+        run: |
+          mvn -B org.owasp:dependency-check-maven:check \
+              -DfailBuildOnCVSS=7 \
+              -Dformats=HTML,JSON \
+              --no-transfer-progress
+
+      - name: Upload dependency-check report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: target/dependency-check-report.*

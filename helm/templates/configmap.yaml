@@ -29,3 +29,31 @@ data:
   # TLS keystore paths (files mounted from the tls Secret volume)
   TLS_KEYSTORE_PATH: {{ printf "%s/%s" .Values.tls.mountPath .Values.tls.keystoreFilename | quote }}
   FED_TRUSTSTORE_PATH: {{ printf "%s/%s" .Values.tls.mountPath .Values.tls.fedTruststoreFilename | quote }}
+
+  # RTP gateway (empty = SandboxRtpClient; set to TCH endpoint when onboarded)
+  RTP_ENDPOINT: {{ .Values.openfednow.gateway.rtpEndpoint | quote }}
+
+  # Rate limiting on the FedNow / RTP transfer endpoints (issue #46)
+  RATE_LIMIT_TRANSFERS_PER_SECOND: {{ .Values.openfednow.rateLimit.transfersPerSecond | toString | quote }}
+
+  # Saga timeout monitor (issue #37)
+  SAGA_TIMEOUT_SECONDS: {{ .Values.openfednow.saga.timeoutSeconds | toString | quote }}
+  SAGA_TIMEOUT_CHECK_INTERVAL_SECONDS: {{ .Values.openfednow.saga.timeoutCheckIntervalSeconds | toString | quote }}
+
+  # Idempotency record retention (issue #38)
+  IDEMPOTENCY_TTL_HOURS: {{ .Values.openfednow.idempotency.ttlHours | toString | quote }}
+  IDEMPOTENCY_CLEANUP_INTERVAL_MINUTES: {{ .Values.openfednow.idempotency.cleanupIntervalMinutes | toString | quote }}
+
+  # Reconciliation pagination (issue #51)
+  RECONCILIATION_BATCH_SIZE: {{ .Values.openfednow.reconciliation.batchSize | toString | quote }}
+
+  # Shadow Ledger balance seeding (issue #39) — comma-separated account IDs
+  SHADOW_LEDGER_SEED_ACCOUNTS: {{ .Values.openfednow.shadowLedger.seedAccounts | quote }}
+
+  # Fraud pre-screening (issue #47). Disabled by default; institutions plug in
+  # their own FraudScreeningPort for production scoring.
+  FRAUD_ENABLED: {{ .Values.openfednow.fraud.enabled | toString | quote }}
+  FRAUD_MAX_AMOUNT: {{ .Values.openfednow.fraud.maxSingleTransferAmount | quote }}
+  FRAUD_VELOCITY_MAX: {{ .Values.openfednow.fraud.velocity.maxPerWindow | toString | quote }}
+  FRAUD_VELOCITY_WINDOW_SECONDS: {{ .Values.openfednow.fraud.velocity.windowSeconds | toString | quote }}
+  FRAUD_ACCOUNT_DENYLIST: {{ .Values.openfednow.fraud.accountDenylist | quote }}

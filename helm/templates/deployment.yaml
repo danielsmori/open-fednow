@@ -26,6 +26,12 @@ spec:
       {{- end }}
       serviceAccountName: {{ include "openfednow.serviceAccountName" . }}
 
+      # Must exceed spring.lifecycle.timeout-per-shutdown-phase (30s) so
+      # Kubernetes does not SIGKILL the pod before the in-flight payment
+      # drain completes. 60s gives the Spring graceful-shutdown window plus
+      # headroom for the kubelet shutdown signal propagation.
+      terminationGracePeriodSeconds: 60
+
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000

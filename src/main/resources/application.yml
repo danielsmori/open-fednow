@@ -2,6 +2,21 @@ spring:
   application:
     name: openfednow
 
+  # Graceful shutdown: on SIGTERM, refuse new requests and let in-flight
+  # ones complete before the JVM exits. Critical for payments — a half-
+  # processed pacs.008 cut at TCP close would leave a saga at FUNDS_RESERVED
+  # with no acknowledgement to the originator. The phase timeout caps the
+  # drain at 30s; Kubernetes' preStop + terminationGracePeriodSeconds must
+  # exceed this so the pod isn't SIGKILL'd before drain completes.
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+server:
+  # GRACEFUL is the trigger for spring.lifecycle.timeout-per-shutdown-phase.
+  # IMMEDIATE (the default) would close the listener and cut every in-flight
+  # request — unsafe for payments.
+  shutdown: graceful
+
   # Shadow Ledger — Redis configuration
   data:
     redis:

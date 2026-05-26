@@ -5,6 +5,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -103,12 +106,50 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
+            // CORS uses our explicit deny-by-default configuration source —
+            // see corsConfigurationSource() below.
+            .cors(Customizer.withDefaults())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .anyRequest().permitAll()
             )
+            // Spring Security 6 enables a default header set (X-Content-Type-Options,
+            // X-Frame-Options DENY, Cache-Control, X-XSS-Protection: 0). HSTS is
+            // opt-in — enable it explicitly so any TLS-terminated deployment instructs
+            // compliant browsers to remember the HTTPS-only policy. The Ingress /
+            // load balancer is the actual enforcer; this is defense in depth.
+            .headers(headers -> headers
+                .httpStrictTransportSecurity(hsts -> hsts
+                        .includeSubDomains(true)
+                        // 2 years — the OWASP recommended baseline; long enough that
+                        // browsers won't fall back to plaintext between visits.
+                        .maxAgeInSeconds(63_072_000)))
             .httpBasic(Customizer.withDefaults());
         return http.build();
+    }
+
+    /**
+     * CORS posture: <strong>deny by default</strong>.
+     *
+     * <p>OpenFedNow is a server-to-server API — FedNow and TCH submit requests
+     * over mTLS, the institution's core banking adapter calls outbound. No
+     * browser-origin client should ever hit these endpoints. The empty
+     * configuration source registered here makes that intent explicit: there
+     * is no allow-list, so every preflight is denied.
+     *
+     * <p>An institution that builds a browser-based admin console can override
+     * this bean with their own {@link CorsConfigurationSource} carrying the
+     * appropriate allow-list — no other framework code needs to change.
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        // Returning a configuration with no allowed origins / methods / headers
+        // means Spring Security responds to preflights with the request rejected.
+        // A future admin UI override would replace this bean with one carrying
+        // an institution-specific allow-list.
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", new CorsConfiguration());
+        return source;
     }
 
     @Bean

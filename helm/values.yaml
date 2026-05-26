@@ -42,7 +42,48 @@ openfednow:
   adapter: fiserv
   gateway:
     fednowEndpoint: "https://connect.fednow.org"
+    rtpEndpoint: ""    # Set when TCH RTP onboarding is live; empty = sandbox client
     responseTimeoutSeconds: 18
+
+  # Per-client rate limiting on /fednow/** and /rtp/** POST endpoints. 429 +
+  # Retry-After on excess. See ADR / docs for behavior.
+  rateLimit:
+    transfersPerSecond: 100
+
+  # Saga timeout monitor. Sweeps non-terminal sagas older than the threshold
+  # and compensates with ISO 20022 XPIR.
+  saga:
+    timeoutSeconds: 30
+    timeoutCheckIntervalSeconds: 10
+
+  # Idempotency retention for duplicate pacs.008 detection. FedNow's documented
+  # retry window is 24h; the default 48h doubles it for clock-skew slack.
+  idempotency:
+    ttlHours: 48
+    cleanupIntervalMinutes: 60
+
+  # Reconciliation pagination. Accounts with unconfirmed entries are scanned
+  # in keyset-paginated batches so memory stays flat regardless of institution
+  # scale (see #51).
+  reconciliation:
+    batchSize: 500
+
+  # Shadow Ledger balance seeding on startup. Comma-separated account IDs.
+  # Empty by default; opt in once the operations team has confirmed which
+  # accounts must be hydrated from the core on a fresh deployment.
+  shadowLedger:
+    seedAccounts: ""
+
+  # Fraud pre-screening. Disabled by default — institutions are expected to
+  # plug in their own FraudScreeningPort for production. When enabled, the
+  # rule-based default service applies amount cap + debtor velocity + denylist.
+  fraud:
+    enabled: false
+    maxSingleTransferAmount: "25000.00"
+    velocity:
+      maxPerWindow: 10
+      windowSeconds: 60
+    accountDenylist: ""    # Comma-separated account IDs
 
 redis:
   host: redis-master
