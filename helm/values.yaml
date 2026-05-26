@@ -84,6 +84,20 @@ openfednow:
       maxPerWindow: 10
       windowSeconds: 60
     accountDenylist: ""    # Comma-separated account IDs
+    # Hard timeout on the fraud-screening call. A production scoring service
+    # that hangs must not block the payment thread past the FedNow SLA window.
+    screeningTimeoutMillis: 1500
+
+# ── HikariCP database connection pool ─────────────────────────────────────
+# Defaults are sized for moderate FedNow throughput. Tune to observed
+# utilization once you have production traffic.
+hikari:
+  maxPoolSize: 50
+  minIdle: 10
+  connectionTimeoutMs: 5000
+  idleTimeoutMs: 300000
+  maxLifetimeMs: 1500000
+  validationTimeoutMs: 5000
 
 redis:
   host: redis-master

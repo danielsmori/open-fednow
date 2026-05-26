@@ -50,6 +50,29 @@ spring:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+    # HikariCP sizing for prod traffic. Sized against the expected concurrent
+    # saga count at peak FedNow throughput: ~30 in-flight sagas × ~3 DB
+    # statements per saga step + headroom for the scheduled jobs (saga timeout
+    # monitor, idempotency cleanup, reconciliation) gives a working set of
+    # ~50 connections. Hikari's default of 10 would starve at less than 1/3
+    # of peak load and force in-flight payments to wait on the pool.
+    # See https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing
+    # for the math behind these defaults; tune to observed utilization.
+    hikari:
+      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:50}
+      minimum-idle: ${HIKARI_MIN_IDLE:10}
+      # Cap how long a request will wait for a connection from the pool. Set
+      # below the FedNow 20-second SLA window so a thread will not block
+      # waiting for a connection longer than the rest of the budget allows.
+      connection-timeout: ${HIKARI_CONNECTION_TIMEOUT_MS:5000}
+      # Recycle connections frequently enough to avoid stale-connection issues
+      # with cloud-managed PostgreSQL (RDS, Aurora, Cloud SQL) which idle out
+      # at 5–10 minutes.
+      idle-timeout: ${HIKARI_IDLE_TIMEOUT_MS:300000}
+      max-lifetime: ${HIKARI_MAX_LIFETIME_MS:1500000}
+      # Fail fast on a misconfigured pool — Hikari's default is 1 ms which
+      # masks real validation failures.
+      validation-timeout: ${HIKARI_VALIDATION_TIMEOUT_MS:5000}
   jpa:
     show-sql: false
 

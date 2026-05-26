@@ -171,6 +171,12 @@ openfednow:
     # Comma-separated list of account IDs (debtor OR creditor) to block outright.
     # Empty by default.
     account-denylist: ${FRAUD_ACCOUNT_DENYLIST:}
+    # Hard ceiling on how long MessageRouter waits for FraudScreeningPort.screen()
+    # to return. A production implementation calling out to a hosted scoring
+    # service must not block the payment thread past the FedNow 20s SLA window
+    # if that service stalls. On timeout the framework fails open (PASS) and logs;
+    # the screening service's own alerting catches its unavailability.
+    screening-timeout-millis: ${FRAUD_SCREENING_TIMEOUT_MS:1500}
 
   # Payment saga settings
   saga:
@@ -261,6 +267,30 @@ springdoc:
 #                                  /actuator/health alongside the custom
 #                                  coreBanking indicator
 resilience4j:
+  # ── Retry — outbound FedNow submission ───────────────────────────────────
+  # Transient FedNow failures (network blips, 5xx) get a bounded number of
+  # automatic retries before the framework returns a synthetic RJCT. 4xx
+  # responses are NOT retried — a duplicate-detected pacs.008 or a malformed
+  # message will not become well-formed by trying again. Idempotency is
+  # guaranteed at the FedNow side via the message's EndToEndId.
+  retry:
+    instances:
+      fednow:
+        maxAttempts: 3
+        waitDuration: 200ms
+        # Exponential backoff with full jitter — the second retry waits
+        # ~200ms * 2 = 400ms, the third ~800ms. The 18s response-timeout
+        # window comfortably accommodates the full retry budget.
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+        enableRandomizedWait: true
+        randomizedWaitFactor: 0.5
+        retryExceptions:
+          - org.springframework.web.client.ResourceAccessException
+          - org.springframework.web.client.HttpServerErrorException
+        ignoreExceptions:
+          - org.springframework.web.client.HttpClientErrorException
+
   circuitbreaker:
     instances:
       corebanking:

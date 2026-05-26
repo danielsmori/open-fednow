@@ -57,3 +57,12 @@ data:
   FRAUD_VELOCITY_MAX: {{ .Values.openfednow.fraud.velocity.maxPerWindow | toString | quote }}
   FRAUD_VELOCITY_WINDOW_SECONDS: {{ .Values.openfednow.fraud.velocity.windowSeconds | toString | quote }}
   FRAUD_ACCOUNT_DENYLIST: {{ .Values.openfednow.fraud.accountDenylist | quote }}
+  FRAUD_SCREENING_TIMEOUT_MS: {{ .Values.openfednow.fraud.screeningTimeoutMillis | toString | quote }}
+
+  # HikariCP connection pool tuning (audit #14)
+  HIKARI_MAX_POOL_SIZE: {{ .Values.hikari.maxPoolSize | toString | quote }}
+  HIKARI_MIN_IDLE: {{ .Values.hikari.minIdle | toString | quote }}
+  HIKARI_CONNECTION_TIMEOUT_MS: {{ .Values.hikari.connectionTimeoutMs | toString | quote }}
+  HIKARI_IDLE_TIMEOUT_MS: {{ .Values.hikari.idleTimeoutMs | toString | quote }}
+  HIKARI_MAX_LIFETIME_MS: {{ .Values.hikari.maxLifetimeMs | toString | quote }}
+  HIKARI_VALIDATION_TIMEOUT_MS: {{ .Values.hikari.validationTimeoutMs | toString | quote }}

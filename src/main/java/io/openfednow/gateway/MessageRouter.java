@@ -19,12 +19,17 @@ import io.openfednow.shadowledger.ShadowLedger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Layer 1 — Message Router
@@ -62,6 +67,7 @@ public class MessageRouter {
     private final SagaOrchestrator sagaOrchestrator;
     private final PaymentEventPublisher eventPublisher;
     private final FraudScreeningPort fraudScreeningPort;
+    private final long fraudTimeoutMillis;
 
     public MessageRouter(FedNowClient fedNowClient,
                          CoreBankingAdapter coreBankingAdapter,
@@ -72,7 +78,8 @@ public class MessageRouter {
                          ShadowLedger shadowLedger,
                          SagaOrchestrator sagaOrchestrator,
                          PaymentEventPublisher eventPublisher,
-                         FraudScreeningPort fraudScreeningPort) {
+                         FraudScreeningPort fraudScreeningPort,
+                         @Value("${openfednow.fraud.screening-timeout-millis:1500}") long fraudTimeoutMillis) {
         this.fedNowClient = fedNowClient;
         this.coreBankingAdapter = coreBankingAdapter;
         this.idempotencyService = idempotencyService;
@@ -83,6 +90,49 @@ public class MessageRouter {
         this.sagaOrchestrator = sagaOrchestrator;
         this.eventPublisher = eventPublisher;
         this.fraudScreeningPort = fraudScreeningPort;
+        if (fraudTimeoutMillis <= 0) {
+            throw new IllegalArgumentException(
+                    "openfednow.fraud.screening-timeout-millis must be positive");
+        }
+        this.fraudTimeoutMillis = fraudTimeoutMillis;
+    }
+
+    /**
+     * Invokes the fraud screening port with a hard timeout.
+     *
+     * <p>A production {@link FraudScreeningPort} implementation may call out to a
+     * hosted scoring service. If that call hangs, the entire payment thread would
+     * block past the FedNow 20-second SLA window. The hard timeout caps the wait
+     * at {@code openfednow.fraud.screening-timeout-millis} (default 1500 ms);
+     * on timeout the framework fails <em>open</em> — the payment proceeds as if
+     * the screening result were {@code PASS} — and a WARN is logged. Failing open
+     * is the right default for a payment system: a momentarily-degraded fraud
+     * service should not turn into a blanket service outage, and the screening
+     * service's downstream alerting will catch its own unavailability.
+     *
+     * <p>Institutions that prefer fail-closed semantics can wrap their port
+     * implementation with that policy in their own bean.
+     */
+    private ScreeningResult screenWithTimeout(Pacs008Message message) {
+        CompletableFuture<ScreeningResult> future = CompletableFuture.supplyAsync(
+                () -> fraudScreeningPort.screen(message));
+        try {
+            return future.get(fraudTimeoutMillis, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            future.cancel(true);
+            log.warn("Fraud screening timed out after {}ms e2e={} — failing open",
+                    fraudTimeoutMillis, message.getEndToEndId());
+            return ScreeningResult.pass();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Fraud screening interrupted e2e={} — failing open",
+                    message.getEndToEndId());
+            return ScreeningResult.pass();
+        } catch (ExecutionException e) {
+            log.warn("Fraud screening threw e2e={} — failing open",
+                    message.getEndToEndId(), e.getCause());
+            return ScreeningResult.pass();
+        }
     }
 
     /**
@@ -125,7 +175,7 @@ public class MessageRouter {
         // Step 1.5 — fraud pre-screening before any side effects.
         // A BLOCK short-circuits with an RJCT FRAD pacs.002 so the originator
         // can see exactly why; no saga is initiated, no funds are touched.
-        ScreeningResult screening = fraudScreeningPort.screen(message);
+        ScreeningResult screening = screenWithTimeout(message);
         if (screening.decision() == ScreeningResult.Decision.BLOCK) {
             Pacs002Message rjct = Pacs002Message.rejected(
                     message.getEndToEndId(), message.getTransactionId(),
@@ -255,7 +305,7 @@ public class MessageRouter {
         // Step 1.5 — fraud pre-screening before any side effects.
         // For outbound we screen before the funds check so an outright fraud signal
         // doesn't get masked as "insufficient funds".
-        ScreeningResult screening = fraudScreeningPort.screen(message);
+        ScreeningResult screening = screenWithTimeout(message);
         if (screening.decision() == ScreeningResult.Decision.BLOCK) {
             Pacs002Message rjct = Pacs002Message.rejected(
                     message.getEndToEndId(), message.getTransactionId(),
