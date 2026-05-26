@@ -8,11 +8,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -61,6 +64,27 @@ public class DefaultFraudScreeningService implements FraudScreeningPort {
 
     static final String BLOCKED_METRIC = "fraud.blocked";
     static final String REVIEWED_METRIC = "fraud.reviewed";
+
+    /**
+     * Atomic INCR+EXPIRE for the velocity counter. The previous two-call
+     * implementation had a race: if the pod died between the INCR and the
+     * EXPIRE, the counter persisted with no TTL — and every subsequent call
+     * from that debtor would BLOCK forever because the limit would always be
+     * exceeded. The script is sent once and Redis runs it atomically: either
+     * both the increment and the TTL apply, or neither does.
+     *
+     * <p>The script also sets the TTL on every call, not just the first.
+     * That's deliberate: a sliding window matches the documented semantic
+     * ("more than N transfers within the last X seconds") more closely than
+     * a fixed window where the bucket rolls over only when the first entry
+     * expires. The cost is one additional EXPIRE per request, which Redis
+     * handles in microseconds.
+     */
+    private static final RedisScript<Long> VELOCITY_INCR_SCRIPT = new DefaultRedisScript<>(
+            "local v = redis.call('INCR', KEYS[1])\n" +
+                    "redis.call('EXPIRE', KEYS[1], ARGV[1])\n" +
+                    "return v",
+            Long.class);
 
     private final BigDecimal maxAmount;
     private final int velocityLimit;
@@ -144,15 +168,15 @@ public class DefaultFraudScreeningService implements FraudScreeningPort {
                     "amount " + amount + " exceeds maxSingleTransferAmount " + maxAmount);
         }
 
-        // Rule 3: debtor velocity (Redis counter with TTL = window)
+        // Rule 3: debtor velocity (Redis counter with TTL = window).
+        // The INCR and EXPIRE are executed atomically inside a Lua script so
+        // a mid-operation pod failure cannot leave a TTL-less counter behind.
         String debtor = message.getDebtorAccountNumber();
         if (debtor != null && !debtor.isBlank()) {
             String key = VELOCITY_KEY_PREFIX + debtor;
-            Long count = redis.opsForValue().increment(key);
-            // On the first increment we set the TTL — subsequent increments reuse the window.
-            if (count != null && count == 1L) {
-                redis.expire(key, Duration.ofSeconds(velocityWindowSeconds));
-            }
+            List<String> keys = Collections.singletonList(key);
+            Long count = redis.execute(
+                    VELOCITY_INCR_SCRIPT, keys, String.valueOf(velocityWindowSeconds));
             if (count != null && count > velocityLimit) {
                 return blockAndLog(message,
                         "debtor velocity " + count + " exceeds " + velocityLimit

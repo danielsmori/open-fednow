@@ -19,6 +19,7 @@ import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Layer 4 — Reconciliation Service
@@ -46,6 +47,15 @@ public class ReconciliationService {
     private final CoreBankingAdapter coreBankingAdapter;
     private final int batchSize;
     private final TransactionTemplate perAccountTx;
+    /**
+     * Guards against concurrent reconcile() invocations within the same JVM. The
+     * realistic concern is "operator triggers /admin/reconcile while the scheduled
+     * trigger is already running" — a non-fair lock with tryLock semantics surfaces
+     * the collision immediately rather than queuing the second call behind a
+     * potentially long-running cycle. Cross-pod coordination is institution-specific
+     * deployment work (see ADR-0001 / known-limitations on the multi-pod constraint).
+     */
+    private final ReentrantLock reconcileLock = new ReentrantLock();
 
     public ReconciliationService(ShadowLedger shadowLedger,
                                  JdbcTemplate jdbc,
@@ -83,6 +93,23 @@ public class ReconciliationService {
      * @return a {@link ReconciliationReport} summarizing the results
      */
     public ReconciliationReport reconcile() {
+        // Same-JVM concurrency guard. A second concurrent call returns immediately
+        // with a synthetic "skipped" report so a misconfigured cron or simultaneous
+        // manual + scheduled trigger does not create overlapping reconciliation_run
+        // rows and racing UPDATEs against shadow_ledger_transaction_log.
+        if (!reconcileLock.tryLock()) {
+            log.warn("Reconciliation cycle skipped — another invocation is already running");
+            return new ReconciliationReport(0, 0, true,
+                    "Skipped: another reconciliation cycle was already in progress");
+        }
+        try {
+            return reconcileLocked();
+        } finally {
+            reconcileLock.unlock();
+        }
+    }
+
+    private ReconciliationReport reconcileLocked() {
         log.info("Reconciliation cycle starting");
 
         // Open the run audit record
