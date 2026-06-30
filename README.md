@@ -9,7 +9,7 @@
 
 73% of U.S. financial institutions cite legacy core banking systems as a moderate-to-severe obstacle to FedNow participation because their core systems — Fiserv, FIS, Jack Henry — were built for batch processing, not 24/7 real-time settlement. This framework bridges the gap without touching the core.
 
-> **Sandbox / reference implementation.** The reusable core framework — Shadow Ledger, SyncAsyncBridge, Saga orchestration, idempotency, reconciliation, dual-rail Layer 1 (FedNow + RTP), and all three vendor adapters — is implemented and tested. Live rail connectivity remains credential-, certification-, and institution-dependent. See [docs/known-limitations.md](docs/known-limitations.md) and the [Production Boundaries](#production-boundaries) section for the full gap analysis.
+> **Sandbox / reference implementation.** The reusable core framework — five-layer architecture, dual-rail Layer 1 (FedNow + RTP), all three vendor adapters, saga lifecycle (recovery / timeout monitor / compensation retry), idempotency, reconciliation, fraud screening, cancellation handling, rate limiting, admin audit, and the production-hardening pass (transactions, headers, graceful shutdown, retries, dependency scanning) — is implemented and tested across 500+ unit and integration tests. Live rail connectivity remains credential-, certification-, and institution-dependent. See [docs/known-limitations.md](docs/known-limitations.md) and the [Production Boundaries](#production-boundaries) section for what remains.
 
 ---
 
@@ -25,14 +25,14 @@
 | MockVendorAdapter — in-memory balance ledger, configurable failure modes | ✅ Implemented; `CoreBankingAdapterContractTest` enforces adapter contract |
 | `CoreBankingAdapter` contract | ✅ Implemented |
 | Shadow Ledger — Redis-backed, WATCH/MULTI/EXEC optimistic locking | ✅ Implemented + tested |
-| Shadow Ledger endpoint wiring (inbound + outbound) | ✅ Implemented in sandbox/reference mode |
+| Shadow Ledger endpoint wiring (inbound + outbound) | ✅ Implemented |
 | 24/7 Bridge Mode — queues payments during core maintenance window | ✅ Implemented + tested |
 | Reconciliation — replay and sync after core returns online | ✅ Implemented + tested |
 | Reconciliation pagination — keyset-paginated account scan for large institutions | ✅ Configurable batch size (default 500); memory stays flat regardless of pending-account count |
 | Saga orchestration — compensation on core rejection | ✅ Implemented + tested |
 | Idempotency — Redis + PostgreSQL dual-write, 48h window | ✅ Implemented + tested |
 | Concurrent overdraft prevention under load | ✅ Tested (race-condition suite) |
-| Send-side (outbound) payment flow | ✅ Implemented in sandbox/reference mode |
+| Send-side (outbound) payment flow | ✅ Implemented |
 | Admin auth — HTTP Basic on `/admin/*` | ✅ Implemented as reference configuration |
 | Admin audit log — every `/admin/**` access recorded to PostgreSQL | ✅ Implemented; both GRANTED and DENIED captured, surfaced via `GET /admin/audit-log` |
 | Admin query endpoints — saga state, balances, reconciliation history | ✅ `GET /admin/sagas[/{txId}]`, `/admin/accounts/{id}/balance`, `/admin/reconciliation-runs[/{id}]`, `/admin/audit-log` |
@@ -41,11 +41,27 @@
 | Balance seeding from core on startup | ✅ Configurable account list seeded via SETNX; `POST /admin/shadow-ledger/seed` for on-demand re-seed |
 | Idempotency cleanup — scheduled sweep of expired Postgres rows | ✅ Configurable TTL (default 48h) and sweep cadence (default 60min) |
 | Rate limiting — per-client on `/fednow/**` and `/rtp/**` POSTs | ✅ Resilience4j `RateLimiter` per IP / X-Forwarded-For; 429 + Retry-After; `gateway.rate_limited` counter |
+| Saga compensation retry — sweeps FAILED sagas with missing REVERSAL rows | ✅ `@Scheduled` retry; idempotent reversal primitives; `saga.compensation.retry.succeeded` and `.failed` counters |
+| Admin audit log retention — scheduled cleanup of `admin_audit_log` | ✅ Configurable retention (default 365 days) and sweep cadence |
+| Transactional boundaries — multi-statement writes commit atomically | ✅ `@Transactional` on `SagaOrchestrator.compensate` / `cancelInboundSaga`; `TransactionTemplate`-wrapped per-account reconciliation |
+| Idempotent Shadow Ledger reversals — safe under retry | ✅ `reverseDebit` and `reverseCredit` skip on existing REVERSAL row; one-call semantics from any caller |
+| Default-credential startup guard | ✅ `@PostConstruct` check refuses to start the `prod` profile if admin credentials are still the sandbox defaults |
+| HTTP security headers — HSTS, X-Content-Type-Options, X-Frame-Options, Cache-Control | ✅ Configured in `SecurityConfig`; verified end-to-end via `SecurityHeadersTest` |
+| CORS — deny-by-default for server-to-server API | ✅ Explicit empty `CorsConfigurationSource`; institutions registering a browser-origin allow-list override the bean |
+| Graceful shutdown — drain in-flight requests on SIGTERM | ✅ `server.shutdown=graceful` + 30s drain window; Helm `terminationGracePeriodSeconds: 60` |
+| HikariCP tuning — prod-sized connection pool | ✅ Pool 50 / min-idle 10 / 5s connection timeout — sized for FedNow throughput; tunable via env |
+| Outbound FedNow retry — transient-failure resilience | ✅ Resilience4j retry: 3 attempts, exponential backoff with jitter; retries 5xx + network errors, fast-fails 4xx |
+| Fraud screening timeout — hard cap on port calls | ✅ `CompletableFuture` deadline (default 1500ms); fails open on timeout / exception |
+| Atomic velocity counter — single Redis Lua script | ✅ `INCR` + `EXPIRE` in one round-trip; sliding window matching the documented semantic |
+| Reconcile concurrency guard — same-JVM serialization | ✅ `ReentrantLock` with tryLock; second concurrent call returns "Skipped" report rather than racing |
+| Saga source-rail tracking — dual-rail dispatch foundation | ✅ `source_rail` column on `saga_state` (V5); both gateways thread `Rail` through `MessageRouter` |
+| Dependency scanning — Dependabot + OWASP dependency-check | ✅ Weekly Maven + Actions updates; OWASP scan fails the build on CVSS ≥ 7 |
+| CI — unit + integration test jobs | ✅ GitHub Actions workflow runs unit tests + Testcontainers-backed integration tests on every PR |
 | Dual-rail architecture (FedNow + RTP) | ✅ ISO 20022 foundation; Layer 1 varies, Layers 2–4 rail-agnostic; source rail persisted on `saga_state` |
-| RTP Layer 1 — inbound XML, outbound XML, TCH cert validation hook, sandbox + HTTP client | ✅ Implemented and tested in reference mode; symmetric with FedNow Layer 1 |
+| RTP Layer 1 — inbound XML, outbound XML, TCH cert validation hook, sandbox + HTTP client | ✅ Implemented; symmetric with FedNow Layer 1 |
 | Optional Kafka event bus — `PaymentEventPublisher`, 6 event types | ✅ Implemented (disabled by default; no Kafka required) |
 | Event schema versioning — `schemaVersion` field + `X-Schema-Version` / `X-Event-Type` headers | ✅ Implemented; JSON Schema in `docs/event-schemas/`; strategy documented in [ADR-0006](docs/adr/0006-event-schema-versioning.md) |
-| Vendor adapters (Fiserv, FIS, Jack Henry) | ✅ All three implemented (OAuth 2.0, ISO 20022 code mapping, WireMock tests); Fiserv + FIS via REST/JSON, Jack Henry via jXchange SOAP |
+| Vendor adapters (Fiserv, FIS, Jack Henry) | ✅ All three implemented — OAuth 2.0 authentication, vendor error code → ISO 20022 mapping, WireMock integration test suite. Fiserv + FIS via REST/JSON, Jack Henry via jXchange SOAP. |
 | Live FedNow connectivity (Fed PKI, mTLS, message signing) | 🔲 Credential/certification-dependent; simulator-compatible HTTP client implemented |
 | Live RTP connectivity (TCH network, TCH PKI certificates) | 🔲 TCH onboarding/certification-dependent; `HttpRtpClient` and full XML pipeline implemented |
 
@@ -87,13 +103,17 @@ flowchart TD
 | Document | What it answers |
 |----------|-----------------|
 | [docs/known-limitations.md](docs/known-limitations.md) | Current implementation boundaries, credential-dependent live connectivity, and production-readiness gaps |
-| [docs/rtp-compatibility.md](docs/rtp-compatibility.md) | RTP Layer 1 status: implemented and tested in reference mode, symmetric with FedNow at the framework level; TCH live connectivity pending institutional credentials |
-| [docs/adr/0005-dual-rail-architecture-fednow-rtp.md](docs/adr/0005-dual-rail-architecture-fednow-rtp.md) | Decision: keep Layers 2–4 rail-agnostic |
-| [docs/adr/0004-eventual-consistency-shadow-ledger-and-core.md](docs/adr/0004-eventual-consistency-shadow-ledger-and-core.md) | Why eventual consistency, why not 2PC |
+| [docs/rtp-compatibility.md](docs/rtp-compatibility.md) | RTP Layer 1 status, symmetric with FedNow at the framework level; TCH live connectivity pending institutional credentials |
 | [docs/shadow-ledger.md](docs/shadow-ledger.md) | How the Shadow Ledger works, failure modes |
+| [docs/saga-pattern.md](docs/saga-pattern.md) | Compensation path when core rejects post-ACSP |
+| [docs/event-schemas/README.md](docs/event-schemas/README.md) | Kafka domain event schema versioning policy |
 | [docs/adr/0001-optimistic-locking-shadow-ledger-debits.md](docs/adr/0001-optimistic-locking-shadow-ledger-debits.md) | Why WATCH/MULTI/EXEC, the Lettuce caveat |
 | [docs/adr/0003-provisional-acceptance-acsp.md](docs/adr/0003-provisional-acceptance-acsp.md) | Why ACSP is returned, the exposure window |
-| [docs/saga-pattern.md](docs/saga-pattern.md) | Compensation path when core rejects post-ACSP |
+| [docs/adr/0004-eventual-consistency-shadow-ledger-and-core.md](docs/adr/0004-eventual-consistency-shadow-ledger-and-core.md) | Why eventual consistency, why not 2PC |
+| [docs/adr/0005-dual-rail-architecture-fednow-rtp.md](docs/adr/0005-dual-rail-architecture-fednow-rtp.md) | Decision: keep Layers 2–4 rail-agnostic |
+| [docs/adr/0006-event-schema-versioning.md](docs/adr/0006-event-schema-versioning.md) | Hybrid header + envelope event versioning |
+| [docs/adr/0007-camt056-cancellation-lifecycle.md](docs/adr/0007-camt056-cancellation-lifecycle.md) | camt.056 → camt.029 decision matrix keyed on saga state |
+| [docs/adr/0008-fraud-screening.md](docs/adr/0008-fraud-screening.md) | Port-based fraud screening with a configurable default rule set |
 
 ---
 
@@ -504,7 +524,7 @@ The framework is structured as five independent layers. Each layer addresses a s
 ### Layer Descriptions
 
 **Layer 1 — API Gateway & Security**
-The only layer that varies between payment rails. `FedNowGateway` handles FedNow-specific connectivity: Federal Reserve PKI certificates, JSON envelope parsing, and REST/HTTPS transport. `RtpGateway` is implemented in reference mode and is symmetric with `FedNowGateway`: it accepts RTP ISO 20022 XML via `RtpXmlParser`, invokes the TCH certificate-validation hook via `CertificateManager`, and routes parsed messages through the same rail-agnostic pipeline. Outbound transfers are handled by `RtpClient` (XML serialization via `RtpXmlSerializer`, HTTP via `HttpRtpClient` when `RTP_ENDPOINT` is set). Live TCH connectivity requires institution-provided PKI credentials and private-network transport — the same class of dependency as Fed PKI for FedNow. Both gateways deliver the same `Pacs008Message` to `MessageRouter` — Layers 2–4 have no knowledge of which rail the message arrived on. Also handles rate limiting and fraud pre-screening on all inbound and outbound paths.
+The only layer that varies between payment rails. `FedNowGateway` handles FedNow-specific connectivity: Federal Reserve PKI certificates, JSON envelope parsing, REST/HTTPS transport, and outbound retry on transient failures. `RtpGateway` is symmetric: it accepts RTP ISO 20022 XML via `RtpXmlParser`, invokes the TCH certificate-validation hook via `CertificateManager`, and routes parsed messages through the same rail-agnostic pipeline. Outbound transfers go through `RtpClient` (XML serialization via `RtpXmlSerializer`, HTTP via `HttpRtpClient` when `RTP_ENDPOINT` is set). Live TCH connectivity is institution-provided PKI credentials and private-network transport — the same class of dependency as Fed PKI for FedNow. Both gateways deliver the same `Pacs008Message` to `MessageRouter`, which threads the source `Rail` through to the saga and applies cross-cutting concerns: idempotency check, fraud pre-screening with hard timeout, rate limiting, and admin access auditing.
 
 **Layer 2 — Anti-Corruption Layer / Core Banking Adapter**
 The architectural core of the framework. Translates between the modern ISO 20022 world (REST APIs, JSON, UTF-8) and the proprietary world of each core banking vendor (vendor-specific APIs, proprietary formats). Also manages the synchronous-to-asynchronous bridge: FedNow requires synchronous sub-20-second responses, but legacy core processing is inherently asynchronous. This layer decouples the two models. The vendor-specific adapter is the only component that varies between institutions (~13% of total scope).
@@ -547,64 +567,96 @@ The Santander PIX platform is proprietary to Santander Brazil. OpenFedNow is a n
 openfednow/
 ├── src/main/java/io/openfednow/
 │   ├── gateway/              # Layer 1 — API Gateway & Security
-│   │   ├── FedNowGateway.java
-│   │   ├── FedNowGateway.java · RtpGateway.java             # Dual-rail Layer 1 (symmetric)
-│   │   ├── RtpXmlParser.java · RtpXmlSerializer.java       # pacs.008/pacs.002 XML, XXE-protected
+│   │   ├── FedNowGateway.java · RtpGateway.java       # Dual-rail Layer 1 (symmetric)
+│   │   ├── MessageRouter.java                         # Routes both rails; threads source Rail through every saga
+│   │   ├── Rail.java                                  # FEDNOW / RTP enum, persisted on saga_state
+│   │   ├── CorrelationFilter.java                     # MDC request / e2e / txn / sourceRail seed
+│   │   ├── RtpXmlParser.java · RtpXmlSerializer.java  # pacs.008 / pacs.002 XML, XXE-protected
 │   │   ├── RtpClient.java · HttpRtpClient.java · SandboxRtpClient.java · RtpClientConfig.java
 │   │   ├── FedNowClient.java · HttpFedNowClient.java · SandboxFedNowClient.java · FedNowClientConfig.java
-│   │   ├── CertificateManager.java   # Fed PKI + TCH PKI validation (no-op in sandbox)
-│   │   ├── MessageRouter.java                  # Routes both rails; tracks source Rail on every saga
-│   │   ├── FedNowGatewayValidation.java        # ISO 20022 field validation + structured error handler
-│   │   ├── AdminController.java                # /admin endpoints (HTTP Basic + ADMIN role)
-│   │   │                                       #   POST /admin/reconcile · /admin/reconciliation-runs
-│   │   │                                       #   GET  /admin/sagas[/{txId}] · /admin/audit-log
-│   │   │                                       #   GET  /admin/accounts/{id}/balance · /admin/reconciliation-runs[/{id}]
-│   │   │                                       #   POST /admin/shadow-ledger/seed
-│   │   └── ratelimit/RateLimitFilter.java      # 429 + Retry-After on /fednow & /rtp; gateway.rate_limited metric
+│   │   ├── CertificateManager.java                    # Fed PKI + TCH PKI validation (no-op in sandbox)
+│   │   ├── ValidationErrorHandler.java                # ISO 20022 field validation + structured error handler
+│   │   ├── AdminController.java                       # /admin endpoints — HTTP Basic + ADMIN role
+│   │   │                                              #   POST /admin/reconcile · /admin/reconciliation-runs
+│   │   │                                              #   POST /admin/shadow-ledger/seed
+│   │   │                                              #   GET  /admin/sagas[/{txId}]
+│   │   │                                              #   GET  /admin/accounts/{id}/balance
+│   │   │                                              #   GET  /admin/reconciliation-runs[/{id}]
+│   │   │                                              #   GET  /admin/audit-log
+│   │   └── ratelimit/RateLimitFilter.java             # 429 + Retry-After on /fednow & /rtp POSTs
 │   ├── acl/                  # Layer 2 — Anti-Corruption Layer
 │   │   ├── core/
-│   │   │   ├── CoreBankingAdapter.java      # Interface (4 methods)
+│   │   │   ├── CoreBankingAdapter.java                # Interface
+│   │   │   ├── CoreBankingHealthIndicator.java        # Actuator coreBanking UP / OUT_OF_SERVICE
 │   │   │   ├── MessageTranslator.java
-│   │   │   └── SyncAsyncBridge.java
+│   │   │   └── SyncAsyncBridge.java                   # 15s sync attempt; ACSP + async reconcile on timeout
 │   │   └── adapters/
-│   │       ├── SandboxAdapter.java          # Functional — scenario routing by prefix
-│   │       ├── MockVendorAdapter.java        # Functional — in-memory ledger, configurable failures
-│   │       ├── FiservAdapter.java           # Implemented — OAuth 2.0, ISO 20022 code mapping, WireMock tests
-│   │       ├── FisAdapter.java              # Implemented — OAuth 2.0, ISO 20022 code mapping, WireMock tests
-│   │       └── JackHenryAdapter.java        # Implemented — jXchange SOAP, OAuth 2.0, ISO 20022 code mapping, WireMock tests
+│   │       ├── SandboxAdapter.java                    # Scenario routing by prefix
+│   │       ├── MockVendorAdapter.java                 # In-memory ledger; CoreBankingAdapterContractTest base
+│   │       ├── fiserv/FiservAdapter.java              # REST/JSON, OAuth 2.0, WireMock suite
+│   │       ├── fis/FisAdapter.java                    # REST/JSON, OAuth 2.0, WireMock suite
+│   │       └── jackhenry/JackHenryAdapter.java        # jXchange SOAP, OAuth 2.0, WireMock suite
 │   ├── processing/           # Layer 3 — Real-Time Processing Engine
 │   │   ├── saga/
-│   │   │   ├── PaymentSaga.java
-│   │   │   └── SagaOrchestrator.java
+│   │   │   ├── PaymentSaga.java                       # State machine
+│   │   │   ├── SagaOrchestrator.java                  # @Transactional compensate / cancelInboundSaga
+│   │   │   ├── SagaSnapshot.java                      # Read-only projection for admin endpoints
+│   │   │   ├── SagaRecoveryService.java               # ApplicationReadyEvent: drive non-terminal sagas to terminal
+│   │   │   ├── SagaTimeoutMonitor.java                # @Scheduled XPIR compensation for stalled sagas
+│   │   │   └── CompensationRetryService.java          # @Scheduled retry of failed Shadow Ledger reversals
+│   │   ├── cancellation/
+│   │   │   └── CancellationService.java               # camt.056 → camt.029 state-keyed decision matrix
+│   │   ├── fraud/
+│   │   │   ├── FraudScreeningPort.java                # One-method extensibility seam
+│   │   │   ├── ScreeningResult.java                   # PASS / REVIEW / BLOCK
+│   │   │   ├── DefaultFraudScreeningService.java      # Amount cap, atomic-Lua velocity, denylist, REVIEW
+│   │   │   └── NoOpFraudScreeningService.java         # Default when openfednow.fraud.enabled=false
 │   │   └── idempotency/
-│   │       └── IdempotencyService.java
+│   │       ├── IdempotencyService.java                # Redis + Postgres dual-write
+│   │       └── IdempotencyCleanupService.java         # @Scheduled sweep of expired Postgres rows
 │   ├── shadowledger/         # Layer 4 — Shadow Ledger & Bridge
-│   │   ├── ShadowLedger.java
-│   │   ├── AvailabilityBridge.java
-│   │   └── ReconciliationService.java
-│   ├── events/               # Optional Kafka event bus
-│   │   ├── PaymentEvent.java             # Record; 6-value EventType enum
-│   │   ├── PaymentEventPublisher.java    # Interface — fire-and-forget
-│   │   ├── NoOpPaymentEventPublisher.java    # Default (kafka.enabled=false)
-│   │   ├── KafkaPaymentEventPublisher.java   # Active when kafka.enabled=true
-│   │   └── KafkaConfig.java                  # Topic declaration
+│   │   ├── ShadowLedger.java                          # WATCH/MULTI/EXEC; idempotent reverseDebit/reverseCredit
+│   │   ├── ShadowLedgerHealthIndicator.java           # Actuator shadowLedger ONLINE / BRIDGE
+│   │   ├── AvailabilityBridge.java                    # @Scheduled core-availability polling; RabbitMQ queueing
+│   │   ├── ReconciliationService.java                 # Keyset-paginated, per-account @Transactional, ReentrantLock guard
+│   │   ├── ReconciliationRunSummary.java              # Read-only projection
+│   │   ├── BalanceSeedService.java                    # ApplicationReadyEvent: SETNX-seed balances from core
+│   │   ├── BalanceSeedReport.java                     # Per-account SEEDED / SKIPPED / FAILED outcomes
+│   │   └── AccountBalanceView.java                    # available + reservedPendingCore for admin endpoint
+│   ├── security/             # Authentication + admin audit
+│   │   ├── SecurityConfig.java                        # HTTP Basic, HSTS, deny-by-default CORS, prod-credential guard
+│   │   └── audit/
+│   │       ├── AdminAccessAuditFilter.java            # Records every /admin/** request — GRANTED / DENIED / REJECTED / ERROR
+│   │       ├── AdminAuditEntry.java · AuditResult.java
+│   │       ├── AdminAuditLogService.java              # Persists + queries admin_audit_log
+│   │       └── AdminAuditLogCleanupService.java       # @Scheduled retention sweep (default 365 days)
+│   ├── events/               # Optional Kafka event bus (disabled by default)
+│   │   ├── PaymentEvent.java                          # Record; carries schemaVersion field (ADR-0006)
+│   │   ├── PaymentEventPublisher.java                 # Interface — fire-and-forget
+│   │   ├── NoOpPaymentEventPublisher.java             # Default (kafka.enabled=false)
+│   │   ├── KafkaPaymentEventPublisher.java            # Writes X-Schema-Version + X-Event-Type headers
+│   │   └── KafkaConfig.java                           # Topic declaration
 │   └── iso20022/             # ISO 20022 message models
-│       ├── Pacs008Message.java
-│       └── Pacs002Message.java
+│       ├── Pacs008Message.java · Pacs002Message.java  # Credit transfer + status report
+│       ├── Pacs004Message.java                        # Payment return (saga compensation path)
+│       └── Camt056Message.java · Camt029Message.java  # Cancellation request + investigation resolution
+├── src/main/resources/db/migration/                    # Flyway: V1–V6
 ├── docs/
-│   ├── architecture.md
-│   ├── shadow-ledger.md
-│   ├── anti-corruption-layer.md
-│   ├── saga-pattern.md
-│   ├── iso20022-mapping.md
-│   ├── known-limitations.md   # What is and isn't production-ready
-│   ├── rtp-compatibility.md   # Dual-rail design: what's shared, what varies
-│   └── adr/                  # Architecture Decision Records
+│   ├── architecture.md · shadow-ledger.md · anti-corruption-layer.md · saga-pattern.md · iso20022-mapping.md
+│   ├── known-limitations.md                           # Implementation boundaries + operational capabilities
+│   ├── rtp-compatibility.md                           # Dual-rail design: what's shared, what varies
+│   ├── event-schemas/                                 # JSON Schema for PaymentEvent + versioning policy
+│   └── adr/
 │       ├── 0001-optimistic-locking-shadow-ledger-debits.md
 │       ├── 0002-redis-shadow-ledger-over-direct-core-reads.md
 │       ├── 0003-provisional-acceptance-acsp.md
 │       ├── 0004-eventual-consistency-shadow-ledger-and-core.md
-│       └── 0005-dual-rail-architecture-fednow-rtp.md
+│       ├── 0005-dual-rail-architecture-fednow-rtp.md
+│       ├── 0006-event-schema-versioning.md
+│       ├── 0007-camt056-cancellation-lifecycle.md
+│       └── 0008-fraud-screening.md
+├── helm/                     # Production Helm chart (deployment, HPA, PDB, configmap, ingress)
+├── .github/workflows/        # CI (unit + integration) + OWASP dependency-check
 ├── LICENSE                   # Apache 2.0
 └── README.md
 ```
@@ -613,12 +665,12 @@ openfednow/
 
 ## Production Boundaries
 
-OpenFedNow is a working sandbox/reference implementation of the reusable core framework. It is not a production-ready banking product. The following items remain outside the current public implementation and require institutional access:
+The framework — Shadow Ledger, SyncAsyncBridge, Saga orchestration with recovery and timeout monitoring, idempotency with TTL cleanup, reconciliation with pagination, fraud screening port, cancellation handling, rate limiting, audit log, and all three vendor adapters — is implemented and tested. The remaining items below are out-of-scope for the framework itself; they're institution-onboarding work that any deployment of any integration framework would have to do:
 
-- **Production vendor adapters** — `FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` are all implemented with OAuth 2.0 authentication, vendor error code → ISO 20022 mapping, and WireMock integration tests. Each requires institution-specific credentials (OAuth client ID/secret, base URL) from the respective vendor. `SandboxAdapter` and `MockVendorAdapter` are functional; `CoreBankingAdapterContractTest` enforces the behavioral contract all adapters must satisfy.
-- **Live FedNow connectivity** — requires Federal Reserve PKI client certificates, mutual TLS, JWS message signing, and FedNow certification. `HttpFedNowClient` provides simulator-compatible HTTP transport; `SandboxFedNowClient` is the default for local development.
-- **Live RTP connectivity** — requires TCH institutional participation, TCH PKI certificates, and private-network transport. `HttpRtpClient`, `RtpXmlSerializer`, and the TCH certificate-validation hook are implemented in reference mode; the endpoint URL and certificates are institution-provided.
-- **Institution-specific configuration** — account mapping, IAM integration, reconciliation policies, compliance controls, and operational validation are institution-dependent and not included in this framework.
+- **Live FedNow connectivity** — Federal Reserve PKI client certificates, mutual TLS, JWS message signing, and FedNow certification. `HttpFedNowClient` is wired with retry-on-transient-failures and provides simulator-compatible HTTP transport; JWS detached-signature support is the one remaining code-side gap and is tracked as future work.
+- **Live RTP connectivity** — TCH institutional participation, TCH PKI certificates, and the dedicated private-network connection. `HttpRtpClient`, the XML pipeline, and the TCH certificate-validation hook are all in place; activation is institution-provided credentials and network access.
+- **Vendor adapter credentials** — `FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` are complete (OAuth 2.0, vendor error code → ISO 20022 mapping, WireMock test suite each). Production use requires institution-specific OAuth client ID / secret / base URL from the respective vendor.
+- **Institution-specific configuration** — account mapping, IAM integration, reconciliation policies, compliance controls, and operational validation are institution-dependent. The framework exposes the necessary configuration knobs and extensibility seams (e.g., `FraudScreeningPort`) but does not prescribe institutional policy.
 
 ---
 
@@ -626,37 +678,53 @@ OpenFedNow is a working sandbox/reference implementation of the reusable core fr
 
 See [docs/known-limitations.md](docs/known-limitations.md) for the full analysis. Key architectural boundaries:
 
-- **Single-instance Shadow Ledger.** The `WATCH`/`MULTI`/`EXEC` optimistic locking is safe for one pod. Multi-pod deployments require a distributed lock per account or consistent-hash routing.
-- **Admin credentials are reference defaults.** `/admin/*` requires HTTP Basic (`admin` / `changeme`). Override via `ADMIN_USERNAME` and `ADMIN_PASSWORD` before any non-local deployment.
-- **Post-reconciliation reversals are customer-visible.** If the core rejects a provisionally accepted transaction, a pacs.004 return goes back to FedNow. The sender's institution sees a credit followed by a return.
+- **Single-instance Shadow Ledger.** The `WATCH`/`MULTI`/`EXEC` optimistic locking is safe for one pod. Multi-pod deployments require a distributed lock per account or consistent-hash routing — see [issue #40](https://github.com/danielsmori/open-fednow/issues/40).
+- **Admin credentials default to `admin` / `changeme` in dev / sandbox.** A `@PostConstruct` check in `SecurityConfig` refuses to start the application under `spring.profiles.active=prod` if `ADMIN_USERNAME` / `ADMIN_PASSWORD` are still at their defaults, so a misconfigured production deployment fails loud at boot rather than silently shipping with default credentials.
+- **Post-reconciliation reversals are customer-visible.** If the core rejects a provisionally accepted transaction, a pacs.004 return goes back to FedNow. The sender's institution sees a credit followed by a return — see [ADR-0003](docs/adr/0003-provisional-acceptance-acsp.md).
+- **Outbound camt.056 not yet implemented.** Inbound cancellation handling is complete (camt.056 → camt.029 with state-keyed decision matrix). Initiating a cancellation against our own outbound payment is tracked as future work.
 
 ---
 
 ## Roadmap
 
-**Phase 1 — Core Framework Foundation Established**
+**Phase 1 — Core Framework ✅ Complete**
 - Five-layer architecture: Shadow Ledger, SyncAsyncBridge, Saga orchestration, idempotency, reconciliation
-- ISO 20022 message models; RTP inbound XML parser (pacs.008 with XXE protection)
-- MockVendorAdapter + CoreBankingAdapterContractTest; dual content-type RTP gateway
-- Full test suite; CI pipeline; Docker / docker-compose deployment
+- ISO 20022 message models — pacs.008 / pacs.002 / pacs.004 / camt.056 / camt.029
+- `MockVendorAdapter` + `CoreBankingAdapterContractTest` baseline; sandbox scenario routing
 
 **Phase 2 — Fiserv + FIS Adapters ✅ Complete**
-- Fiserv DNA adapter (42% of U.S. banks, 31% of credit unions) — implemented
-- FIS Horizon / IBS adapter (9% of U.S. banks) — implemented
-- Big Three combined: >70% of U.S. banks covered
+- Fiserv DNA / Precision / Premier / Cleartouch adapter (42% of U.S. banks)
+- FIS Horizon / IBS adapter (9% of U.S. banks)
 
 **Phase 3 — Jack Henry Adapter ✅ Complete**
-- Jack Henry SilverLake / Symitar adapter (jXchange SOAP) — implemented
-- Big Three reference adapters complete: Fiserv + FIS + Jack Henry collectively serve over 70% of U.S. banks according to KC Fed data; credit union coverage varies by vendor and remains institution-specific
+- Jack Henry SilverLake / Symitar / CIF 20/20 adapter via jXchange SOAP (21% of U.S. banks)
+- All three vendor adapters complete: Fiserv + FIS + Jack Henry collectively serve over 70% of U.S. banks per KC Fed data; credit union coverage varies by vendor and remains institution-specific
 
 **Phase 3b — RTP Layer 1 ✅ Complete**
-- Layer 1 implemented in reference mode, symmetric with FedNow: `RtpXmlSerializer`, `HttpRtpClient`, `SandboxRtpClient`, `RtpClientConfig`, TCH certificate-validation hook
-- `RtpGateway` inbound XML and outbound send paths fully wired; 305 tests passing
-- Submission to U.S. Faster Payments Council as reference integration pattern
+- Dual-rail Layer 1 symmetric with FedNow: `RtpXmlParser`, `RtpXmlSerializer`, `RtpClient` with sandbox + HTTP implementations, TCH certificate-validation hook
+- `RtpGateway` inbound XML and outbound send paths wired; rail-agnostic Layers 2–4 ([ADR-0005](docs/adr/0005-dual-rail-architecture-fednow-rtp.md))
 
-**Phase 4 — IBM z/OS Path & Knowledge Transfer (Month 31+)**
-- IBM z/OS mainframe adapter for large institutions
-- Technical assistance program for community bank engineering teams
+**Phase 4 — Operational Tooling ✅ Complete**
+- Saga lifecycle: source-rail tracking, restart-time recovery, timeout monitor with `XPIR` compensation, compensation retry for failed reversals
+- Admin endpoints: saga state queries, account balance views, reconciliation history, audit log; all under HTTP Basic + `ADMIN` role
+- Admin access auditing with retention sweep; idempotency TTL cleanup; balance seeding from core on startup
+- Cancellation handling — camt.056 → camt.029 with state-keyed decision matrix ([ADR-0007](docs/adr/0007-camt056-cancellation-lifecycle.md))
+- Fraud screening port with rule-based default ([ADR-0008](docs/adr/0008-fraud-screening.md))
+- Per-client rate limiting on `/fednow/**` and `/rtp/**`; reconciliation pagination for large institutions
+- Event schema versioning ([ADR-0006](docs/adr/0006-event-schema-versioning.md))
+
+**Phase 5 — Production Hardening ✅ Complete**
+- Transactional boundaries on multi-statement writes; idempotent Shadow Ledger reversals; atomic Lua velocity counter; same-JVM reconcile concurrency guard
+- HSTS, deny-by-default CORS, default-credential startup guard in prod profile
+- Graceful shutdown with bounded drain window; HikariCP pool sizing for FedNow throughput
+- Outbound FedNow retry on transient failures; hard timeout on `FraudScreeningPort` calls (fail-open)
+- Dependabot + OWASP dependency-check workflow; GitHub Actions CI with both unit and integration test jobs
+
+**Open work**
+- Live FedNow / RTP connectivity (institutional credentials + JWS message signing — see Production Boundaries)
+- Multi-pod Shadow Ledger consistency ([#40](https://github.com/danielsmori/open-fednow/issues/40)) — Redlock or consistent-hash routing
+- Distributed tracing across MDC, RabbitMQ, and Kafka boundaries
+- Operational runbooks for the standard incident-response scenarios
 
 ---
 
