@@ -6,6 +6,7 @@
 [![Status](https://img.shields.io/badge/Status-Sandbox%20%2F%20Reference%20Implementation-blue)]()
 [![Java](https://img.shields.io/badge/Java-17%2B-orange)]()
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-green)]()
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21114113.svg)](https://doi.org/10.5281/zenodo.21114113)
 
 73% of U.S. financial institutions cite legacy core banking systems as a moderate-to-severe obstacle to FedNow participation because their core systems — Fiserv, FIS, Jack Henry — were built for batch processing, not 24/7 real-time settlement. This framework bridges the gap without touching the core.
 
