@@ -13,10 +13,12 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+
+import java.nio.file.Path;
 
 /**
  * Reference security configuration for OpenFedNow administrative endpoints.
@@ -54,6 +56,17 @@ public class SecurityConfig {
 
     @Value("${openfednow.admin.password:" + DEFAULT_ADMIN_PASSWORD + "}")
     private String adminPassword;
+
+    /**
+     * Optional path to a two-line file containing the admin username and
+     * password. When set, credentials are re-read from the file on every
+     * login (with mtime-based caching), so a K8s Secret mount can be
+     * rotated in-place without restarting the pod. When absent, the
+     * {@code openfednow.admin.username} / {@code openfednow.admin.password}
+     * values are used and rotation requires a restart.
+     */
+    @Value("${openfednow.admin.credential-file:}")
+    private String credentialFilePath;
 
     private final Environment environment;
 
@@ -153,14 +166,37 @@ public class SecurityConfig {
     }
 
     @Bean
-    public UserDetailsService userDetailsService(PasswordEncoder encoder) {
-        return new InMemoryUserDetailsManager(
-            User.builder()
-                .username(adminUsername)
-                .password(encoder.encode(adminPassword))
-                .roles("ADMIN")
-                .build()
-        );
+    public AdminCredentialSource adminCredentialSource() {
+        Path file = (credentialFilePath == null || credentialFilePath.isBlank())
+                ? null : Path.of(credentialFilePath);
+        return new AdminCredentialSource(adminUsername, adminPassword, file);
+    }
+
+    /**
+     * UserDetailsService that resolves the admin principal from
+     * {@link AdminCredentialSource} on every login attempt. That indirection
+     * is what makes rotation possible: once the credential file changes on
+     * disk (or the static values are refreshed by a future @RefreshScope
+     * mechanism), the next login sees the new password without a restart.
+     *
+     * <p>The username is compared case-sensitively — usernames coming from a
+     * Basic auth header are already exact and we don't want a mismatched
+     * casing to accidentally authenticate as admin.
+     */
+    @Bean
+    public UserDetailsService userDetailsService(PasswordEncoder encoder,
+                                                 AdminCredentialSource credentialSource) {
+        return requestedUsername -> {
+            AdminCredentialSource.Snapshot current = credentialSource.current();
+            if (!current.username().equals(requestedUsername)) {
+                throw new UsernameNotFoundException("Unknown user: " + requestedUsername);
+            }
+            return User.builder()
+                    .username(current.username())
+                    .password(encoder.encode(current.password()))
+                    .roles("ADMIN")
+                    .build();
+        };
     }
 
     @Bean
