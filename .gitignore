@@ -49,5 +49,9 @@ application-secret.yml
 # Docker
 docker-compose.override.yml
 
+# Redis persistence dump — written by redis-server when run locally
+# (either via docker-compose or a bare `redis-server` in this directory).
+dump.rdb
+
 # Cowork / Claude session files — not project content
 .claude/
