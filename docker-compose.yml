@@ -1,12 +1,21 @@
-version: '3.8'
-
 # Local development environment for OpenFedNow
-# Starts Redis (Shadow Ledger cache) and RabbitMQ (async message queue)
+# Starts Redis (Shadow Ledger cache), RabbitMQ (async message queue), and
+# Postgres (durable state: saga_state, idempotency_keys, reconciliation_run,
+# admin_audit_log). Postgres is required for the app to accept real traffic
+# — the idempotency writes use ON CONFLICT DO NOTHING, which H2 does not
+# support even in Postgres-compat mode. The Kafka service is opt-in and
+# only relevant when KAFKA_ENABLED=true; it's kept commented out below
+# because bitnami/kafka:3.7 was removed from Docker Hub.
 #
 # Usage:
 #   docker-compose up -d        # start in background
 #   docker-compose down         # stop and remove containers
 #   docker-compose logs -f      # follow logs
+#
+# Then launch the app with Postgres:
+#   DB_URL=jdbc:postgresql://localhost:5432/openfednow \
+#   DB_USERNAME=openfednow DB_PASSWORD=openfednow \
+#   mvn spring-boot:run
 
 services:
 
@@ -41,36 +50,29 @@ services:
       timeout: 5s
       retries: 5
 
-  # Kafka (optional) — event streaming bus alongside RabbitMQ.
-  # Activate by adding KAFKA_ENABLED=true and KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-  # to the openfednow service environment.
-  #
-  # Uses Bitnami Kafka in KRaft mode (no separate Zookeeper container required).
-  kafka:
-    image: bitnami/kafka:3.7
-    container_name: openfednow-kafka
+  postgres:
+    image: postgres:16-alpine
+    container_name: openfednow-postgres
     ports:
-      - "9092:9092"
+      - "5432:5432"
     environment:
-      # KRaft mode — combined controller + broker, no Zookeeper
-      - KAFKA_CFG_NODE_ID=0
-      - KAFKA_CFG_PROCESS_ROLES=controller,broker
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
-      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
-      # Advertised listener — use 'localhost' for host-machine clients,
-      # or 'kafka' when connecting from within the docker-compose network
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
+      POSTGRES_DB: openfednow
+      POSTGRES_USER: openfednow
+      POSTGRES_PASSWORD: openfednow
     volumes:
-      - kafka-data:/bitnami/kafka
+      - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      test: ["CMD-SHELL", "pg_isready -U openfednow -d openfednow"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # Kafka (optional) — event streaming bus alongside RabbitMQ. Only relevant
+  # when KAFKA_ENABLED=true in the app. Kept commented out because
+  # bitnami/kafka:3.7 was removed from Docker Hub; substitute
+  # apache/kafka:3.7.0 (KRaft mode) or confluentinc/cp-kafka when needed.
+
 volumes:
   redis-data:
   rabbitmq-data:
-  kafka-data:
+  postgres-data:
