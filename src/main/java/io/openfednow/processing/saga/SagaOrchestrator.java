@@ -51,20 +51,25 @@ public class SagaOrchestrator {
     public PaymentSaga initiate(Pacs008Message message, Rail sourceRail) {
         String sagaId = "SAGA-" + UUID.randomUUID();
         PaymentSaga saga = new PaymentSaga(sagaId, message.getTransactionId(), sourceRail);
+        // Capture the current request-id from MDC so admin_audit_log entries can
+        // be JOINed to the sagas they resulted in. May be null for sagas
+        // initiated outside an HTTP request (scheduled bridge replay, etc.).
+        String requestId = org.slf4j.MDC.get(io.openfednow.gateway.CorrelationFilter.MDC_REQUEST_ID);
 
         jdbc.update("""
                 INSERT INTO saga_state
-                    (saga_id, transaction_id, end_to_end_id, state, source_rail)
-                VALUES (?, ?, ?, ?, ?)
+                    (saga_id, transaction_id, end_to_end_id, state, source_rail, request_id)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
                 sagaId,
                 message.getTransactionId(),
                 message.getEndToEndId(),
                 saga.getState().name(),
-                sourceRail.name());
+                sourceRail.name(),
+                requestId);
 
-        log.info("Saga initiated sagaId={} transactionId={} e2e={} sourceRail={}",
-                sagaId, message.getTransactionId(), message.getEndToEndId(), sourceRail);
+        log.info("Saga initiated sagaId={} transactionId={} e2e={} sourceRail={} requestId={}",
+                sagaId, message.getTransactionId(), message.getEndToEndId(), sourceRail, requestId);
         return saga;
     }
 
@@ -137,7 +142,8 @@ public class SagaOrchestrator {
         return jdbc.query(
                 """
                 SELECT saga_id, transaction_id, end_to_end_id, state, source_rail,
-                       return_reason_code, failure_description, created_at, updated_at
+                       return_reason_code, failure_description, created_at, updated_at,
+                       request_id
                 FROM saga_state
                 WHERE state NOT IN ('COMPLETED', 'FAILED')
                 ORDER BY created_at ASC
@@ -155,7 +161,8 @@ public class SagaOrchestrator {
         return jdbc.query(
                 """
                 SELECT saga_id, transaction_id, end_to_end_id, state, source_rail,
-                       return_reason_code, failure_description, created_at, updated_at
+                       return_reason_code, failure_description, created_at, updated_at,
+                       request_id
                 FROM saga_state
                 WHERE transaction_id = ?
                 """,
@@ -175,7 +182,8 @@ public class SagaOrchestrator {
                 rs.getString("return_reason_code"),
                 rs.getString("failure_description"),
                 createdAt != null ? createdAt.toInstant() : null,
-                updatedAt != null ? updatedAt.toInstant() : null);
+                updatedAt != null ? updatedAt.toInstant() : null,
+                rs.getString("request_id"));
     }
 
     /**

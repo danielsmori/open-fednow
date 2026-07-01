@@ -68,13 +68,13 @@ class FlywayMigrationTest {
     }
 
     @Test
-    void exactlySixMigrationsArePresent() {
+    void exactlySevenMigrationsArePresent() {
         Flyway flyway = Flyway.configure()
                 .dataSource(dataSource)
                 .locations("classpath:db/migration")
                 .load();
 
-        assertThat(flyway.info().all()).hasSize(6);
+        assertThat(flyway.info().all()).hasSize(7);
     }
 
     // --- V1: shadow_ledger_transaction_log ---
@@ -328,6 +328,55 @@ class FlywayMigrationTest {
         } catch (Exception e) {
             assertThat(e.getMessage()).containsIgnoringCase("constraint");
         }
+    }
+
+    // --- V7: request_id correlation columns on saga_state + reconciliation_run ---
+
+    @Test
+    void sagaStateAcceptsRequestId() {
+        jdbc.update("""
+                INSERT INTO saga_state
+                    (saga_id, transaction_id, end_to_end_id, state, source_rail, request_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                "SAGA-REQ-1", "TXN-REQ-1", "E2E-REQ-1", "INITIATED", "FEDNOW",
+                "req-abc-123");
+
+        String storedRequestId = jdbc.queryForObject(
+                "SELECT request_id FROM saga_state WHERE saga_id = ?",
+                String.class, "SAGA-REQ-1");
+        assertThat(storedRequestId).isEqualTo("req-abc-123");
+    }
+
+    @Test
+    void sagaStateAllowsNullRequestId() {
+        // Scheduled sagas (SagaTimeoutMonitor, AvailabilityBridge) initiate outside
+        // any HTTP request, so request_id must remain nullable.
+        jdbc.update("""
+                INSERT INTO saga_state
+                    (saga_id, transaction_id, end_to_end_id, state, source_rail)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                "SAGA-REQ-NULL", "TXN-REQ-NULL", "E2E-REQ-NULL", "INITIATED", "FEDNOW");
+
+        String storedRequestId = jdbc.queryForObject(
+                "SELECT request_id FROM saga_state WHERE saga_id = ?",
+                String.class, "SAGA-REQ-NULL");
+        assertThat(storedRequestId).isNull();
+    }
+
+    @Test
+    void reconciliationRunAcceptsRequestId() {
+        jdbc.update("""
+                INSERT INTO reconciliation_run (triggered_by, request_id)
+                VALUES ('MANUAL', ?)
+                """,
+                "req-recon-99");
+
+        String storedRequestId = jdbc.queryForObject(
+                "SELECT request_id FROM reconciliation_run WHERE request_id = ?",
+                String.class, "req-recon-99");
+        assertThat(storedRequestId).isEqualTo("req-recon-99");
     }
 
     // --- Helpers ---

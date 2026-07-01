@@ -185,7 +185,8 @@ class CancellationServiceTest {
                 sagaId, deriveTxnId(sagaId), "E2E-" + sagaId,
                 state, Rail.FEDNOW, null, null,
                 Instant.parse("2026-05-19T10:00:00Z"),
-                Instant.parse("2026-05-19T10:00:05Z"));
+                Instant.parse("2026-05-19T10:00:05Z"),
+                null);
         when(orchestrator.findByTransactionId(snapshot.transactionId())).thenReturn(Optional.of(snapshot));
     }
 

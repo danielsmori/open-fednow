@@ -112,12 +112,21 @@ public class ReconciliationService {
     private ReconciliationReport reconcileLocked() {
         log.info("Reconciliation cycle starting");
 
+        // Correlate this run with the admin_audit_log entry that triggered it (if any).
+        // Presence of a request_id also disambiguates SCHEDULED vs MANUAL: a scheduled
+        // job runs outside any HTTP request and has no MDC context; an operator hitting
+        // /admin/reconcile has a per-request UUID from CorrelationFilter.
+        final String requestId = org.slf4j.MDC.get(io.openfednow.gateway.CorrelationFilter.MDC_REQUEST_ID);
+        final String triggeredBy = requestId != null ? "MANUAL" : "SCHEDULED";
+
         // Open the run audit record
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbc.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(
-                    "INSERT INTO reconciliation_run (triggered_by) VALUES ('SCHEDULED')",
+                    "INSERT INTO reconciliation_run (triggered_by, request_id) VALUES (?, ?)",
                     new String[]{"id"});
+            ps.setString(1, triggeredBy);
+            ps.setString(2, requestId);
             return ps;
         }, keyHolder);
         Long runId = keyHolder.getKey().longValue();
@@ -234,7 +243,8 @@ public class ReconciliationService {
         return jdbc.query(
                 """
                 SELECT id, started_at, completed_at, transactions_replayed,
-                       discrepancies_detected, successful, summary, triggered_by
+                       discrepancies_detected, successful, summary, triggered_by,
+                       request_id
                 FROM reconciliation_run
                 ORDER BY started_at DESC, id DESC
                 LIMIT ? OFFSET ?
@@ -252,7 +262,8 @@ public class ReconciliationService {
         return jdbc.query(
                 """
                 SELECT id, started_at, completed_at, transactions_replayed,
-                       discrepancies_detected, successful, summary, triggered_by
+                       discrepancies_detected, successful, summary, triggered_by,
+                       request_id
                 FROM reconciliation_run
                 WHERE id = ?
                 """,
@@ -272,7 +283,8 @@ public class ReconciliationService {
                 rs.getInt("discrepancies_detected"),
                 successful,
                 rs.getString("summary"),
-                rs.getString("triggered_by"));
+                rs.getString("triggered_by"),
+                rs.getString("request_id"));
     }
 
     /**

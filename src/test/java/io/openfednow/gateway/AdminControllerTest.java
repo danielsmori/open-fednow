@@ -141,7 +141,8 @@ class AdminControllerTest {
                 PaymentSaga.SagaState.FAILED, Rail.RTP,
                 "AM04", "Insufficient funds in debtor account",
                 Instant.parse("2026-05-19T10:00:00Z"),
-                Instant.parse("2026-05-19T10:00:18Z"));
+                Instant.parse("2026-05-19T10:00:18Z"),
+                null);
         when(sagaOrchestrator.findByTransactionId("TXN-FAIL")).thenReturn(Optional.of(failed));
 
         mockMvc.perform(get("/admin/sagas/TXN-FAIL"))
@@ -290,7 +291,7 @@ class AdminControllerTest {
     void getReconciliationRun_exposesInProgressRunsWithNullCompletedAt() throws Exception {
         ReconciliationRunSummary inProgress = new ReconciliationRunSummary(
                 12L, Instant.parse("2026-05-19T10:00:00Z"), null,
-                0, 0, null, null, "MANUAL");
+                0, 0, null, null, "MANUAL", null);
         when(reconciliationService.findRunById(12L)).thenReturn(Optional.of(inProgress));
 
         mockMvc.perform(get("/admin/reconciliation-runs/12"))
@@ -418,7 +419,8 @@ class AdminControllerTest {
                 Instant.parse("2026-05-19T10:00:05Z"),
                 3, 0, successful,
                 successful ? "Clean reconciliation" : "Discrepancies found",
-                triggeredBy);
+                triggeredBy,
+                null);
     }
 
     private SagaSnapshot sampleSnapshot(
@@ -428,6 +430,7 @@ class AdminControllerTest {
                 sagaId, transactionId, endToEndId, state, Rail.FEDNOW,
                 null, null,
                 Instant.parse("2026-05-19T10:00:00Z"),
-                Instant.parse("2026-05-19T10:00:05Z"));
+                Instant.parse("2026-05-19T10:00:05Z"),
+                null);
     }
 }

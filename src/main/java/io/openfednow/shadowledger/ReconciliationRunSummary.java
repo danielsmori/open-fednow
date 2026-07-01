@@ -22,6 +22,10 @@ import java.time.Instant;
  *                               discrepancy or error; null while in progress
  * @param summary                free-text summary (error details, discrepancy info)
  * @param triggeredBy            {@code SCHEDULED} or {@code MANUAL}
+ * @param requestId              correlation id from {@code CorrelationFilter} on the
+ *                               HTTP request that triggered the run; joins this row
+ *                               to its {@code admin_audit_log} entry. Null for
+ *                               scheduled runs (which have no HTTP context).
  */
 public record ReconciliationRunSummary(
         long id,
@@ -31,7 +35,8 @@ public record ReconciliationRunSummary(
         int discrepanciesDetected,
         Boolean successful,
         String summary,
-        String triggeredBy
+        String triggeredBy,
+        String requestId
 ) {
     /** True if the run has not yet finished — {@code completed_at} is still null. */
     public boolean inProgress() {

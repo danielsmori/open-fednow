@@ -23,6 +23,11 @@ import java.time.Instant;
  * @param failureDescription   human-readable failure reason; null for non-failed sagas
  * @param createdAt            when the saga was initiated
  * @param updatedAt            when the most recent state transition was persisted
+ * @param requestId            correlation identifier from {@code CorrelationFilter}
+ *                             at initiation time; joins the saga to the
+ *                             {@code admin_audit_log} entry that triggered it
+ *                             (or to the payment-request that started it).
+ *                             Null for sagas initiated outside an HTTP request.
  */
 public record SagaSnapshot(
         String sagaId,
@@ -33,7 +38,8 @@ public record SagaSnapshot(
         String returnReasonCode,
         String failureDescription,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        String requestId
 ) {
     /** Age of the saga in seconds since initiation. Convenience for monitoring. */
     public long ageSeconds() {
