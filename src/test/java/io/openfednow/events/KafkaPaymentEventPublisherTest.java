@@ -2,6 +2,7 @@ package io.openfednow.events;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.Header;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,7 +42,8 @@ class KafkaPaymentEventPublisherTest {
         when(kafkaTemplate.send(any(ProducerRecord.class)))
                 .thenReturn((CompletableFuture<SendResult<String, String>>) (CompletableFuture<?>)
                         CompletableFuture.completedFuture(null));
-        publisher = new KafkaPaymentEventPublisher(kafkaTemplate, "test.topic");
+        publisher = new KafkaPaymentEventPublisher(
+                kafkaTemplate, new SimpleMeterRegistry(), "test.topic", "");
     }
 
     // ── Header presence ──────────────────────────────────────────────────────

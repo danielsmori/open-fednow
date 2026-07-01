@@ -69,9 +69,12 @@ openfednow:
 
   # Kafka event bus — optional, coexists with the RabbitMQ maintenance-window queue.
   # Set KAFKA_ENABLED=true and KAFKA_BOOTSTRAP_SERVERS=<host:port> to activate.
+  # Failed publishes are re-routed to a dead-letter topic (default: <topic>.dlq)
+  # with X-DLQ-Original-Topic + X-DLQ-Reason headers naming the failure.
   kafka:
     enabled: ${KAFKA_ENABLED:false}
     topic: ${KAFKA_TOPIC:openfednow.payment.events}
+    dlq-topic: ${KAFKA_DLQ_TOPIC:}   # blank = derive from topic + ".dlq"
 
   # Idempotency record retention. FedNow's documented retry window for duplicate
   # pacs.008 messages is 24 hours; the default 48-hour TTL doubles that window
