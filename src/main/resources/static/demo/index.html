@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>OpenFedNow — Demo Console</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --panel: #1a1f28;
+    --panel-2: #232a35;
+    --border: #2d3441;
+    --text: #e6edf3;
+    --dim: #8b96a5;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --code-bg: #0d1117;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    grid-template-columns: 260px 1fr 360px;
+    grid-template-areas:
+      "header header header"
+      "sidebar main feed"
+      "status status status";
+  }
+  header {
+    grid-area: header;
+    background: var(--panel);
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  header .tag {
+    font-size: 11px;
+    color: var(--dim);
+    background: var(--panel-2);
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-left: 8px;
+  }
+  header .controls button {
+    margin-left: 8px;
+  }
+  aside.sidebar {
+    grid-area: sidebar;
+    background: var(--panel);
+    padding: 16px 12px;
+    overflow-y: auto;
+    border-right: 1px solid var(--border);
+  }
+  .group-title {
+    font-size: 11px;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 8px 4px;
+  }
+  .group-title:first-child { padding-top: 0; }
+  button {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 10px;
+    font: inherit;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.1s;
+  }
+  button:hover { background: #2d3441; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .scenario-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    margin: 2px 0;
+    font-size: 13px;
+  }
+  .scenario-btn .desc {
+    font-size: 11px;
+    color: var(--dim);
+    margin-top: 2px;
+  }
+  main {
+    grid-area: main;
+    padding: 16px;
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: auto 1fr 1fr;
+    gap: 12px;
+  }
+  .step-header {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+  }
+  .step-header h2 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .step-header p {
+    color: var(--dim);
+    font-size: 13px;
+  }
+  .pane {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .pane-header {
+    padding: 8px 12px;
+    background: var(--panel-2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .pane-header .method {
+    color: var(--accent);
+    font-family: SF Mono, Menlo, Consolas, monospace;
+    font-size: 12px;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .pane-header .status {
+    font-family: SF Mono, Menlo, Consolas, monospace;
+    text-transform: none;
+    letter-spacing: 0;
+    padding: 2px 8px;
+    border-radius: 3px;
+    background: var(--code-bg);
+  }
+  .pane-header .status.ok { color: var(--green); }
+  .pane-header .status.warn { color: var(--yellow); }
+  .pane-header .status.err { color: var(--red); }
+  .pane pre {
+    padding: 12px;
+    overflow: auto;
+    font: 12px/1.5 SF Mono, Menlo, Consolas, monospace;
+    background: var(--code-bg);
+    color: var(--text);
+    flex: 1;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .pane pre.placeholder {
+    color: var(--dim);
+    font-style: italic;
+  }
+  .json-string { color: #a5d6ff; }
+  .json-number { color: #79c0ff; }
+  .json-boolean { color: #ff7b72; }
+  .json-null { color: #8b96a5; }
+  .json-key { color: #d2a8ff; }
+
+  aside.feed {
+    grid-area: feed;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .feed-header {
+    padding: 12px 16px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .feed-header h3 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--dim);
+  }
+  .feed-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+  .feed-item {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .feed-item .time {
+    color: var(--dim);
+    font-family: SF Mono, Menlo, Consolas, monospace;
+    font-size: 11px;
+  }
+  .feed-item .desc {
+    color: var(--text);
+  }
+  .feed-item .desc small {
+    display: block;
+    color: var(--dim);
+    font-size: 10.5px;
+    margin-top: 2px;
+  }
+  .badge {
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: SF Mono, Menlo, Consolas, monospace;
+    font-size: 10.5px;
+    font-weight: 600;
+  }
+  .badge.acsc { background: rgba(63,185,80,0.15); color: var(--green); }
+  .badge.acsp { background: rgba(210,153,34,0.15); color: var(--yellow); }
+  .badge.rjct { background: rgba(248,81,73,0.15); color: var(--red); }
+  .badge.xml  { background: rgba(88,166,255,0.15); color: var(--accent); }
+  .badge.admin { background: rgba(210,168,255,0.15); color: #d2a8ff; }
+
+  .status-bar {
+    grid-area: status;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex;
+    gap: 24px;
+    font-size: 12px;
+    color: var(--dim);
+  }
+  .status-bar .metric {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .status-bar .metric strong {
+    color: var(--text);
+    font-family: SF Mono, Menlo, Consolas, monospace;
+  }
+  .status-bar .metric.up::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+  }
+  .status-bar .metric.down::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--red);
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>OpenFedNow — Demo Console</h1>
+    <span class="tag" id="app-mode">connecting…</span>
+    <span class="tag"><a href="/swagger-ui.html" target="_blank">Swagger UI</a></span>
+    <span class="tag"><a href="/actuator/health" target="_blank">/actuator/health</a></span>
+  </div>
+  <div class="controls">
+    <button id="btn-refresh">Refresh feed</button>
+    <button id="btn-run-all">Run all scenarios</button>
+  </div>
+</header>
+
+<aside class="sidebar" id="sidebar">
+  <!-- Populated by JS -->
+</aside>
+
+<main>
+  <div class="step-header">
+    <h2 id="step-title">Ready</h2>
+    <p id="step-desc">Pick a scenario on the left, or hit "Run all scenarios" to walk the pipeline top-to-bottom.</p>
+  </div>
+  <div class="pane" id="req-pane">
+    <div class="pane-header">
+      <span>Request</span>
+      <span class="method" id="req-method">—</span>
+    </div>
+    <pre class="placeholder" id="req-body">No request sent yet.</pre>
+  </div>
+  <div class="pane" id="res-pane">
+    <div class="pane-header">
+      <span>Response</span>
+      <span class="status" id="res-status">—</span>
+    </div>
+    <pre class="placeholder" id="res-body">Waiting for the first scenario to run.</pre>
+  </div>
+</main>
+
+<aside class="feed">
+  <div class="feed-header">
+    <h3>Live activity</h3>
+    <button id="btn-clear-feed" style="padding:4px 8px;font-size:11px;">Clear</button>
+  </div>
+  <div class="feed-list" id="feed"></div>
+</aside>
+
+<div class="status-bar" id="status-bar">
+  <div class="metric" id="metric-app"><span>App:</span><strong id="app-status">—</strong></div>
+  <div class="metric" id="metric-balance"><span>ACC-DEMO-12345:</span><strong id="balance">—</strong></div>
+  <div class="metric"><span>Sagas:</span><strong id="saga-count">—</strong></div>
+  <div class="metric"><span>Audit rows:</span><strong id="audit-count">—</strong></div>
+</div>
+
+<script>
+// ── Config ─────────────────────────────────────────────────────────────────
+const ADMIN_AUTH = 'Basic ' + btoa('admin:changeme');
+
+// ── Scenarios ──────────────────────────────────────────────────────────────
+// Each scenario declares how to build the request and how to interpret the
+// response. `route` is a scenario id; the on-click handler dispatches to
+// runScenario() which orchestrates request/response rendering + feed logging.
+const GROUPS = [
+  {
+    name: 'FedNow inbound',
+    scenarios: [
+      { id: 'inbound-normal',    label: 'Inbound normal (ACSC)',     desc: '$250 → ACC-DEMO-12345' },
+      { id: 'inbound-duplicate', label: 'Idempotency (cached)',       desc: 'Same endToEndId again' },
+      { id: 'inbound-rjct',      label: 'Rejection (RJCT/AM04)',      desc: 'RJCT_FUNDS_ prefix' },
+      { id: 'inbound-acsp',      label: 'Provisional (ACSP)',         desc: 'TOUT_ prefix — slow core' },
+    ],
+  },
+  {
+    name: 'FedNow outbound',
+    scenarios: [
+      { id: 'outbound-normal',   label: 'Outbound send (ACSC)',       desc: '$100 outbound' },
+      { id: 'outbound-eur',      label: 'Currency guard (AM03)',       desc: 'EUR → RJCT' },
+      { id: 'outbound-return',   label: 'pacs.004 return',             desc: 'Return $50' },
+    ],
+  },
+  {
+    name: 'RTP rail',
+    scenarios: [
+      { id: 'rtp-xml',           label: 'RTP inbound (XML)',           desc: '$175 XML → ACSC' },
+    ],
+  },
+  {
+    name: 'Lifecycle',
+    scenarios: [
+      { id: 'cancel',            label: 'Cancellation (camt.056)',     desc: 'Cancel the ACSP txn' },
+    ],
+  },
+  {
+    name: 'Admin',
+    scenarios: [
+      { id: 'admin-reconcile',   label: 'Reconciliation cycle',        desc: 'POST /admin/reconcile' },
+      { id: 'admin-saga',        label: 'Saga snapshot',                desc: 'GET /admin/sagas/{txn}' },
+      { id: 'admin-balance',     label: 'Balance view',                 desc: 'GET /admin/accounts/…' },
+      { id: 'admin-audit',       label: 'Audit log (redaction)',       desc: '?token=leak → REDACTED' },
+    ],
+  },
+];
+
+const NOW = () => new Date().toISOString().replace('Z', '000Z');
+
+const SCENARIOS = {
+  'inbound-normal': {
+    title: 'Inbound normal — ACSC',
+    description: '$250 pacs.008 credit transfer to ACC-DEMO-12345. Also seeds Shadow Ledger.',
+    request: () => ({
+      method: 'POST',
+      url: '/fednow/receive',
+      headers: { 'Content-Type': 'application/json', 'X-Request-Id': 'demo-req-inbound-001' },
+      body: {
+        messageId: 'MSG-DEMO-001', endToEndId: 'E2E-DEMO-001', transactionId: 'TXN-DEMO-001',
+        creationDateTime: NOW(), numberOfTransactions: 1,
+        interbankSettlementAmount: 250.00, interbankSettlementCurrency: 'USD',
+        debtorAgentRoutingNumber: '021000021', creditorAgentRoutingNumber: '026009593',
+        debtorAccountNumber: '999888', creditorAccountNumber: 'ACC-DEMO-12345',
+        debtorName: 'Alice Smith', creditorName: 'Bob Jones',
+      },
+    }),
+    interpret: r => statusBadge(r.transactionStatus),
+  },
+  'inbound-duplicate': {
+    title: 'Idempotency — duplicate returns cached response',
+    description: 'Re-sending the same endToEndId as the first inbound. The idempotency service serves the cached ACSC without touching downstream systems.',
+    request: () => ({
+      method: 'POST',
+      url: '/fednow/receive',
+      headers: { 'Content-Type': 'application/json' },
+      body: { ...SCENARIOS['inbound-normal'].request().body, messageId: 'MSG-DEMO-001-RETRY', transactionId: 'TXN-DEMO-001-RETRY' },
+    }),
+    interpret: r => statusBadge(r.transactionStatus),
+  },
+  'inbound-rjct': {
+    title: 'Rejection — RJCT / AM04 insufficient funds',
+    description: 'Creditor account prefixed with RJCT_FUNDS_ tells the sandbox core to return AM04.',
+    request: () => ({
+      method: 'POST',
+      url: '/fednow/receive',
+      headers: { 'Content-Type': 'application/json' },
+      body: {
+        messageId: 'MSG-DEMO-003', endToEndId: 'E2E-DEMO-003', transactionId: 'TXN-DEMO-003',
+        creationDateTime: NOW(), numberOfTransactions: 1,
+        interbankSettlementAmount: 250.00, interbankSettlementCurrency: 'USD',
+        debtorAgentRoutingNumber: '021000021', creditorAgentRoutingNumber: '026009593',
+        debtorAccountNumber: '999888', creditorAccountNumber: 'RJCT_FUNDS_ACC-67890',
+        debtorName: 'Alice Smith', creditorName: 'Bob Jones',
+      },
+    }),
+    interpret: r => statusBadge(r.transactionStatus, r.rejectReasonCode),
+  },
+  'inbound-acsp': {
+    title: 'Provisional — ACSP AcceptedSettlementInProcess',
+    description: 'TOUT_ prefix triggers a slow-core response. SyncAsyncBridge returns ACSP immediately rather than blocking past the 20-second FedNow SLA.',
+    request: () => ({
+      method: 'POST',
+      url: '/fednow/receive',
+      headers: { 'Content-Type': 'application/json' },
+      body: {
+        messageId: 'MSG-DEMO-004', endToEndId: 'E2E-DEMO-004', transactionId: 'TXN-DEMO-004',
+        creationDateTime: NOW(), numberOfTransactions: 1,
+        interbankSettlementAmount: 300.00, interbankSettlementCurrency: 'USD',
+        debtorAgentRoutingNumber: '021000021', creditorAgentRoutingNumber: '026009593',
+        debtorAccountNumber: '999888', creditorAccountNumber: 'TOUT_ACC-12345',
+        debtorName: 'Alice Smith', creditorName: 'Bob Jones',
+      },
+    }),
+    interpret: r => statusBadge(r.transactionStatus),
+  },
+  'outbound-normal': {
+    title: 'Outbound send — ACSC',
+    description: '$100 outbound with ACC-DEMO-12345 as debtor. Uses balance seeded by the inbound step.',
+    request: () => ({
+      method: 'POST',
+      url: '/fednow/send',
+      headers: { 'Content-Type': 'application/json' },
+      body: {
+        messageId: 'MSG-DEMO-005', endToEndId: 'E2E-DEMO-005', transactionId: 'TXN-DEMO-005',
+        creationDateTime: NOW(), numberOfTransactions: 1,
+        interbankSettlementAmount: 100.00, interbankSettlementCurrency: 'USD',
+        debtorAgentRoutingNumber: '021000021', creditorAgentRoutingNumber: '026009593',
+        debtorAccountNumber: 'ACC-DEMO-12345', creditorAccountNumber: 'ACC-EXT-99999',
+        debtorName: 'Bob Jones', creditorName: 'Carol Williams',
+      },
+    }),
+    interpret: r => statusBadge(r.transactionStatus),
+  },
+  'outbound-eur': {
+    title: 'Currency guard — non-USD rejected with AM03',
+    description: 'Same shape as the outbound scenario but currency=EUR. MessageRouter rejects before any saga or ledger touch.',
+    request: () => ({
+      method: 'POST',
+      url: '/fednow/send',
+      headers: { 'Content-Type': 'application/json' },
+      body: {
+        messageId: 'MSG-DEMO-006', endToEndId: 'E2E-DEMO-006', transactionId: 'TXN-DEMO-006',
+        creationDateTime: NOW(), numberOfTransactions: 1,
+        interbankSettlementAmount: 50.00, interbankSettlementCurrency: 'EUR',
+        debtorAgentRoutingNumber: '021000021', creditorAgentRoutingNumber: '026009593',
+        debtorAccountNumber: 'ACC-DEMO-12345', creditorAccountNumber: 'ACC-EXT-99999',
+        debtorName: 'Bob Jones', creditorName: 'Carol Williams',
+      },
+    }),
+    interpret: r => statusBadge(r.transactionStatus, r.rejectReasonCode),
+  },
+  'outbound-return': {
+    title: 'pacs.004 outbound return',
+    description: 'Return $50 from the earlier TXN-DEMO-001 payment. Sandbox client returns synthetic ACSC.',
+    request: () => ({
+      method: 'POST',
+      url: '/fednow/return',
+      headers: { 'Content-Type': 'application/json' },
+      body: {
+        messageId: 'MSG-RETURN-001', creationDateTime: NOW(),
+        returnId: 'RET-DEMO-001',
+        originalMessageId: 'MSG-DEMO-001', originalEndToEndId: 'E2E-DEMO-001', originalTransactionId: 'TXN-DEMO-001',
+        returnedAmount: 50.00, returnedAmountCurrency: 'USD',
+        returnReasonCode: 'AC03', returnReasonDescription: 'Wrong beneficiary account',
+        returningAgentRoutingNumber: '026009593', receivingAgentRoutingNumber: '021000021',
+      },
+    }),
+    interpret: r => statusBadge(r.transactionStatus),
+  },
+  'rtp-xml': {
+    title: 'RTP inbound — XML pacs.008',
+    description: 'Canonical ISO 20022 XML over /rtp/receive. Response is XML too; the same processing pipeline serves both rails.',
+    request: () => ({
+      method: 'POST',
+      url: '/rtp/receive',
+      headers: { 'Content-Type': 'application/xml' },
+      raw: `<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08">
+  <FIToFICstmrCdtTrf>
+    <GrpHdr>
+      <MsgId>MSG-DEMO-RTP-007</MsgId>
+      <CreDtTm>${NOW()}</CreDtTm>
+      <NbOfTxs>1</NbOfTxs>
+    </GrpHdr>
+    <CdtTrfTxInf>
+      <PmtId>
+        <EndToEndId>E2E-DEMO-RTP-007</EndToEndId>
+        <TxId>TXN-DEMO-RTP-007</TxId>
+      </PmtId>
+      <IntrBkSttlmAmt Ccy="USD">175.00</IntrBkSttlmAmt>
+      <DbtrAgt><FinInstnId><ClrSysMmbId><MmbId>021000021</MmbId></ClrSysMmbId></FinInstnId></DbtrAgt>
+      <CdtrAgt><FinInstnId><ClrSysMmbId><MmbId>026009593</MmbId></ClrSysMmbId></FinInstnId></CdtrAgt>
+      <Dbtr><Nm>Alice Smith</Nm></Dbtr>
+      <DbtrAcct><Id><Othr><Id>999888</Id></Othr></Id></DbtrAcct>
+      <Cdtr><Nm>Bob Jones</Nm></Cdtr>
+      <CdtrAcct><Id><Othr><Id>ACC-DEMO-12345</Id></Othr></Id></CdtrAcct>
+    </CdtTrfTxInf>
+  </FIToFICstmrCdtTrf>
+</Document>`,
+    }),
+    xml: true,
+    interpret: raw => {
+      const match = raw.match(/<TxSts>([A-Z]+)<\/TxSts>/);
+      const status = match ? match[1] : 'UNKNOWN';
+      return { badge: statusBadge(status), status };
+    },
+  },
+  'cancel': {
+    title: 'Cancellation — camt.056 → camt.029',
+    description: 'Cancel the still-provisional TXN-DEMO-004. Response is a camt.029 resolution.',
+    request: () => ({
+      method: 'POST',
+      url: '/fednow/cancellation',
+      headers: { 'Content-Type': 'application/json' },
+      body: {
+        messageId: 'MSG-CNCL-001', creationDateTime: NOW(), caseId: 'CASE-DEMO-001',
+        originalMessageId: 'MSG-DEMO-004', originalEndToEndId: 'E2E-DEMO-004', originalTransactionId: 'TXN-DEMO-004',
+        originalInterbankSettlementAmount: 300.00, originalInterbankSettlementCurrency: 'USD',
+        cancellationReasonCode: 'DUPL', cancellationReasonDescription: 'Duplicate payment',
+      },
+    }),
+    interpret: r => ({ label: r.resolutionStatus, cls: 'admin' }),
+  },
+  'admin-reconcile': {
+    title: 'Reconciliation cycle',
+    description: 'POST /admin/reconcile (Basic auth). Confirms unconfirmed rows and surfaces discrepancies against the core.',
+    admin: true,
+    request: () => ({ method: 'POST', url: '/admin/reconcile', headers: {} }),
+    interpret: r => ({ label: `${r.transactionsReplayed} replayed / ${r.discrepanciesDetected} discrepancies`, cls: 'admin' }),
+  },
+  'admin-saga': {
+    title: 'Saga snapshot — GET /admin/sagas/{transactionId}',
+    description: 'Fetches the durable saga record for TXN-DEMO-001. Includes the new requestId correlation field (issue #21).',
+    admin: true,
+    request: () => ({ method: 'GET', url: '/admin/sagas/TXN-DEMO-001', headers: {} }),
+    interpret: r => ({ label: `state=${r.state}`, cls: 'admin' }),
+  },
+  'admin-balance': {
+    title: 'Balance view — GET /admin/accounts/{id}/balance',
+    description: 'Reads the Shadow Ledger view for ACC-DEMO-12345.',
+    admin: true,
+    request: () => ({ method: 'GET', url: '/admin/accounts/ACC-DEMO-12345/balance', headers: {} }),
+    interpret: r => ({ label: `available=$${r.available}`, cls: 'admin' }),
+  },
+  'admin-audit': {
+    title: 'Audit log with PII redaction',
+    description: 'Send a call carrying token=leak-secret, then fetch the audit-log. The persisted row shows token=REDACTED — never verbatim.',
+    admin: true,
+    // Two-phase: prime then fetch. Runner handles both.
+    request: () => ({ method: 'GET', url: '/admin/audit-log?limit=1&token=leak-secret', headers: {} }),
+    followUp: {
+      method: 'GET', url: '/admin/audit-log?limit=5', headers: {},
+    },
+    interpret: r => {
+      const redacted = Array.isArray(r) && r.some(row => (row.queryString || '').includes('token=REDACTED'));
+      return { label: redacted ? 'token=REDACTED verified' : 'redaction not observed', cls: redacted ? 'admin' : 'rjct' };
+    },
+  },
+};
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function statusBadge(status, code) {
+  const c = { ACSC: 'acsc', ACSP: 'acsp', RJCT: 'rjct' }[status] || 'admin';
+  return { label: code ? `${status} / ${code}` : status, cls: c };
+}
+
+function highlightJson(obj) {
+  const s = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
+  return s
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/("(?:\\.|[^"\\])*")\s*:/g, '<span class="json-key">$1</span>:')
+    .replace(/:\s*("(?:\\.|[^"\\])*")/g, ': <span class="json-string">$1</span>')
+    .replace(/:\s*(-?\d+(?:\.\d+)?)/g, ': <span class="json-number">$1</span>')
+    .replace(/:\s*(true|false)/g, ': <span class="json-boolean">$1</span>')
+    .replace(/:\s*(null)/g, ': <span class="json-null">$1</span>');
+}
+
+function highlightXml(s) {
+  return s
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function feedEntry(id, badge, desc, subDesc) {
+  const feed = document.getElementById('feed');
+  const time = new Date().toLocaleTimeString();
+  const el = document.createElement('div');
+  el.className = 'feed-item';
+  el.innerHTML = `
+    <span class="time">${time}</span>
+    <span class="desc">${desc}${subDesc ? `<small>${subDesc}</small>` : ''}</span>
+    <span class="badge ${badge.cls}">${badge.label}</span>
+  `;
+  feed.insertBefore(el, feed.firstChild);
+}
+
+// ── Rendering ──────────────────────────────────────────────────────────────
+function buildSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  for (const group of GROUPS) {
+    const title = document.createElement('div');
+    title.className = 'group-title';
+    title.textContent = group.name;
+    sidebar.appendChild(title);
+    for (const s of group.scenarios) {
+      const btn = document.createElement('button');
+      btn.className = 'scenario-btn';
+      btn.innerHTML = `${s.label}<div class="desc">${s.desc}</div>`;
+      btn.dataset.id = s.id;
+      btn.addEventListener('click', () => runScenario(s.id));
+      sidebar.appendChild(btn);
+    }
+  }
+}
+
+function renderStep(scenarioId) {
+  const s = SCENARIOS[scenarioId];
+  document.getElementById('step-title').textContent = s.title;
+  document.getElementById('step-desc').textContent = s.description;
+}
+
+function renderRequest(req) {
+  document.getElementById('req-method').textContent = `${req.method} ${req.url}`;
+  const body = document.getElementById('req-body');
+  body.classList.remove('placeholder');
+  if (req.raw) {
+    body.innerHTML = highlightXml(req.raw);
+  } else if (req.body) {
+    body.innerHTML = highlightJson(req.body);
+  } else {
+    body.innerHTML = '<em style="color:var(--dim);">No request body</em>';
+  }
+}
+
+function renderResponse(status, body, isXml) {
+  const statusEl = document.getElementById('res-status');
+  statusEl.textContent = `HTTP ${status}`;
+  statusEl.classList.remove('ok', 'warn', 'err');
+  statusEl.classList.add(status >= 200 && status < 300 ? 'ok' : status >= 500 ? 'err' : 'warn');
+  const bodyEl = document.getElementById('res-body');
+  bodyEl.classList.remove('placeholder');
+  if (isXml) {
+    bodyEl.innerHTML = highlightXml(body);
+  } else {
+    bodyEl.innerHTML = highlightJson(body);
+  }
+}
+
+// ── HTTP ───────────────────────────────────────────────────────────────────
+async function callApi(req, admin) {
+  const opts = {
+    method: req.method,
+    headers: { ...req.headers },
+  };
+  if (admin) opts.headers['Authorization'] = ADMIN_AUTH;
+  if (req.raw !== undefined) opts.body = req.raw;
+  else if (req.body !== undefined) opts.body = JSON.stringify(req.body);
+  const res = await fetch(req.url, opts);
+  const text = await res.text();
+  const contentType = res.headers.get('content-type') || '';
+  const isXml = contentType.includes('xml');
+  let parsed;
+  if (!isXml && text) {
+    try { parsed = JSON.parse(text); } catch { parsed = text; }
+  } else {
+    parsed = text;
+  }
+  return { status: res.status, body: parsed, raw: text, isXml };
+}
+
+async function runScenario(scenarioId) {
+  const s = SCENARIOS[scenarioId];
+  if (!s) return;
+  renderStep(scenarioId);
+  const req = s.request();
+  renderRequest(req);
+  try {
+    const r = await callApi(req, s.admin);
+    let display = r.body;
+    // For the audit-log two-phase scenario, prime first then re-fetch.
+    if (s.followUp) {
+      const r2 = await callApi(s.followUp, s.admin);
+      renderRequest(s.followUp);
+      display = r2.body;
+      renderResponse(r2.status, r2.body, r2.isXml);
+    } else {
+      renderResponse(r.status, r.isXml ? r.raw : r.body, r.isXml);
+    }
+    const badge = s.xml ? s.interpret(r.raw).badge : s.interpret(display);
+    feedEntry(scenarioId, badge, s.title.split(' — ')[0], `${req.method} ${req.url}`);
+  } catch (err) {
+    document.getElementById('res-status').textContent = 'ERROR';
+    document.getElementById('res-status').className = 'status err';
+    const bodyEl = document.getElementById('res-body');
+    bodyEl.classList.remove('placeholder');
+    bodyEl.textContent = String(err);
+    feedEntry(scenarioId, { label: 'ERROR', cls: 'rjct' }, s.title.split(' — ')[0], String(err));
+  }
+  refreshStatusBar();
+}
+
+// ── Status bar / polling ───────────────────────────────────────────────────
+async function refreshStatusBar() {
+  try {
+    const h = await (await fetch('/actuator/health')).json();
+    document.getElementById('app-status').textContent = h.status;
+    document.getElementById('metric-app').className = 'metric ' + (h.status === 'UP' ? 'up' : 'down');
+    document.getElementById('app-mode').textContent = h.status === 'UP' ? 'connected' : h.status;
+  } catch {
+    document.getElementById('app-status').textContent = 'DOWN';
+    document.getElementById('metric-app').className = 'metric down';
+    document.getElementById('app-mode').textContent = 'unreachable';
+    return;
+  }
+  try {
+    const bal = await (await fetch('/admin/accounts/ACC-DEMO-12345/balance', { headers: { Authorization: ADMIN_AUTH } })).json();
+    document.getElementById('balance').textContent = `$${bal.available}`;
+  } catch { document.getElementById('balance').textContent = '—'; }
+  try {
+    const sagas = await (await fetch('/admin/sagas', { headers: { Authorization: ADMIN_AUTH } })).json();
+    document.getElementById('saga-count').textContent = sagas.length;
+  } catch { document.getElementById('saga-count').textContent = '—'; }
+  try {
+    const audit = await (await fetch('/admin/audit-log?limit=500', { headers: { Authorization: ADMIN_AUTH } })).json();
+    document.getElementById('audit-count').textContent = audit.length;
+  } catch { document.getElementById('audit-count').textContent = '—'; }
+}
+
+async function runAll() {
+  const order = [
+    'inbound-normal', 'inbound-duplicate', 'inbound-rjct', 'inbound-acsp',
+    'outbound-normal', 'outbound-eur', 'outbound-return',
+    'rtp-xml',
+    'cancel',
+    'admin-reconcile', 'admin-saga', 'admin-balance', 'admin-audit',
+  ];
+  for (const id of order) {
+    await runScenario(id);
+    await new Promise(r => setTimeout(r, 400));
+  }
+}
+
+// ── Wire up ────────────────────────────────────────────────────────────────
+buildSidebar();
+refreshStatusBar();
+setInterval(refreshStatusBar, 5000);
+
+document.getElementById('btn-refresh').addEventListener('click', refreshStatusBar);
+document.getElementById('btn-run-all').addEventListener('click', runAll);
+document.getElementById('btn-clear-feed').addEventListener('click', () => {
+  document.getElementById('feed').innerHTML = '';
+});
+</script>
+</body>
+</html>
