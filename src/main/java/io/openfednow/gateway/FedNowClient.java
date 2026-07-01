@@ -1,6 +1,7 @@
 package io.openfednow.gateway;
 
 import io.openfednow.iso20022.Pacs002Message;
+import io.openfednow.iso20022.Pacs004Message;
 import io.openfednow.iso20022.Pacs008Message;
 
 /**
@@ -35,4 +36,25 @@ public interface FedNowClient {
      *         code {@code NARR} is returned rather than propagating an exception.
      */
     Pacs002Message submitCreditTransfer(Pacs008Message message);
+
+    /**
+     * Submits an outbound payment return (pacs.004) to FedNow.
+     *
+     * <p>Returns are the saga-compensation path for payments that were
+     * provisionally accepted during a maintenance window but subsequently
+     * rejected by the core, and the ops-initiated remediation path when a
+     * settled payment must be undone (fraud, customer error, etc.). The
+     * institution builds a {@link Pacs004Message} referencing the original
+     * pacs.008 and submits it here; FedNow acknowledges with a pacs.002.
+     *
+     * <p>Same latency, retry, and signing behavior as
+     * {@link #submitCreditTransfer(Pacs008Message)}. Idempotency is
+     * guaranteed at the FedNow side via the return's {@code returnId}.
+     *
+     * @param message the ISO 20022 pacs.004.001.09 return to submit
+     * @return pacs.002 status report from FedNow; never {@code null}. On
+     *         network error or timeout a synthetic RJCT response with reason
+     *         code {@code NARR} is returned rather than propagating an exception.
+     */
+    Pacs002Message submitReturn(Pacs004Message message);
 }

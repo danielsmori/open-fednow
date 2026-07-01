@@ -1,6 +1,7 @@
 package io.openfednow.gateway;
 
 import io.openfednow.iso20022.Pacs002Message;
+import io.openfednow.iso20022.Pacs004Message;
 import io.openfednow.iso20022.Pacs008Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,6 +65,24 @@ public class SandboxFedNowClient implements FedNowClient {
         }
 
         return accepted(message);
+    }
+
+    @Override
+    public Pacs002Message submitReturn(Pacs004Message message) {
+        log.info("SandboxFedNowClient: outbound return returnId={} originalTxn={} reason={}",
+                message.getReturnId(), message.getOriginalTransactionId(),
+                message.getReturnReasonCode());
+        // Sandbox always accepts a return. Production FedNow occasionally rejects
+        // (e.g., the original transaction is unknown), but the sandbox doesn't
+        // model that — the pacs.008-side scenario prefixes are the way to
+        // exercise rejections locally.
+        return Pacs002Message.builder()
+                .messageId("FEDNOW-SANDBOX-RET-" + message.getReturnId())
+                .originalEndToEndId(message.getOriginalEndToEndId())
+                .originalTransactionId(message.getOriginalTransactionId())
+                .transactionStatus(Pacs002Message.TransactionStatus.ACSC)
+                .creationDateTime(OffsetDateTime.now())
+                .build();
     }
 
     // ── Response builders ─────────────────────────────────────────────────────

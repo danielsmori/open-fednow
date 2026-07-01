@@ -48,7 +48,8 @@ class FedNowGatewayValidationTest {
         messageRouter = mock(MessageRouter.class);
         CertificateManager certificateManager = mock(CertificateManager.class);
         FedNowGateway gateway = new FedNowGateway(messageRouter, certificateManager,
-                mock(io.openfednow.processing.cancellation.CancellationService.class));
+                mock(io.openfednow.processing.cancellation.CancellationService.class),
+                mock(FedNowClient.class));
         mockMvc = MockMvcBuilders
                 .standaloneSetup(gateway)
                 .setControllerAdvice(new ValidationErrorHandler())

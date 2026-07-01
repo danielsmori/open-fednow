@@ -3,6 +3,7 @@ package io.openfednow.gateway;
 import io.openfednow.iso20022.Camt029Message;
 import io.openfednow.iso20022.Camt056Message;
 import io.openfednow.iso20022.Pacs002Message;
+import io.openfednow.iso20022.Pacs004Message;
 import io.openfednow.iso20022.Pacs008Message;
 import io.openfednow.processing.cancellation.CancellationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -46,13 +47,16 @@ public class FedNowGateway {
     private final MessageRouter messageRouter;
     private final CertificateManager certificateManager;
     private final CancellationService cancellationService;
+    private final FedNowClient fedNowClient;
 
     public FedNowGateway(MessageRouter messageRouter,
                          CertificateManager certificateManager,
-                         CancellationService cancellationService) {
+                         CancellationService cancellationService,
+                         FedNowClient fedNowClient) {
         this.messageRouter = messageRouter;
         this.certificateManager = certificateManager;
         this.cancellationService = cancellationService;
+        this.fedNowClient = fedNowClient;
     }
 
     /**
@@ -155,6 +159,43 @@ public class FedNowGateway {
     public ResponseEntity<Camt029Message> receiveCancellation(@Valid @RequestBody Camt056Message request) {
         certificateManager.validateClientCertificate();
         return ResponseEntity.ok(cancellationService.handleCancellationRequest(request));
+    }
+
+    /**
+     * Submits an outbound payment return (pacs.004) to FedNow.
+     *
+     * <p>Used by operations tooling and by the saga-compensation path when a
+     * provisionally-accepted payment must be returned to the sender's institution
+     * — typically after the core banking system rejects a transaction that was
+     * already ACSP-accepted during a maintenance window. The FedNow response
+     * (pacs.002) is returned to the caller so they can confirm acceptance of the
+     * return itself.
+     *
+     * @param message the ISO 20022 pacs.004.001.09 payment return
+     * @return pacs.002 status report from FedNow acknowledging the return
+     */
+    @PostMapping("/return")
+    @Operation(
+        summary = "Submit outbound payment return (pacs.004)",
+        description = """
+            Submits an outbound pacs.004.001.09 payment return to the FedNow Service. \
+            Returns the pacs.002 status report from FedNow. Idempotency is enforced at \
+            the FedNow side via the return's returnId. The same retry and JWS-signing \
+            behavior as /fednow/send applies."""
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "FedNow response received — inspect transactionStatus for ACSC, ACSP, or RJCT",
+            content = @Content(mediaType = "application/json",
+                               schema = @Schema(implementation = Pacs002Message.class))),
+        @ApiResponse(responseCode = "400",
+            description = "Malformed or schema-invalid ISO 20022 pacs.004 message"),
+        @ApiResponse(responseCode = "500",
+            description = "Internal processing error")
+    })
+    public ResponseEntity<Pacs002Message> submitReturn(@Valid @RequestBody Pacs004Message message) {
+        return ResponseEntity.ok(fedNowClient.submitReturn(message));
     }
 
     /**

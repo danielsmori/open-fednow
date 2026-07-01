@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.github.resilience4j.retry.Retry;
 import io.openfednow.gateway.signing.FedNowJwsSigner;
 import io.openfednow.iso20022.Pacs002Message;
+import io.openfednow.iso20022.Pacs004Message;
 import io.openfednow.iso20022.Pacs008Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +45,9 @@ public class HttpFedNowClient implements FedNowClient {
 
     /** Path appended to the configured base endpoint for credit transfer submission. */
     static final String TRANSFERS_PATH = "/transfers";
+
+    /** Path appended to the configured base endpoint for payment return submission. */
+    static final String RETURNS_PATH = "/returns";
 
     /** HTTP header FedNow uses to convey the JWS detached signature. */
     static final String JWS_HEADER = "X-JWS-Signature";
@@ -111,8 +115,29 @@ public class HttpFedNowClient implements FedNowClient {
     public Pacs002Message submitCreditTransfer(Pacs008Message message) {
         String url = fednowEndpoint + TRANSFERS_PATH;
         log.info("Submitting pacs.008 to FedNow endpoint={}", url);
+        return post(url, message, message.getEndToEndId(), message.getTransactionId());
+    }
 
-        Supplier<Pacs002Message> attempt = () -> restTemplate.postForObject(url, message, Pacs002Message.class);
+    @Override
+    public Pacs002Message submitReturn(Pacs004Message message) {
+        String url = fednowEndpoint + RETURNS_PATH;
+        log.info("Submitting pacs.004 return to FedNow endpoint={} returnId={} originalTxn={}",
+                url, message.getReturnId(), message.getOriginalTransactionId());
+        // pacs.002 correlates on the original pacs.008's IDs, not the returnId,
+        // so the synthetic-RJCT fallback surfaces them for the caller.
+        return post(url, message,
+                message.getOriginalEndToEndId(), message.getOriginalTransactionId());
+    }
+
+    /**
+     * Shared HTTP submission path used by both {@link #submitCreditTransfer} and
+     * {@link #submitReturn}. Applies the configured retry policy, catches every
+     * failure mode, and synthesizes a well-formed RJCT pacs.002 rather than
+     * propagating exceptions.
+     */
+    private Pacs002Message post(String url, Object payload,
+                                String correlationEndToEndId, String correlationTransactionId) {
+        Supplier<Pacs002Message> attempt = () -> restTemplate.postForObject(url, payload, Pacs002Message.class);
         if (retry != null) {
             attempt = Retry.decorateSupplier(retry, attempt);
         }
@@ -122,7 +147,7 @@ public class HttpFedNowClient implements FedNowClient {
             if (response == null) {
                 log.warn("FedNow returned empty response body");
                 return Pacs002Message.rejected(
-                        message.getEndToEndId(), message.getTransactionId(),
+                        correlationEndToEndId, correlationTransactionId,
                         "NARR", "FedNow returned an empty response body");
             }
             log.debug("FedNow raw response messageId={}", response.getMessageId());
@@ -131,7 +156,7 @@ public class HttpFedNowClient implements FedNowClient {
             // 4xx — client error; the retry policy is configured not to attempt these
             log.warn("FedNow returned client error status={}", e.getStatusCode().value());
             return Pacs002Message.rejected(
-                    message.getEndToEndId(), message.getTransactionId(),
+                    correlationEndToEndId, correlationTransactionId,
                     "NARR",
                     "FedNow returned HTTP " + e.getStatusCode().value());
         } catch (HttpStatusCodeException e) {
@@ -139,13 +164,13 @@ public class HttpFedNowClient implements FedNowClient {
             log.warn("FedNow returned server error status={} (after retries if any)",
                     e.getStatusCode().value());
             return Pacs002Message.rejected(
-                    message.getEndToEndId(), message.getTransactionId(),
+                    correlationEndToEndId, correlationTransactionId,
                     "NARR",
                     "FedNow returned HTTP " + e.getStatusCode().value());
         } catch (ResourceAccessException e) {
             log.warn("FedNow connection error (after retries if any): {}", e.getMessage());
             return Pacs002Message.rejected(
-                    message.getEndToEndId(), message.getTransactionId(),
+                    correlationEndToEndId, correlationTransactionId,
                     "NARR",
                     "FedNow connection timeout or network error: " + e.getMessage());
         }
