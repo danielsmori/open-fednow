@@ -319,7 +319,8 @@ public class MessageRouter {
         java.math.BigDecimal available = shadowLedger.getAvailableBalance(message.getDebtorAccountNumber());
         if (available.compareTo(message.getInterbankSettlementAmount()) < 0) {
             log.info("Outbound payment rejected: insufficient funds account={} available={} requested={}",
-                    message.getDebtorAccountNumber(), available, message.getInterbankSettlementAmount());
+                    io.openfednow.security.pii.PiiRedactor.maskAccount(message.getDebtorAccountNumber()),
+                    available, message.getInterbankSettlementAmount());
             Pacs002Message insufficientFunds = Pacs002Message.rejected(
                     message.getEndToEndId(), message.getTransactionId(),
                     "AM04", "Insufficient funds in debtor Shadow Ledger balance");

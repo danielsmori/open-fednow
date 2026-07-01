@@ -346,9 +346,11 @@ public class ShadowLedger {
 
         if (shadowCents != confirmedCents) {
             log.warn("Shadow Ledger discrepancy detected account={} shadow={} confirmed={}",
-                    accountId, centsToDollars(shadowCents), confirmedBalance);
+                    io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
+                    centsToDollars(shadowCents), confirmedBalance);
         } else {
-            log.debug("Shadow Ledger reconciliation: balances match account={}", accountId);
+            log.debug("Shadow Ledger reconciliation: balances match account={}",
+                    io.openfednow.security.pii.PiiRedactor.maskAccount(accountId));
         }
 
         redis.opsForValue().set(key, String.valueOf(confirmedCents));

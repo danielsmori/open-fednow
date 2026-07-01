@@ -1,6 +1,7 @@
 package io.openfednow.security.audit;
 
 import io.openfednow.gateway.CorrelationFilter;
+import io.openfednow.security.pii.PiiRedactor;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -87,7 +88,7 @@ public class AdminAccessAuditFilter extends OncePerRequestFilter {
                         principal,
                         request.getMethod(),
                         request.getRequestURI(),
-                        request.getQueryString(),
+                        PiiRedactor.redactQueryString(request.getQueryString()),
                         result,
                         status,
                         MDC.get(CorrelationFilter.MDC_REQUEST_ID));

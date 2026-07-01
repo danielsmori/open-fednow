@@ -310,7 +310,8 @@ public class ReconciliationService {
             if (coreBalance.compareTo(shadowBalance) != 0) {
                 discrepancyDetected = 1;
                 log.warn("Balance discrepancy account={} shadow={} core={}",
-                        accountId, shadowBalance, coreBalance);
+                        io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
+                        shadowBalance, coreBalance);
                 shadowLedger.reconcile(accountId, coreBalance);
             }
 

@@ -158,6 +158,17 @@ class AdminAccessAuditFilterTest {
         assertThat(recorded.queryString()).isNull();
     }
 
+    @Test
+    void sensitiveQueryParametersAreRedactedBeforePersistence() throws Exception {
+        // No admin endpoint accepts these params today, but the audit filter is
+        // the last line of defense — a future endpoint that inadvertently
+        // exposes a secret in the URL must not leak into the audit table.
+        AdminAuditEntry recorded = runFilter("GET", "/admin/sagas", null, 200,
+                "limit=10&token=deadbeef&offset=0");
+
+        assertThat(recorded.queryString()).isEqualTo("limit=10&token=REDACTED&offset=0");
+    }
+
     // ── Persistence failure isolation ────────────────────────────────────────
 
     @Test
