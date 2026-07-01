@@ -100,6 +100,16 @@ openfednow:
     intervalSeconds: 300
     batchSize: 200
 
+  # FedNow JWS message signing (ADR-0009). Opt-in — enable in production
+  # once Fed PKI keystore is provisioned in the openfednow-tls Secret and the
+  # signing truststore Secret is mounted.
+  fednow:
+    signing:
+      enabled: false
+      keyAlias: ""       # first key entry used when blank
+      keyId: ""          # SHA-256 thumbprint used when blank
+      truststorePath: "" # required for inbound verification in prod
+
 # ── HikariCP database connection pool ─────────────────────────────────────
 # Defaults are sized for moderate FedNow throughput. Tune to observed
 # utilization once you have production traffic.

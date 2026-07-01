@@ -82,7 +82,7 @@ These are features that are not yet built. They are explicitly tracked as future
 `FedNowClient` is an interface with two implementations:
 
 - **`SandboxFedNowClient`** — active by default (when `FEDNOW_ENDPOINT` is not set). Returns synthetic in-memory responses for local development and testing.
-- **`HttpFedNowClient`** — activated when `FEDNOW_ENDPOINT` is set. Provides HTTP transport to a configured endpoint (e.g., FedNow simulator or sandbox). Live FedNow production additionally requires Federal Reserve PKI client certificates, mutual TLS, and message signing per the FedNow Technical Specifications. These are institution-provided credentials and are outside the scope of the framework.
+- **`HttpFedNowClient`** — activated when `FEDNOW_ENDPOINT` is set. Provides HTTP transport with retry-on-transient-failures + optional JWS detached message signing (activate via `openfednow.fednow.signing.enabled=true`; see [ADR-0009](adr/0009-fednow-jws-message-signing.md)). Live FedNow production additionally requires Federal Reserve PKI client certificates and mutual TLS. These are institution-provided credentials and are outside the scope of the framework.
 
 The `FedNowClientConfig` bean is conditional: `HttpFedNowClient` is only created when `openfednow.gateway.fednow-endpoint` is present. When that property is absent, `SandboxFedNowClient` activates via `@ConditionalOnMissingBean`. This means `mvn spring-boot:run` without any environment variables uses the sandbox client throughout.
 

@@ -2,6 +2,8 @@ package io.openfednow.gateway;
 
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryRegistry;
+import io.openfednow.gateway.signing.FedNowJwsSigner;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -41,8 +43,12 @@ public class FedNowClientConfig {
     public FedNowClient fedNowClient(
             @Value("${openfednow.gateway.fednow-endpoint}") String endpoint,
             @Value("${openfednow.gateway.response-timeout-seconds}") int timeoutSeconds,
-            RetryRegistry retryRegistry) {
+            RetryRegistry retryRegistry,
+            @Autowired(required = false) FedNowJwsSigner signer) {
         Retry retry = retryRegistry.retry(FEDNOW_RETRY_NAME);
-        return new HttpFedNowClient(endpoint, timeoutSeconds, retry);
+        // signer is null when openfednow.fednow.signing.enabled is false — the
+        // FedNowSigningConfig bean is @ConditionalOnProperty. In that mode the
+        // client sends unsigned requests, which is correct for the simulator.
+        return new HttpFedNowClient(endpoint, timeoutSeconds, retry, signer);
     }
 }

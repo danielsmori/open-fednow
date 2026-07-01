@@ -62,7 +62,8 @@
 | Optional Kafka event bus — `PaymentEventPublisher`, 6 event types | ✅ Implemented (disabled by default; no Kafka required) |
 | Event schema versioning — `schemaVersion` field + `X-Schema-Version` / `X-Event-Type` headers | ✅ Implemented; JSON Schema in `docs/event-schemas/`; strategy documented in [ADR-0006](docs/adr/0006-event-schema-versioning.md) |
 | Vendor adapters (Fiserv, FIS, Jack Henry) | ✅ All three implemented — OAuth 2.0 authentication, vendor error code → ISO 20022 mapping, WireMock integration test suite. Fiserv + FIS via REST/JSON, Jack Henry via jXchange SOAP. |
-| Live FedNow connectivity (Fed PKI, mTLS, message signing) | 🔲 Credential/certification-dependent; simulator-compatible HTTP client implemented |
+| FedNow JWS message signing — outbound RS256 detached signature + inbound verification | ✅ Implemented per RFC 7515 + RFC 7797 with `b64=false`; opt-in via `openfednow.fednow.signing.enabled=true`. See [ADR-0009](docs/adr/0009-fednow-jws-message-signing.md) |
+| Live FedNow connectivity (Fed PKI, mTLS) | 🔲 Credential/certification-dependent; simulator-compatible HTTP client implemented |
 | Live RTP connectivity (TCH network, TCH PKI certificates) | 🔲 TCH onboarding/certification-dependent; `HttpRtpClient` and full XML pipeline implemented |
 
 See [docs/known-limitations.md](docs/known-limitations.md) for the full gap analysis.
@@ -114,6 +115,7 @@ flowchart TD
 | [docs/adr/0006-event-schema-versioning.md](docs/adr/0006-event-schema-versioning.md) | Hybrid header + envelope event versioning |
 | [docs/adr/0007-camt056-cancellation-lifecycle.md](docs/adr/0007-camt056-cancellation-lifecycle.md) | camt.056 → camt.029 decision matrix keyed on saga state |
 | [docs/adr/0008-fraud-screening.md](docs/adr/0008-fraud-screening.md) | Port-based fraud screening with a configurable default rule set |
+| [docs/adr/0009-fednow-jws-message-signing.md](docs/adr/0009-fednow-jws-message-signing.md) | RS256 detached JWS with `b64=false` per RFC 7515 + 7797 |
 
 ---
 
@@ -583,7 +585,12 @@ openfednow/
 │   │   │                                              #   GET  /admin/accounts/{id}/balance
 │   │   │                                              #   GET  /admin/reconciliation-runs[/{id}]
 │   │   │                                              #   GET  /admin/audit-log
-│   │   └── ratelimit/RateLimitFilter.java             # 429 + Retry-After on /fednow & /rtp POSTs
+│   │   ├── ratelimit/RateLimitFilter.java             # 429 + Retry-After on /fednow & /rtp POSTs
+│   │   └── signing/                                   # FedNow JWS detached signing (ADR-0009)
+│   │       ├── FedNowJwsSigner.java                   # RS256, b64=false, kid-header
+│   │       ├── FedNowJwsVerifier.java                 # RFC 7515 + 7797 validation
+│   │       ├── FedNowSigningConfig.java               # Loads keys from keystore; ConditionalOnProperty
+│   │       └── JwsInboundVerificationFilter.java      # Buffers body and gates /fednow/** POSTs on 401
 │   ├── acl/                  # Layer 2 — Anti-Corruption Layer
 │   │   ├── core/
 │   │   │   ├── CoreBankingAdapter.java                # Interface
@@ -667,7 +674,7 @@ openfednow/
 
 The framework — Shadow Ledger, SyncAsyncBridge, Saga orchestration with recovery and timeout monitoring, idempotency with TTL cleanup, reconciliation with pagination, fraud screening port, cancellation handling, rate limiting, audit log, and all three vendor adapters — is implemented and tested. The remaining items below are out-of-scope for the framework itself; they're institution-onboarding work that any deployment of any integration framework would have to do:
 
-- **Live FedNow connectivity** — Federal Reserve PKI client certificates, mutual TLS, JWS message signing, and FedNow certification. `HttpFedNowClient` is wired with retry-on-transient-failures and provides simulator-compatible HTTP transport; JWS detached-signature support is the one remaining code-side gap and is tracked as future work.
+- **Live FedNow connectivity** — Federal Reserve PKI client certificates, mutual TLS, and FedNow certification. `HttpFedNowClient` is wired with retry-on-transient-failures and outbound JWS detached signing (opt-in via `openfednow.fednow.signing.enabled=true`); the inbound `JwsInboundVerificationFilter` verifies FedNow-signed responses. Activation is institution-provided credentials + a Fed certification cycle.
 - **Live RTP connectivity** — TCH institutional participation, TCH PKI certificates, and the dedicated private-network connection. `HttpRtpClient`, the XML pipeline, and the TCH certificate-validation hook are all in place; activation is institution-provided credentials and network access.
 - **Vendor adapter credentials** — `FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` are complete (OAuth 2.0, vendor error code → ISO 20022 mapping, WireMock test suite each). Production use requires institution-specific OAuth client ID / secret / base URL from the respective vendor.
 - **Institution-specific configuration** — account mapping, IAM integration, reconciliation policies, compliance controls, and operational validation are institution-dependent. The framework exposes the necessary configuration knobs and extensibility seams (e.g., `FraudScreeningPort`) but does not prescribe institutional policy.
@@ -720,8 +727,15 @@ See [docs/known-limitations.md](docs/known-limitations.md) for the full analysis
 - Outbound FedNow retry on transient failures; hard timeout on `FraudScreeningPort` calls (fail-open)
 - Dependabot + OWASP dependency-check workflow; GitHub Actions CI with both unit and integration test jobs
 
+**Phase 6 — Live-FedNow Enablement ✅ Complete**
+- RS256 detached JWS message signing implemented per RFC 7515 + RFC 7797 ([ADR-0009](docs/adr/0009-fednow-jws-message-signing.md))
+- Outbound: `FedNowJwsSigner` + RestTemplate interceptor attaches `X-JWS-Signature` on every submission
+- Inbound: `JwsInboundVerificationFilter` verifies FedNow-signed responses, buffers body for the downstream controller
+- Opt-in via `openfednow.fednow.signing.enabled=true`; sandbox / demo flow unchanged
+- With this, the only remaining requirements for live FedNow are institution-onboarding artifacts (PKI certificates, endpoint URL, formal certification)
+
 **Open work**
-- Live FedNow / RTP connectivity (institutional credentials + JWS message signing — see Production Boundaries)
+- Live FedNow / RTP connectivity (institutional credentials — see Production Boundaries)
 - Multi-pod Shadow Ledger consistency ([#40](https://github.com/danielsmori/open-fednow/issues/40)) — Redlock or consistent-hash routing
 - Distributed tracing across MDC, RabbitMQ, and Kafka boundaries
 - Operational runbooks for the standard incident-response scenarios

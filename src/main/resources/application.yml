@@ -234,6 +234,26 @@ openfednow:
     tch-truststore-path: ${TCH_TRUSTSTORE_PATH:}
     tch-truststore-password: ${TCH_TRUSTSTORE_PASSWORD:}
 
+  # FedNow JWS message signing (ADR-0009). Disabled by default so the sandbox
+  # simulator setup keeps working unchanged. Enable in production; the private
+  # key is loaded from openfednow.tls.keystore-path (same PKCS#12 keystore that
+  # holds the mTLS keypair).
+  fednow:
+    signing:
+      enabled: ${FEDNOW_SIGNING_ENABLED:false}
+      # Alias of the RSA private-key entry to use. Optional — if unset the
+      # first key entry in the keystore is used, which matches the typical
+      # one-key-per-institution setup.
+      key-alias: ${FEDNOW_SIGNING_KEY_ALIAS:}
+      # JWS 'kid' header value. Optional — if unset a SHA-256 thumbprint of the
+      # signing certificate is used, so both sides can derive it independently.
+      key-id: ${FEDNOW_SIGNING_KEY_ID:}
+      # Truststore containing the Fed's public signing certificate(s). Required
+      # for inbound signature verification. Absent → filter is a no-op and the
+      # Ingress-level mTLS remains the only inbound authentication.
+      truststore-path: ${FEDNOW_SIGNING_TRUSTSTORE_PATH:}
+      truststore-password: ${FEDNOW_SIGNING_TRUSTSTORE_PASSWORD:}
+
 management:
   endpoints:
     web:

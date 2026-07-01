@@ -74,3 +74,9 @@ data:
   # Compensation retry sweep (audit #24)
   COMPENSATION_RETRY_INTERVAL_SECONDS: {{ .Values.openfednow.compensationRetry.intervalSeconds | toString | quote }}
   COMPENSATION_RETRY_BATCH_SIZE: {{ .Values.openfednow.compensationRetry.batchSize | toString | quote }}
+
+  # FedNow JWS message signing (ADR-0009)
+  FEDNOW_SIGNING_ENABLED: {{ .Values.openfednow.fednow.signing.enabled | toString | quote }}
+  FEDNOW_SIGNING_KEY_ALIAS: {{ .Values.openfednow.fednow.signing.keyAlias | quote }}
+  FEDNOW_SIGNING_KEY_ID: {{ .Values.openfednow.fednow.signing.keyId | quote }}
+  FEDNOW_SIGNING_TRUSTSTORE_PATH: {{ .Values.openfednow.fednow.signing.truststorePath | quote }}
