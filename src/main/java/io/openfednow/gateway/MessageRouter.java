@@ -165,6 +165,25 @@ public class MessageRouter {
                 message.getInterbankSettlementCurrency(),
                 sourceRail);
 
+        // Step 0 — currency guard. FedNow and RTP are USD-only today; a non-USD
+        // message would be a schema-clean but operationally invalid submission,
+        // typically from a bank testing against the wrong sandbox. Reject with
+        // ISO 20022 reason code AM03 (NotAllowedCurrency) so the sender sees
+        // the actual problem rather than a downstream funds/routing failure.
+        if (!sourceRail.supportsCurrency(message.getInterbankSettlementCurrency())) {
+            log.info("Inbound rejected: currency {} not supported by rail {}",
+                    message.getInterbankSettlementCurrency(), sourceRail);
+            Pacs002Message rjct = Pacs002Message.rejected(
+                    message.getEndToEndId(), message.getTransactionId(),
+                    "AM03",
+                    "Currency " + message.getInterbankSettlementCurrency()
+                            + " not supported on rail " + sourceRail
+                            + " (supported: " + sourceRail.getSupportedCurrency() + ")");
+            idempotencyService.recordOutcome(message.getEndToEndId(), rjct);
+            eventPublisher.publish(event(message, EventType.INBOUND_PAYMENT_REJECTED, "AM03"));
+            return ResponseEntity.ok(rjct);
+        }
+
         // Step 1 — idempotency check
         Optional<Pacs002Message> cached = idempotencyService.checkDuplicate(message.getEndToEndId());
         if (cached.isPresent()) {
@@ -294,6 +313,23 @@ public class MessageRouter {
         log.info("Outbound credit transfer received amount={} currency={}",
                 message.getInterbankSettlementAmount(),
                 message.getInterbankSettlementCurrency());
+
+        // Step 0 — currency guard. Outbound routing is FedNow-only today (see the
+        // comment at the saga-initiation step below); if that ever expands, the
+        // rail should be threaded through and passed here instead of the constant.
+        if (!Rail.FEDNOW.supportsCurrency(message.getInterbankSettlementCurrency())) {
+            log.info("Outbound rejected: currency {} not supported by rail FEDNOW",
+                    message.getInterbankSettlementCurrency());
+            Pacs002Message rjct = Pacs002Message.rejected(
+                    message.getEndToEndId(), message.getTransactionId(),
+                    "AM03",
+                    "Currency " + message.getInterbankSettlementCurrency()
+                            + " not supported on rail FEDNOW (supported: "
+                            + Rail.FEDNOW.getSupportedCurrency() + ")");
+            idempotencyService.recordOutcome(message.getEndToEndId(), rjct);
+            eventPublisher.publish(event(message, EventType.OUTBOUND_PAYMENT_REJECTED, "AM03"));
+            return ResponseEntity.ok(rjct);
+        }
 
         // Step 1 — idempotency check
         Optional<Pacs002Message> cached = idempotencyService.checkDuplicate(message.getEndToEndId());
