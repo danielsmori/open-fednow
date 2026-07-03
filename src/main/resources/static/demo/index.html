@@ -40,10 +40,25 @@
     justify-content: space-between;
     align-items: center;
   }
-  header h1 {
-    font-size: 16px;
-    font-weight: 600;
+  header .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header .brand img {
+    height: 28px;
+    display: block;
+    background: #ffffff;
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+  header .brand .subtitle {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--dim);
     letter-spacing: 0.3px;
+    padding-left: 12px;
+    border-left: 1px solid var(--border);
   }
   header .tag {
     font-size: 11px;
@@ -279,8 +294,9 @@
 <body>
 
 <header>
-  <div>
-    <h1>OpenFedNow — Demo Console</h1>
+  <div class="brand">
+    <img src="logo.png" alt="OpenFedNow">
+    <span class="subtitle">Demo Console</span>
     <span class="tag" id="app-mode">connecting…</span>
     <span class="tag"><a href="/swagger-ui.html" target="_blank">Swagger UI</a></span>
     <span class="tag"><a href="/actuator/health" target="_blank">/actuator/health</a></span>

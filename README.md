@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/logo.png" alt="OpenFedNow" width="520">
+</p>
+
 # OpenFedNow — Legacy Core to U.S. Instant Payment Rails
 
 **Open-source middleware connecting legacy core banking systems to U.S. instant payment rails — FedNow and RTP — through a reusable, rail-agnostic core framework.**
