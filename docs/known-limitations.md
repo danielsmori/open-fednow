@@ -173,23 +173,19 @@ The full decision matrix and design tradeoffs are documented in [ADR-0007](adr/0
 
 These are behaviors that differ between the local H2-backed development setup and a production PostgreSQL deployment.
 
-### 12. H2 in-memory does not persist across restarts
+### 12. H2 is only used by tests — the runtime uses PostgreSQL
 
-Transaction records written to `shadow_ledger_transaction_log`, `saga_state`, and `idempotency_keys` are lost when the application restarts. In a PostgreSQL deployment, these records survive restarts, which means:
+The `application.yml` default datasource is PostgreSQL (`jdbc:postgresql://localhost:5432/openfednow`) and `docker-compose.yml` provides that instance. Running the app on H2 is not supported: the idempotency INSERT uses `ON CONFLICT DO NOTHING`, which H2 does not implement even in Postgres-compat mode. Every table that carries durable state — `shadow_ledger_transaction_log`, `saga_state`, `idempotency_keys`, `reconciliation_run`, `admin_audit_log` — survives restarts under Postgres.
 
-- Bridge-mode transactions accumulate in `shadow_ledger_transaction_log` during an offline window
-- After the core returns and the app restarts, `ReconciliationService.reconcile()` finds and replays them
-- `transactionsReplayed` in the reconciliation report reflects the actual backlog
-
-In local development with H2, `transactionsReplayed` is always 0 after a restart because the table was reset.
+H2 is still used by the test suite (see `src/test/resources/application.properties`) so tests remain fast and Docker-free. `@Tag("integration")` tests override that with real Postgres via Testcontainers.
 
 ---
 
-### 13. Redis has no replication or persistence in docker-compose
+### 13. Redis has no replication in docker-compose
 
-The `docker-compose.yml` starts a single Redis node with no replicas and no AOF/RDB persistence configured. If Redis is stopped and restarted between a maintenance window and reconciliation, all Shadow Ledger balance entries are lost — the reconciliation would read zero balances from Redis and flag discrepancies for every account.
+The `docker-compose.yml` starts a single Redis node with AOF persistence enabled (`redis-server --appendonly yes`), so Shadow Ledger balances survive a Redis restart. What is **not** configured is replication — a single lost Redis node with an unrecoverable AOF would still drop the ledger.
 
-For production, Redis should be deployed with AOF persistence enabled (`--appendonly yes`) and at minimum one replica.
+For production, deploy Redis with at minimum one replica (Sentinel or Cluster), and back up the AOF to durable storage on the schedule your recovery objective demands.
 
 ---
 

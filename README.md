@@ -171,8 +171,8 @@ Three adapter implementations make the complete framework available to thousands
 ```bash
 git clone https://github.com/danielsmori/open-fednow
 cd open-fednow
-docker-compose up -d redis rabbitmq    # Redis + RabbitMQ (Kafka is optional)
-mvn spring-boot:run                    # → http://localhost:8080
+docker-compose up -d                   # Postgres + Redis + RabbitMQ
+mvn spring-boot:run                    # → http://localhost:8080/demo/
 ```
 
 Once the app is running (look for `Started OpenFedNowApplication` in the console), verify it's up:

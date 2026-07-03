@@ -44,11 +44,20 @@ server:
       # at-least-once delivery is preferred when Kafka is healthy)
       retries: 3
 
-  # Datasource — PostgreSQL in production; H2 (PostgreSQL-compatible mode) for local dev
+  # Datasource — PostgreSQL. The default here assumes docker-compose is up
+  # (see docker-compose.yml) so `mvn spring-boot:run` works with no env vars.
+  # Tests do NOT use these values: TestcontainersConfiguration overrides them
+  # for @Tag("integration") tests, and unit tests that need a DB stand up
+  # H2 directly (see FlywayMigrationTest for the pattern).
+  #
+  # PostgreSQL is required at runtime because IdempotencyService uses
+  # ON CONFLICT DO NOTHING, which H2 does not support even in Postgres-compat
+  # mode. Override with DB_URL / DB_USERNAME / DB_PASSWORD env vars for other
+  # environments (Kubernetes Secrets, managed RDS, etc.).
   datasource:
-    url: ${DB_URL:jdbc:h2:mem:openfednow;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1}
-    username: ${DB_USERNAME:sa}
-    password: ${DB_PASSWORD:}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/openfednow}
+    username: ${DB_USERNAME:openfednow}
+    password: ${DB_PASSWORD:openfednow}
 
   # Flyway — schema migration management
   flyway:
