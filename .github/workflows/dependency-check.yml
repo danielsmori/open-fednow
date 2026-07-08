@@ -61,10 +61,13 @@ jobs:
         # (CVSS 7.0–10.0). Medium and Low are reported but don't fail —
         # avoids alert fatigue while still catching the actually-dangerous
         # ones. format=HTML so reviewers can open the report directly.
+        # suppressionFile scopes documented exceptions (see the .owasp
+        # directory for the rationale on each entry).
         run: |
           mvn -B org.owasp:dependency-check-maven:check \
               -DfailBuildOnCVSS=7 \
               -Dformats=HTML,JSON \
+              -DsuppressionFiles=.owasp/dependency-check-suppressions.xml \
               --no-transfer-progress
 
       - name: Upload dependency-check report

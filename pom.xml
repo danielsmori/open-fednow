@@ -33,6 +33,17 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Override Lombok to a version that supports Java 21+ -->
         <lombok.version>1.18.38</lombok.version>
+
+        <!-- Transitive-dependency overrides for CVE hygiene. -->
+        <!-- Each of these bumps a library that Spring Boot's BOM otherwise -->
+        <!-- pins to a version flagged by the OWASP dependency-check workflow. -->
+        <!-- Kept within the same Spring Boot major line so nothing else moves. -->
+        <!-- Revisit each override when moving to a newer Spring Boot: the -->
+        <!-- BOM's managed version may catch up, letting the override drop. -->
+        <jackson-bom.version>2.22.1</jackson-bom.version>
+        <netty.version>4.2.16.Final</netty.version>
+        <tomcat.version>10.1.57</tomcat.version>
+        <postgresql.version>42.7.13</postgresql.version>
     </properties>
 
     <dependencies>
