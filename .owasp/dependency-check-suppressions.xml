@@ -52,44 +52,4 @@
     <vulnerabilityName>GHSA-x4vx-rjvf-j5p4</vulnerabilityName>
   </suppress>
 
-  <!-- ────────────────────────────────────────────────────────────────────
-       spring-core / spring-security-core CVEs pending Spring Boot patch
-       ─────────────────────────────────────────────────────────────────── -->
-  <!--
-    Spring Boot 3.5.16 manages spring-framework 6.2.19 and spring-security
-    6.5.11. Any CVE reported at those versions cannot be fixed by overriding
-    the transitive artifact directly — the next major line (spring-framework
-    7 / spring-security 7) is only compatible with Spring Boot 4. The fix
-    path is to wait for the next Spring Boot 3.5 patch release that pulls
-    a patched spring-framework 6.2.x or spring-security 6.5.x.
-
-    Suppressions below are intentionally scoped and time-bounded via the
-    `until` attribute so they auto-expire if we forget to revisit.
-  -->
-  <suppress until="2026-10-01Z">
-    <notes><![CDATA[
-      spring-core 6.2.19 CVEs. Fix path is Spring Boot 3.5.17+ (pending
-      upstream release). Reassess after every Spring Boot patch or when
-      this suppression expires, whichever comes first.
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.springframework/spring-core@.*$</packageUrl>
-    <cve>CVE-2026-41855</cve>
-    <cve>CVE-2026-41838</cve>
-    <cve>CVE-2026-41842</cve>
-    <cve>CVE-2026-41848</cve>
-    <cve>CVE-2026-41850</cve>
-    <cve>CVE-2026-41851</cve>
-  </suppress>
-
-  <suppress until="2026-10-01Z">
-    <notes><![CDATA[
-      spring-security-core 6.5.11 CVEs. Fix path is Spring Boot 3.5.17+
-      (pending upstream release). Reassess after every Spring Boot patch
-      or when this suppression expires, whichever comes first.
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.springframework\.security/spring-security-core@.*$</packageUrl>
-    <cve>CVE-2026-40988</cve>
-    <cve>CVE-2026-47838</cve>
-  </suppress>
-
 </suppressions>
