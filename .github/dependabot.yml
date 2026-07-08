@@ -33,6 +33,12 @@ updates:
     ignore:
       - dependency-name: "org.springframework.boot:*"
         update-types: ["version-update:semver-major"]
+      # springdoc-openapi 3.x targets Spring Boot 4 and transitively drags
+      # in spring-boot-webmvc:4.x, which conflicts with our Spring Boot 3.5
+      # baseline and prevents the ApplicationContext from starting. Stay
+      # on 2.x until we're ready to move to Spring Boot 4 wholesale.
+      - dependency-name: "org.springdoc:*"
+        update-types: ["version-update:semver-major"]
 
   # ── GitHub Actions ────────────────────────────────────────────────────
   - package-ecosystem: "github-actions"
