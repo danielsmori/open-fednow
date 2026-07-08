@@ -37,11 +37,24 @@ jobs:
 
       # The dependency-check plugin downloads the NVD CVE feed on first run
       # (~250MB). Cache it so subsequent runs only fetch the daily delta.
+      #
+      # Cache key rotates weekly (ISO week number) so we save a fresh snapshot
+      # each Monday and every subsequent run in that week is a hit. The
+      # previous key never rotated: actions/cache only writes on a miss, so
+      # the cache stayed frozen at the first-ever save and every scheduled
+      # run downloaded the full NVD delta since then -- driving the job to
+      # 3+ hours. restore-keys falls back to the previous week's snapshot
+      # when the current-week key hasn't been written yet.
+      - name: Compute weekly cache key
+        id: cache-key
+        run: echo "week=$(date -u +%G-%V)" >> $GITHUB_OUTPUT
       - name: Cache NVD database
         uses: actions/cache@v6
         with:
           path: ~/.m2/repository/org/owasp/dependency-check-data
-          key: dependency-check-data-${{ runner.os }}
+          key: dependency-check-data-${{ runner.os }}-${{ steps.cache-key.outputs.week }}
+          restore-keys: |
+            dependency-check-data-${{ runner.os }}-
 
       - name: Run dependency-check
         # failBuildOnCVSS=7 trips the build on any High or Critical CVE
