@@ -45,6 +45,15 @@ openfednow:
     keystore-password: ${TLS_KEYSTORE_PASSWORD}
     fed-truststore-path: ${FED_TRUSTSTORE_PATH}
 
+  # Bridge-mode policy. Default here is receive-only (allow-sends=false):
+  # a first-90-days production deployment should refuse to authorize outbound
+  # sends while the core is offline. Once the operator has observed the
+  # Shadow Ledger + reconciliation behaviour during several maintenance
+  # windows and is confident, override BRIDGE_MODE_ALLOW_SENDS=true.
+  # See ADR-0011 and docs/known-limitations.md for the reasoning.
+  bridge-mode:
+    allow-sends: ${BRIDGE_MODE_ALLOW_SENDS:false}
+
 spring:
   datasource:
     url: ${DB_URL}

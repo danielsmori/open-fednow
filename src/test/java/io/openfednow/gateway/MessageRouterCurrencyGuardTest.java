@@ -67,7 +67,9 @@ class MessageRouterCurrencyGuardTest {
                 sagaOrchestrator,
                 eventPublisher,
                 fraudScreeningPort,
-                1500L);
+                new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
+                1500L,
+                true);
     }
 
     // ── Inbound ──────────────────────────────────────────────────────────────

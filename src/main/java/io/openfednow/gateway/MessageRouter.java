@@ -2,6 +2,8 @@ package io.openfednow.gateway;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.openfednow.acl.core.CoreBankingAdapter;
 import io.openfednow.acl.core.SyncAsyncBridge;
 import io.openfednow.events.PaymentEvent;
@@ -69,6 +71,20 @@ public class MessageRouter {
     private final FraudScreeningPort fraudScreeningPort;
     private final long fraudTimeoutMillis;
 
+    /** Metric emitted every time the bridge-mode-off guard rejects an outbound send. */
+    static final String BRIDGE_SENDS_BLOCKED_METRIC = "bridge_mode.sends.blocked";
+
+    /**
+     * Controls whether outbound FedNow sends are allowed while
+     * {@link AvailabilityBridge#isInBridgeMode()} is {@code true}.
+     * Defaults to {@code true} for backwards compatibility: existing deployments
+     * see no behavioural change. Institutions running a receive-only on-ramp
+     * flip this to {@code false} so that if the core goes offline, the framework
+     * refuses to authorize sends against the potentially-stale Shadow Ledger.
+     */
+    private final boolean bridgeSendsAllowed;
+    private final Counter bridgeSendsBlockedCounter;
+
     public MessageRouter(FedNowClient fedNowClient,
                          CoreBankingAdapter coreBankingAdapter,
                          IdempotencyService idempotencyService,
@@ -79,7 +95,9 @@ public class MessageRouter {
                          SagaOrchestrator sagaOrchestrator,
                          PaymentEventPublisher eventPublisher,
                          FraudScreeningPort fraudScreeningPort,
-                         @Value("${openfednow.fraud.screening-timeout-millis:1500}") long fraudTimeoutMillis) {
+                         MeterRegistry meterRegistry,
+                         @Value("${openfednow.fraud.screening-timeout-millis:1500}") long fraudTimeoutMillis,
+                         @Value("${openfednow.bridge-mode.allow-sends:true}") boolean bridgeSendsAllowed) {
         this.fedNowClient = fedNowClient;
         this.coreBankingAdapter = coreBankingAdapter;
         this.idempotencyService = idempotencyService;
@@ -95,6 +113,10 @@ public class MessageRouter {
                     "openfednow.fraud.screening-timeout-millis must be positive");
         }
         this.fraudTimeoutMillis = fraudTimeoutMillis;
+        this.bridgeSendsAllowed = bridgeSendsAllowed;
+        this.bridgeSendsBlockedCounter = Counter.builder(BRIDGE_SENDS_BLOCKED_METRIC)
+                .description("Outbound FedNow sends rejected by the bridge-mode allow-sends guard")
+                .register(meterRegistry);
     }
 
     /**
@@ -328,6 +350,27 @@ public class MessageRouter {
                             + Rail.FEDNOW.getSupportedCurrency() + ")");
             idempotencyService.recordOutcome(message.getEndToEndId(), rjct);
             eventPublisher.publish(event(message, EventType.OUTBOUND_PAYMENT_REJECTED, "AM03"));
+            return ResponseEntity.ok(rjct);
+        }
+
+        // Step 0.5 — bridge-mode send guard. When the operator has opted a
+        // deployment into receive-only mode (openfednow.bridge-mode.allow-sends
+        // = false), refuse to authorize sends while the core is offline —
+        // the Shadow Ledger balance is stale relative to any card-processor
+        // STIP activity that happened during the maintenance window, so a
+        // send authorized here can be over-authorized against funds that a
+        // card auth already claimed. The guard fires only during bridge
+        // mode; online-core sends are unaffected by this flag.
+        if (!bridgeSendsAllowed && availabilityBridge.isInBridgeMode()) {
+            log.warn("Bridge-mode sends disabled by configuration — rejecting outbound during maintenance window e2e={}",
+                    message.getEndToEndId());
+            bridgeSendsBlockedCounter.increment();
+            Pacs002Message rjct = Pacs002Message.rejected(
+                    message.getEndToEndId(), message.getTransactionId(),
+                    "TS01",
+                    "Payment system unavailable: bridge-mode sends disabled during core maintenance window");
+            idempotencyService.recordOutcome(message.getEndToEndId(), rjct);
+            eventPublisher.publish(event(message, EventType.OUTBOUND_PAYMENT_REJECTED, "TS01"));
             return ResponseEntity.ok(rjct);
         }
 

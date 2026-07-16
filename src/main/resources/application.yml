@@ -195,6 +195,22 @@ openfednow:
     # the screening service's own alerting catches its unavailability.
     screening-timeout-millis: ${FRAUD_SCREENING_TIMEOUT_MS:1500}
 
+  # Bridge-mode policy — see docs/known-limitations.md and ADR-0011.
+  # When the core banking system is offline (`AvailabilityBridge.isInBridgeMode()`),
+  # the framework accepts inbound payments against the Shadow Ledger and queues
+  # them for replay when the core returns. Outbound sends during bridge mode
+  # authorize against the Shadow Ledger too — which is stale relative to any
+  # card-processor STIP activity from the same window.
+  #
+  # Set allow-sends to false for a receive-only deployment: outbound sends
+  # attempted while the core is offline are rejected with ISO 20022 TS01
+  # (SystemUnavailable). Recommended for institutions in their first 90 days
+  # of production, or for institutions that don't originate outbound at all.
+  # Every rejection increments the `bridge_mode.sends.blocked` Micrometer
+  # counter so ops can measure how often the guard trips.
+  bridge-mode:
+    allow-sends: ${BRIDGE_MODE_ALLOW_SENDS:true}
+
   # Admin audit log retention (audit #15). Default 365 days — long enough for
   # typical compliance review windows. The sweep runs daily.
   admin-audit:
