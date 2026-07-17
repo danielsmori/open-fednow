@@ -40,7 +40,12 @@
 | Send-side (outbound) payment flow | ✅ Implemented |
 | Payment returns (pacs.004 outbound) | ✅ `POST /fednow/return` with retry + JWS signing; sandbox and HTTP clients implement `FedNowClient.submitReturn` |
 | Admin auth — HTTP Basic on `/admin/*` | ✅ Implemented as reference configuration |
-| Admin audit log — every `/admin/**` access recorded to PostgreSQL | ✅ Implemented; both GRANTED and DENIED captured, surfaced via `GET /admin/audit-log` |
+| Admin audit log — every `/admin/**` access recorded to PostgreSQL | ✅ Implemented; both GRANTED and DENIED captured, surfaced via `GET /admin/audit-log`. Sensitive query parameters (`token`, `apikey`, `password`, …) are rewritten to `REDACTED` before persistence by `PiiRedactor` |
+| PII redaction in structured logs | ✅ Account numbers masked to last 4 in `MessageRouter` insufficient-funds log, `ShadowLedger` / `ReconciliationService` discrepancy log; single policy source in `io.openfednow.security.pii.PiiRedactor` |
+| Rotatable admin credentials — file-backed source | ✅ Set `openfednow.admin.credential-file` to a two-line file; re-read on every login (mtime-cached). A K8s Secret mount can be rotated in place without a pod restart |
+| Bridge-mode send policy — receive-only on-ramp | ✅ `openfednow.bridge-mode.allow-sends` (default `true`; prod profile defaults to `false`). When off, outbound sends during a maintenance window are rejected with ISO 20022 `TS01` (SystemUnavailable) and increment `bridge_mode.sends.blocked` |
+| Currency guard — reject non-USD at ingress | ✅ Inbound and outbound sends in a currency the rail cannot settle (currently USD-only for both FedNow and RTP) are rejected with ISO 20022 `AM03` before any saga init, fraud screen, or ledger touch |
+| Correlate saga_state ↔ admin_audit_log via request-id | ✅ V7 migration adds `request_id` to `saga_state` and `reconciliation_run`; `SagaOrchestrator.initiate` and `ReconciliationService.reconcile` stamp `MDC[requestId]` so any admin-initiated saga is one JOIN from its audit row |
 | Admin query endpoints — saga state, balances, reconciliation history | ✅ `GET /admin/sagas[/{txId}]`, `/admin/accounts/{id}/balance`, `/admin/reconciliation-runs[/{id}]`, `/admin/audit-log` |
 | Saga recovery on application restart | ✅ `ApplicationReadyEvent` listener; dispatches each non-terminal saga by state (compensate, advance, finalize) |
 | Saga timeout monitor — auto-compensate stalled sagas | ✅ `@Scheduled` sweep; ISO 20022 `XPIR` reason; `saga.timeout` Micrometer counter |
@@ -68,7 +73,7 @@
 | Optional Kafka event bus — `PaymentEventPublisher`, 6 event types | ✅ Implemented (disabled by default; no Kafka required) |
 | Kafka publish DLQ — failed publishes routed to a dead-letter topic | ✅ `<topic>.dlq` (configurable) with `X-DLQ-Original-Topic` + `X-DLQ-Reason` headers; `events.publish.failed` / `events.publish.dlq_failed` counters |
 | Event schema versioning — `schemaVersion` field + `X-Schema-Version` / `X-Event-Type` headers | ✅ Implemented; JSON Schema in `docs/event-schemas/`; strategy documented in [ADR-0006](docs/adr/0006-event-schema-versioning.md) |
-| Vendor adapters (Fiserv, FIS, Jack Henry) | ✅ All three implemented — OAuth 2.0 authentication, vendor error code → ISO 20022 mapping, WireMock integration test suite. Fiserv + FIS via REST/JSON, Jack Henry via jXchange SOAP. |
+| Vendor adapters (Fiserv, FIS, Jack Henry) | ✅ All three implemented — OAuth 2.0 authentication, vendor error code → ISO 20022 mapping, WireMock integration test suite. Fiserv + FIS via REST/JSON. Jack Henry via jXchange SOAP posting a balanced two-leg `TrnAdd` (DDA credit + settlement GL debit) per the jXchange Creating Balanced Transactions doc — verified in review with Jack Henry's developer relations team. |
 | FedNow JWS message signing — outbound RS256 detached signature + inbound verification | ✅ Implemented per RFC 7515 + RFC 7797 with `b64=false`; opt-in via `openfednow.fednow.signing.enabled=true`. See [ADR-0009](docs/adr/0009-fednow-jws-message-signing.md) |
 | Live FedNow connectivity (Fed PKI, mTLS) | 🔲 Credential/certification-dependent; simulator-compatible HTTP client implemented |
 | Live RTP connectivity (TCH network, TCH PKI certificates) | 🔲 TCH onboarding/certification-dependent; `HttpRtpClient` and full XML pipeline implemented |
@@ -182,13 +187,17 @@ curl http://localhost:8080/fednow/health
 # → OpenFedNow Gateway — operational
 ```
 
-Then run the demo:
+Then either:
+
+**Option A — browser console** (recommended for a first pass): open <http://localhost:8080/demo/> and click **Start live demo →**. The console has a **▶ Guided tour** button that walks through 9 curated scenarios with captions explaining each — designed to record cleanly in ~65 seconds.
+
+**Option B — shell script** for a scripted end-to-end check:
 
 ```bash
 ./demo/run-demo.sh
 ```
 
-That's it. The script runs all four scenarios — ACSC, RJCT, ACSP, reconcile — and prints pass/fail for each.
+The shell script runs 13 scenarios covering inbound normal / rejection / provisional, outbound, currency guard (AM03), RTP XML, pacs.004 return, cancellation, reconciliation, saga snapshot with request-id correlation, PII-redacted audit log, and balance view. Prints pass/fail for each.
 
 ### What the demo does (step by step)
 
