@@ -150,6 +150,12 @@ openfednow:
     client-id: ${JH_CLIENT_ID:}
     client-secret: ${JH_CLIENT_SECRET:}
     institution-routing-id: ${JH_ROUTING_ID:}
+    # FedNow settlement GL account number. jXchange requires every TrnAdd DDA
+    # credit to name an offsetting GL debit; a missing value leaves the bank
+    # ledger out of balance on every settlement. See issue #70 and the
+    # jXchange "Creating Balanced Transactions" docs. Institution-specific;
+    # no framework default.
+    settlement-gl-account: ${JH_SETTLEMENT_GL:}
     token-path: ${JH_TOKEN_PATH:/oauth2/token}
     token-expiry-buffer-seconds: ${JH_TOKEN_BUFFER_SECONDS:60}
 

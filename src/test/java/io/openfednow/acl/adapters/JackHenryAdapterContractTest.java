@@ -56,7 +56,7 @@ class JackHenryAdapterContractTest extends CoreBankingAdapterContractTest {
         JackHenryTokenManager tokenManager = new JackHenryTokenManager(
                 tokenClient, "/oauth2/token", "client-id", "client-secret", 60);
         JackHenrySoapClient soapClient = new JackHenrySoapClient(
-                apiClient, tokenManager, "021000021");
+                apiClient, tokenManager, "021000021", "GL-FEDNOW-CONTRACT");
         adapter = new JackHenryAdapter(soapClient);
 
         // OAuth token endpoint

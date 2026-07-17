@@ -71,7 +71,7 @@ class JackHenryAdapterTest {
                 tokenRestClient, "/oauth2/token",
                 "test-client-id", "test-client-secret", 60);
         soapClient = new JackHenrySoapClient(
-                apiRestClient, tokenManager, "021000021");
+                apiRestClient, tokenManager, "021000021", "GL-FEDNOW-9999");
         adapter = new JackHenryAdapter(soapClient);
 
         // Stub the OAuth token endpoint for every test.
@@ -191,12 +191,42 @@ class JackHenryAdapterTest {
                 .withHeader("SOAPAction", equalTo("TrnAdd"))
                 .withRequestBody(containing("<jx:TrnAmt>1000.50</jx:TrnAmt>"))
                 .withRequestBody(containing("<jx:TrnAddRqst>"))
+                // The offset legs are load-bearing (jXchange rejects single-leg
+                // postings) — assert them here too so any refactor that drops
+                // them fails both this test and the dedicated one below.
+                .withRequestBody(containing("<jx:OffsetAcctId>GL-FEDNOW-9999</jx:OffsetAcctId>"))
+                .withRequestBody(containing("<jx:OffsetAcctType>GL</jx:OffsetAcctType>"))
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "text/xml; charset=utf-8")
                         .withBody(trnAddPostedResponse("REF-AMT"))));
 
         CoreBankingResponse response = adapter.postCreditTransfer(buildMessage("1000.50"));
+
+        assertThat(response.isAccepted()).isTrue();
+    }
+
+    /**
+     * Regression guard for issue #70. Jack Henry's developer relations team
+     * flagged that the original {@code TrnAdd} envelope posted only to the
+     * customer DDA, leaving the bank GL out of balance. jXchange requires a
+     * matched offset entry — this test pins that both legs appear.
+     */
+    @Test
+    void postCreditTransfer_requestContainsBothDdaAndGlOffsetEntries() {
+        wm.stubFor(post(urlEqualTo(JackHenrySoapClient.PATH_SERVICE_GATEWAY))
+                .withHeader("SOAPAction", equalTo("TrnAdd"))
+                // DDA credit leg
+                .withRequestBody(containing("<jx:AcctType>DDA</jx:AcctType>"))
+                // GL offset leg — the missing half that this issue introduced
+                .withRequestBody(containing("<jx:OffsetAcctId>GL-FEDNOW-9999</jx:OffsetAcctId>"))
+                .withRequestBody(containing("<jx:OffsetAcctType>GL</jx:OffsetAcctType>"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "text/xml; charset=utf-8")
+                        .withBody(trnAddPostedResponse("REF-BALANCED"))));
+
+        CoreBankingResponse response = adapter.postCreditTransfer(buildMessage("250.00"));
 
         assertThat(response.isAccepted()).isTrue();
     }

@@ -75,17 +75,24 @@ public class JackHenrySoapClient {
     private final RestClient restClient;
     private final JackHenryTokenManager tokenManager;
     private final String institutionRoutingId;
+    private final String settlementGlAccount;
 
     /**
      * @param restClient           configured with the jXchange Service Gateway base URL
      * @param tokenManager         manages OAuth 2.0 bearer tokens
      * @param institutionRoutingId 9-digit ABA routing number used as {@code InstRtId} in headers
+     * @param settlementGlAccount  institution's FedNow settlement GL account number,
+     *                             posted as the offset leg of every {@code TrnAdd}.
+     *                             jXchange enforces double-entry bookkeeping — every
+     *                             DDA credit MUST have an offsetting GL debit or the
+     *                             bank ledger goes out of balance after each posting.
      */
     public JackHenrySoapClient(RestClient restClient, JackHenryTokenManager tokenManager,
-                                String institutionRoutingId) {
+                                String institutionRoutingId, String settlementGlAccount) {
         this.restClient = restClient;
         this.tokenManager = tokenManager;
         this.institutionRoutingId = institutionRoutingId;
+        this.settlementGlAccount = settlementGlAccount;
     }
 
     // ── Public operations ─────────────────────────────────────────────────────
@@ -93,9 +100,14 @@ public class JackHenrySoapClient {
     /**
      * Posts a credit transfer to the Jack Henry core banking system via {@code TrnAdd}.
      *
-     * <p>The SOAP request credits the {@code CdtrAcct} (creditor account) with the
-     * interbank settlement amount from the pacs.008. The pacs.008 {@code EndToEndId}
-     * is carried in the {@code RefId} field for reconciliation.
+     * <p>The SOAP request posts a <strong>balanced two-leg entry</strong>: a credit
+     * to the {@code CdtrAcct} DDA and an offsetting debit to the institution's
+     * FedNow settlement GL account. jXchange enforces double-entry bookkeeping —
+     * a single-leg posting leaves the bank ledger out of balance. See
+     * <a href="https://developer.jackhenry.com/docs/jxchange-soap-api/creating-balanced-transactions">
+     * jXchange &mdash; Creating Balanced Transactions</a>.
+     * The pacs.008 {@code EndToEndId} is carried in the {@code RefId} field for
+     * reconciliation.
      *
      * <p>Business rejections (insufficient funds, frozen account, etc.) arrive as SOAP
      * faults with an {@code ErrRec/ErrCode} in the response body and are returned as
@@ -195,6 +207,17 @@ public class JackHenrySoapClient {
 
     // ── SOAP envelope builders ────────────────────────────────────────────────
 
+    /**
+     * Builds the {@code TrnAdd} SOAP envelope as a <strong>balanced two-leg</strong>
+     * posting: credit to the customer DDA, offsetting debit to the institution's
+     * FedNow settlement GL account. jXchange rejects single-leg postings — every
+     * {@code AcctId} + {@code AcctType} pair must have a corresponding
+     * {@code OffsetAcctId} + {@code OffsetAcctType}, or the general ledger falls
+     * out of balance on every settlement.
+     *
+     * @see <a href="https://developer.jackhenry.com/docs/jxchange-soap-api/creating-balanced-transactions">
+     *      jXchange &mdash; Creating Balanced Transactions</a>
+     */
     String buildTrnAddEnvelope(Pacs008Message msg, String trackingId, String correlId) {
         // jXchange expects amounts as plain decimal strings ("1000.50"), not
         // fixed-point cent integers. Two decimal places required.
@@ -218,6 +241,8 @@ public class JackHenrySoapClient {
                       <jx:TrnDt>%s</jx:TrnDt>
                       <jx:RefId>%s</jx:RefId>
                       <jx:Desc>FedNow Credit Transfer</jx:Desc>
+                      <jx:OffsetAcctId>%s</jx:OffsetAcctId>
+                      <jx:OffsetAcctType>GL</jx:OffsetAcctType>
                     </jx:TrnAddRqst>
                   </s:Body>
                 </s:Envelope>""".formatted(
@@ -226,7 +251,8 @@ public class JackHenrySoapClient {
                 escapeXml(msg.getCreditorAccountNumber()),
                 amount,
                 trnDate,
-                escapeXml(msg.getEndToEndId())
+                escapeXml(msg.getEndToEndId()),
+                escapeXml(settlementGlAccount)
         );
     }
 

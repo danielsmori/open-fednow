@@ -53,6 +53,7 @@ import java.math.BigDecimal;
  *     client-id: ${JH_CLIENT_ID}
  *     client-secret: ${JH_CLIENT_SECRET}
  *     institution-routing-id: ${JH_ROUTING_ID}
+ *     settlement-gl-account: ${JH_SETTLEMENT_GL}   # FedNow settlement GL account
  * </pre>
  *
  * @see JackHenrySoapClient
@@ -75,6 +76,15 @@ public class JackHenryAdapter implements CoreBankingAdapter {
 
     @Value("${openfednow.adapter-jackhenry.institution-routing-id:}")
     private String institutionRoutingId;
+
+    /**
+     * Institution's FedNow settlement GL account number. jXchange enforces
+     * double-entry bookkeeping — every {@code TrnAdd} DDA credit must have an
+     * offsetting GL debit or the bank ledger goes out of balance on posting.
+     * Institution-specific; no default. See ADR / issue #70.
+     */
+    @Value("${openfednow.adapter-jackhenry.settlement-gl-account:}")
+    private String settlementGlAccount;
 
     @Value("${openfednow.adapter-jackhenry.token-path:/oauth2/token}")
     private String tokenPath;
@@ -112,7 +122,8 @@ public class JackHenryAdapter implements CoreBankingAdapter {
 
         JackHenryTokenManager tokenManager = new JackHenryTokenManager(
                 tokenClient, tokenPath, clientId, clientSecret, tokenExpiryBufferSeconds);
-        soapClient = new JackHenrySoapClient(apiClient, tokenManager, institutionRoutingId);
+        soapClient = new JackHenrySoapClient(apiClient, tokenManager,
+                institutionRoutingId, settlementGlAccount);
     }
 
     // ── CoreBankingAdapter ────────────────────────────────────────────────────
