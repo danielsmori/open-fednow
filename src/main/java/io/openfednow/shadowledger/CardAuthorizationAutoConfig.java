@@ -2,7 +2,6 @@ package io.openfednow.shadowledger;
 
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 
 /**
@@ -13,23 +12,19 @@ import org.springframework.context.annotation.Bean;
  * custom implementation has been registered by the institution.
  */
 @AutoConfiguration
-@ConditionalOnProperty(
-        name = "openfednow.shadowledger.card-listener.provider",
-        havingValue = "noop",
-        matchIfMissing = true
-)
 public class CardAuthorizationAutoConfig {
 
     /**
      * Creates the fallback card authorization event listener bean.
      *
-     * <p>Only activated when {@code openfednow.shadowledger.card-listener.provider}
-     * resolves to {@code noop} (or is omitted entirely) and no other bean of type
-     * {@link CardAuthorizationEventListener} exists in the context.
+     * <p>Only activated when no other bean of type {@link CardAuthorizationEventListener}
+     * exists in the application context.
      *
      * <p>This allows the framework to operate out-of-the-box without requiring a
      * live card processor event stream, which is ideal for local development, isolation
      * testing, or deployments where card network synchronization is not enabled.
+     *
+     * @return the default {@link NoOpCardAuthorizationEventListener} safety fallback instance
      */
     @Bean
     @ConditionalOnMissingBean(CardAuthorizationEventListener.class)
