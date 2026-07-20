@@ -6,18 +6,17 @@ Thank you for your interest in contributing. OpenFedNow is an open-source projec
 
 ## Where Contributions Are Most Needed
 
-### Core Banking Adapters (Highest Priority)
+### Core Banking Adapters
 
-The vendor-specific adapters are the most impactful area for contribution. Each adapter implements the `CoreBankingAdapter` interface for a specific platform:
+Each adapter implements the `CoreBankingAdapter` interface for a specific vendor platform. All three primary U.S. cores are covered:
 
-| Adapter | Platform | Status | Issue |
-|---------|----------|--------|-------|
-| `FiservAdapter` | DNA (REST) | Implemented | #1 |
-| `FiservAdapter` | Precision / Premier (SOAP) | Planned | #2 |
-| `FisAdapter` | Horizon / IBS | Implemented | Phase 2 |
-| `JackHenryAdapter` | SilverLake / Symitar (jXchange SOAP) | Implemented | Phase 3 |
+| Adapter | Platforms | Status | Reference |
+|---------|-----------|--------|-----------|
+| `FiservAdapter` | DNA, Precision, Premier, Cleartouch | Implemented | Phase 2 |
+| `FisAdapter` | Horizon, IBS | Implemented | Phase 2 |
+| `JackHenryAdapter` | SilverLake, Symitar, CIF 20/20 (jXchange SOAP) | Implemented | Phase 3 |
 
-If you have access to a Fiserv, FIS, or Jack Henry sandbox environment, your contribution here has direct real-world impact.
+If you have access to a Fiserv, FIS, or Jack Henry sandbox environment, testing against a real vendor endpoint — rather than the WireMock suite — remains one of the most valuable contributions.
 
 ### Other High-Value Areas
 
@@ -35,7 +34,7 @@ If you have access to a Fiserv, FIS, or Jack Henry sandbox environment, your con
 
 - Java 17+
 - Maven 3.8+
-- Docker (for local Redis and RabbitMQ via `docker-compose`)
+- Docker (for local PostgreSQL, Redis, and RabbitMQ via `docker-compose`)
 
 ### Local Setup
 
@@ -44,13 +43,13 @@ If you have access to a Fiserv, FIS, or Jack Henry sandbox environment, your con
 git clone https://github.com/danielsmori/open-fednow.git
 cd open-fednow
 
-# Start local dependencies (Redis + RabbitMQ)
+# Start local dependencies (PostgreSQL + Redis + RabbitMQ)
 docker-compose up -d
 
 # Build
 mvn clean install
 
-# Run tests
+# Run tests (uses H2 in Postgres-compatibility mode — no Docker required for tests)
 mvn test
 ```
 
@@ -60,7 +59,9 @@ mvn test
 mvn spring-boot:run
 ```
 
-The gateway will start on `http://localhost:8080`. Use the `/fednow/health` endpoint to verify.
+The gateway starts on `http://localhost:8080`. Open the browser demo at <http://localhost:8080/demo/>, or verify via `curl http://localhost:8080/fednow/health`.
+
+The application requires PostgreSQL at runtime (the idempotency INSERT uses `ON CONFLICT DO NOTHING`, which H2 does not implement). Defaults in `application.yml` point at the docker-compose Postgres — override with `SPRING_DATASOURCE_URL` / `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD` for other environments.
 
 ---
 
