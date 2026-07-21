@@ -1,18 +1,18 @@
 package io.openfednow.shadowledger;
 
-import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 /**
- * Spring Boot auto-configuration for real-time card authorization event processing.
+ * Spring configuration for real-time card authorization event processing.
  *
  * <p>Wires the fallback {@link NoOpCardAuthorizationEventListener} as the default
  * {@link CardAuthorizationEventListener} bean when no vendor-specific adapter or
  * custom implementation has been registered by the institution.
  */
-@AutoConfiguration
-public class CardAuthorizationAutoConfig {
+@Configuration
+public class CardAuthorizationConfig {
 
     /**
      * Creates the fallback card authorization event listener bean.
