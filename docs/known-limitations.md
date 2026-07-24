@@ -49,9 +49,9 @@ These are deliberate design choices with known trade-offs. They are not bugs.
 
 **What happens:** During a maintenance window, the institution returns ACSP to FedNow before the core has seen the transaction. The Shadow Ledger is the decision-maker for that window. This is architecturally necessary — but it is not zero-risk.
 
-**The bounded risk:** The Shadow Ledger's balance is initialized from the core and updated atomically on each transaction. The only source of divergence is a core-side rejection of a provisionally accepted payment (see limitation #1 above). All other sources of balance drift are prevented by design.
+**The bounded risk:** The Shadow Ledger's balance is initialized from the core and updated atomically on each transaction. Two sources of divergence exist: a core-side rejection of a provisionally accepted payment (see limitation #1 above), and card-processor STIP activity that authorizes debits on the same account outside the Shadow Ledger during the window — the "STIP gap." All other sources of balance drift are prevented by design.
 
-**Why this is documented:** Compliance teams at regulated institutions should understand that for the duration of a maintenance window (typically 2–4 hours), the core is not the ledger of record. The Shadow Ledger is. This is disclosed in [ADR-0004](adr/0004-eventual-consistency-shadow-ledger-and-core.md) and should be disclosed in the institution's internal control documentation.
+**Why this is documented:** Compliance teams at regulated institutions should understand that for the duration of a maintenance window (typically 2–4 hours), the core is not the ledger of record. The Shadow Ledger is. The full analysis of the STIP gap and the four-step mitigation roadmap (kill switch, aggregate cap, real-time card authorization port, and configuration postures from receive-only through STIP-aware) is in [ADR-0010](adr/0010-bridge-mode-fraud-risk.md). This should be disclosed in the institution's internal control documentation.
 
 ---
 
