@@ -63,11 +63,19 @@ jobs:
         # ones. format=HTML so reviewers can open the report directly.
         # suppressionFile scopes documented exceptions (see the .owasp
         # directory for the rationale on each entry).
+        #
+        # NVD now requires an API key for the CVE feed update — without one,
+        # the update is rate-limited to the point of failure. Request a free
+        # key at https://nvd.nist.gov/developers/request-an-api-key and store
+        # it as the NVD_API_KEY repository secret.
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
           mvn -B org.owasp:dependency-check-maven:check \
               -DfailBuildOnCVSS=7 \
               -Dformats=HTML,JSON \
               -DsuppressionFiles=.owasp/dependency-check-suppressions.xml \
+              -Dnvd.api.key="${NVD_API_KEY}" \
               --no-transfer-progress
 
       - name: Upload dependency-check report
