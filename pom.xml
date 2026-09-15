@@ -36,7 +36,7 @@
 
         <!-- Transitive-dependency overrides for CVE hygiene. -->
         <!-- Each of these bumps a library that Spring Boot's BOM otherwise -->
-        <!-- pins to a version flagged by the OWASP dependency-check workflow. -->
+        <!-- pins to a version flagged by the Trivy vulnerability-scan workflow. -->
         <!-- Kept within the same Spring Boot major line so nothing else moves. -->
         <!-- Revisit each override when moving to a newer Spring Boot: the -->
         <!-- BOM's managed version may catch up, letting the override drop. -->
