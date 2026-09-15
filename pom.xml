@@ -36,17 +36,35 @@
 
         <!-- Transitive-dependency overrides for CVE hygiene. -->
         <!-- Each of these bumps a library that Spring Boot's BOM otherwise -->
-        <!-- pins to a version flagged by the OWASP dependency-check workflow. -->
+        <!-- pins to a version flagged by the Trivy vulnerability-scan workflow. -->
         <!-- Kept within the same Spring Boot major line so nothing else moves. -->
         <!-- Revisit each override when moving to a newer Spring Boot: the -->
         <!-- BOM's managed version may catch up, letting the override drop. -->
         <jackson-bom.version>2.22.1</jackson-bom.version>
-        <netty.version>4.2.16.Final</netty.version>
-        <tomcat.version>10.1.57</tomcat.version>
+        <!-- CVE-2026-75595 (netty-handler, CRITICAL) -->
+        <netty.version>4.2.17.Final</netty.version>
+        <!-- CVE-2026-65182 / CVE-2026-65905 / CVE-2026-68525 (tomcat-embed-core, CRITICAL).
+             Trivy's reported fix version 10.1.58 was never published to Maven
+             Central (10.1.57 is directly followed by 10.1.59) - using 10.1.59. -->
+        <tomcat.version>10.1.59</tomcat.version>
         <postgresql.version>42.7.13</postgresql.version>
         <log4j2.version>2.26.1</log4j2.version>
         <commons-lang3.version>3.20.0</commons-lang3.version>
     </properties>
+
+    <!-- com.rabbitmq:amqp-client has no corresponding Spring Boot BOM property
+         (unlike netty/tomcat/etc. above), so it's overridden here directly
+         rather than guessing a property name that could silently fail to
+         apply. Fixes CVE-2026-63337 / CVE-2026-69219 / CVE-2026-69220 (HIGH). -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.rabbitmq</groupId>
+                <artifactId>amqp-client</artifactId>
+                <version>5.33.1</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
 

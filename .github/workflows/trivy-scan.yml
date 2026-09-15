@@ -1,0 +1,100 @@
+name: Trivy Vulnerability Scan
+
+# Scans the project's dependency tree for known vulnerabilities using Trivy
+# (https://github.com/aquasecurity/trivy). Runs weekly and on any PR that
+# touches pom.xml, pairing with the Dependabot weekly cadence the same way
+# the previous scanner did.
+#
+# This replaces OWASP dependency-check-maven, which as of its 2024+ releases
+# hard-requires an NVD API key to update its CVE feed at all (no more
+# unauthenticated fallback — it now fails outright without one, which is
+# what broke the old workflow). Requesting that key means going through
+# NIST's own key-request page (nvd.nist.gov/developers/request-an-api-key),
+# which was itself broken at the time of this migration — a Cloudflare
+# Turnstile challenge failing with a JS error thrown by NIST's own frontend
+# code, reproduced independently in two unrelated browser sessions. Making
+# this workflow's health depend on a single third-party signup flow with no
+# fallback was judged worse than switching scanners. Trivy pulls from public
+# advisory sources (GHSA, OSV, etc.) and needs no API key or signup.
+#
+# Results are both (a) uploaded to the repo's Security tab as SARIF and
+# (b) used to fail the build on High/Critical findings, matching the old
+# failBuildOnCVSS=7 threshold.
+
+on:
+  schedule:
+    # Mondays 04:00 UTC — pairs with the Dependabot weekly cadence so that
+    # by mid-week the team is reviewing the union of "dependencies updated"
+    # PRs and "vulnerabilities detected" scans.
+    - cron: "0 4 * * 1"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "pom.xml"
+      - ".github/workflows/trivy-scan.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Scan for known vulnerabilities
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write   # required to upload SARIF to the Security tab
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Java 17
+        # Trivy's Maven scanner parses pom.xml + the local dependency cache
+        # directly — a full build isn't required, but having Java/Maven
+        # available lets it resolve the effective dependency tree accurately.
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Resolve dependencies
+        run: mvn -B -q dependency:resolve --no-transfer-progress
+
+      - name: Trivy scan — SARIF for GitHub Security tab
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+          exit-code: 0
+
+      - name: Upload SARIF to Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-results.sarif
+
+      - name: Trivy scan — fail build on High/Critical
+        # Suppressions (documented exceptions) live in .trivyignore at the
+        # repo root — Trivy picks it up automatically with no extra flag.
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: table
+          output: trivy-report.txt
+          severity: CRITICAL,HIGH
+          exit-code: 1
+
+      - name: Upload dependency scan report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: trivy-report
+          path: |
+            trivy-results.sarif
+            trivy-report.txt
