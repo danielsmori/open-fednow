@@ -112,7 +112,7 @@ class SagaRecoveryServiceIntegrationTest extends AbstractInfrastructureIntegrati
                 message("TXN-REC-COMP", "E2E-REC-COMP"), Rail.FEDNOW);
         // Manually park the saga in COMPENSATING so recovery has to finalize it.
         jdbc.update(
-                "UPDATE saga_state SET state = 'COMPENSATING', return_reason_code = 'AM04' WHERE saga_id = ?",
+                "UPDATE saga_state SET state = 'COMPENSATING', return_reason_code = 'AM04', failure_description = 'Original failure' WHERE saga_id = ?",
                 saga.getSagaId());
 
         recoveryService.recoverInflightSagas();
@@ -120,6 +120,8 @@ class SagaRecoveryServiceIntegrationTest extends AbstractInfrastructureIntegrati
         assertThat(loadState(saga.getSagaId())).isEqualTo("FAILED");
         // The original AM04 reason is preserved — recovery did not overwrite it
         assertThat(loadReasonCode(saga.getSagaId())).isEqualTo("AM04");
+        assertThat(jdbc.queryForObject("SELECT failure_description FROM saga_state WHERE saga_id = ?",
+                String.class, saga.getSagaId())).isEqualTo("Original failure");
     }
 
     // ── Mixed batch ──────────────────────────────────────────────────────────

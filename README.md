@@ -68,7 +68,7 @@ OpenFedNow explores integration between legacy core banking systems and instant 
 | Atomic velocity counter — single Redis Lua script | ✅ `INCR` + `EXPIRE` in one round-trip; sliding window matching the documented semantic |
 | Reconcile concurrency guard — same-JVM serialization | ✅ `ReentrantLock` with tryLock; second concurrent call returns "Skipped" report rather than racing |
 | Saga source-rail tracking — dual-rail dispatch foundation | ✅ `source_rail` column on `saga_state` (V5); both gateways thread `Rail` through `MessageRouter` |
-| Dependency scanning — Dependabot + OWASP dependency-check | ✅ Weekly Maven + Actions updates; OWASP scan fails the build on CVSS ≥ 7 |
+| Dependency scanning — Dependabot + Trivy | ✅ Weekly Maven + Actions updates; Trivy scan fails the build on HIGH/CRITICAL findings |
 | CI — unit + integration test jobs | ✅ GitHub Actions workflow runs unit tests + Testcontainers-backed integration tests on every PR |
 | Dual-rail architecture (FedNow + RTP) | ✅ ISO 20022 foundation; Layer 1 varies, Layers 2–4 rail-agnostic; source rail persisted on `saga_state` |
 | RTP Layer 1 — inbound XML, outbound XML, TCH cert validation hook, sandbox + HTTP client | Inbound reference routing and transport utilities implemented; `/rtp/send` disabled pending financial-control parity |
@@ -681,7 +681,7 @@ openfednow/
 │       ├── 0007-camt056-cancellation-lifecycle.md
 │       └── 0008-fraud-screening.md
 ├── helm/                     # Production Helm chart (deployment, HPA, PDB, configmap, ingress)
-├── .github/workflows/        # CI (unit + integration) + OWASP dependency-check
+├── .github/workflows/        # CI (unit + integration) + Trivy dependency scan
 ├── LICENSE                   # Apache 2.0
 └── README.md
 ```
@@ -746,7 +746,7 @@ See [docs/known-limitations.md](docs/known-limitations.md) for the full analysis
 - HSTS, deny-by-default CORS, default-credential startup guard in prod profile
 - Graceful shutdown with bounded drain window; HikariCP pool sizing for FedNow throughput
 - Outbound FedNow retry on transient failures; hard timeout on `FraudScreeningPort` calls (fail-closed by default; explicit fail-open option)
-- Dependabot + OWASP dependency-check workflow; GitHub Actions CI with both unit and integration test jobs
+- Dependabot + Trivy workflow; GitHub Actions CI with both unit and integration test jobs
 
 **Phase 6 — Live-FedNow Enablement ✅ Complete**
 - RS256 detached JWS message signing implemented per RFC 7515 + RFC 7797 ([ADR-0009](docs/adr/0009-fednow-jws-message-signing.md))

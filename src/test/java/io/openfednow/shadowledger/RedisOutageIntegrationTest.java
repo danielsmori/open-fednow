@@ -1,6 +1,5 @@
 package io.openfednow.shadowledger;
 
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -9,7 +8,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.redis.RedisConnectionFailureException;
+import org.springframework.dao.DataAccessException;
+import org.springframework.test.annotation.DirtiesContext;
+import io.lettuce.core.RedisException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -23,7 +24,6 @@ import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Exercises Shadow Ledger behavior when Redis is unreachable.
@@ -31,22 +31,18 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * <p>Unlike {@link RedisIntegrationTest} — which shares the base container with
  * every other infrastructure test — this class owns its own Redis instance and
  * deliberately stops it mid-test. Stopping the shared container would break
- * every other {@code @Tag("integration")} class, so isolation is intentional.
+ * every other integration test, so isolation is intentional.
  *
- * <p>The test documents the currently expected failure mode: Shadow Ledger
- * surfaces a {@link RedisConnectionFailureException} when Redis is down, rather
- * than silently returning stale data, a default balance, or a generic
- * RuntimeException. This is the correct behavior — a payment system that
- * guesses a balance from thin air is worse than one that outright refuses.
- * The outer caller (MessageRouter) can catch this specific exception type and
- * translate it into an ISO 20022 TS01 (System Unavailable) response instead of
- * a downstream funds/reservation error that would mislead operators.
- *
- * <p>A future change that swallows or masks the connection error would be
- * caught here — that's the point of pinning the behavior down as a test.
+ * <p>An outage must surface as a Redis data-access error, not a fabricated
+ * balance. Depending on whether Lettuce reconnects or an established connection
+ * closes mid-command or a queued command times out, Spring may use different
+ * DataAccessException subtypes; the underlying Redis error must remain visible.
  */
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @Tag("integration")
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {
+        "spring.data.redis.timeout=1s", "spring.data.redis.connect-timeout=1s"
+})
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class RedisOutageIntegrationTest {
 
@@ -67,20 +63,11 @@ class RedisOutageIntegrationTest {
 
     @BeforeAll
     static void bootContainers() {
-        assumeTrue(DockerClientFactory.instance().isDockerAvailable(),
-                "Docker not available — skipping Redis-outage integration test");
+        assertThat(DockerClientFactory.instance().isDockerAvailable())
+                .as("Docker is required for the integration suite").isTrue();
         REDIS.start();
         POSTGRES.start();
         RABBITMQ.start();
-    }
-
-    @AfterAll
-    static void tearDownContainers() {
-        if (REDIS.isRunning()) {
-            REDIS.stop();
-        }
-        POSTGRES.stop();
-        RABBITMQ.stop();
     }
 
     @DynamicPropertySource
@@ -115,10 +102,11 @@ class RedisOutageIntegrationTest {
 
     @Test
     @Order(2)
-    void redisOutageSurfacesAsRedisConnectionFailureException() {
+    void redisOutageSurfacesAsRedisDataAccessError() {
         REDIS.stop();
 
         assertThatThrownBy(() -> shadowLedger.getAvailableBalance(ACCOUNT))
-                .isInstanceOf(RedisConnectionFailureException.class);
+                .isInstanceOf(DataAccessException.class)
+                .hasCauseInstanceOf(RedisException.class);
     }
 }

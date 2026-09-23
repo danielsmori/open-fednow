@@ -143,9 +143,9 @@ class CancellationIntegrationTest extends AbstractInfrastructureIntegrationTest 
         shadowLedger.applyCredit("ACC-FRAUD", new BigDecimal("100.00"), "TXN-FRAUD");
         orchestrator.advance(saga, PaymentSaga.SagaState.FUNDS_RESERVED);
 
-        cancellationService.handleCancellationRequest(camt056("TXN-FRAUD", "FRAUD"));
+        cancellationService.handleCancellationRequest(camt056("TXN-FRAUD", "FRAD"));
 
-        assertThat(loadReasonCode(saga.getSagaId())).isEqualTo("FRAUD");
+        assertThat(loadReasonCode(saga.getSagaId())).isEqualTo("FRAD");
     }
 
     // ── Audit row written ─────────────────────────────────────────────────────

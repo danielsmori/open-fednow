@@ -30,7 +30,7 @@ import java.util.UUID;
  * <table>
  *   <tr><th>Code</th><th>Meaning</th></tr>
  *   <tr><td>{@code DUPL}</td><td>Duplicate payment — this transfer was already submitted</td></tr>
- *   <tr><td>{@code FRAUD}</td><td>Fraudulent origin — payment was initiated fraudulently</td></tr>
+ *   <tr><td>{@code FRAD}</td><td>Fraudulent origin — payment was initiated fraudulently</td></tr>
  *   <tr><td>{@code CUST}</td><td>Requested by customer — debtor has requested cancellation</td></tr>
  *   <tr><td>{@code UPAY}</td><td>Undue payment — funds were sent in error</td></tr>
  *   <tr><td>{@code NARR}</td><td>Narrative reason — see {@link #cancellationReasonDescription}</td></tr>
@@ -101,7 +101,7 @@ public class Camt056Message {
     @NotBlank
     @Size(max = 4)
     @Schema(description = "ISO 20022 reason code for the cancellation request " +
-            "(DUPL, FRAUD, CUST, UPAY, or NARR).",
+            "(DUPL, FRAD, CUST, UPAY, or NARR).",
             example = "DUPL", maxLength = 4)
     private String cancellationReasonCode;
 
@@ -118,7 +118,7 @@ public class Camt056Message {
      * which payment is to be cancelled.
      *
      * @param original                     the pacs.008 message to be cancelled
-     * @param cancellationReasonCode       ISO 20022 reason code (e.g., "DUPL", "FRAUD", "CUST")
+     * @param cancellationReasonCode       ISO 20022 reason code (e.g., "DUPL", "FRAD", "CUST")
      * @param cancellationReasonDescription human-readable explanation; required for NARR
      * @return a fully populated camt.056 ready for submission to FedNow
      */

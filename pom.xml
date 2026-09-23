@@ -37,17 +37,28 @@
 
         <!-- Transitive-dependency overrides for CVE hygiene. -->
         <!-- Each of these bumps a library that Spring Boot's BOM otherwise -->
-        <!-- pins to a version flagged by the OWASP dependency-check workflow. -->
+        <!-- pins to a version flagged by the Trivy vulnerability-scan workflow. -->
         <!-- Kept within the same Spring Boot major line so nothing else moves. -->
         <!-- Revisit each override when moving to a newer Spring Boot: the -->
         <!-- BOM's managed version may catch up, letting the override drop. -->
         <jackson-bom.version>2.22.1</jackson-bom.version>
-        <netty.version>4.2.16.Final</netty.version>
-        <tomcat.version>10.1.57</tomcat.version>
+        <netty.version>4.2.17.Final</netty.version>
+        <tomcat.version>10.1.59</tomcat.version>
         <postgresql.version>42.7.13</postgresql.version>
         <log4j2.version>2.26.1</log4j2.version>
         <commons-lang3.version>3.20.0</commons-lang3.version>
     </properties>
+
+    <!-- Fixed versions for the HIGH/CRITICAL advisories reported by Trivy. -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.rabbitmq</groupId>
+                <artifactId>amqp-client</artifactId>
+                <version>5.34.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
 

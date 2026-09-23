@@ -37,17 +37,17 @@ class PostgresIntegrationTest extends AbstractInfrastructureIntegrationTest {
     // --- Flyway ran successfully ---
 
     @Test
-    void flywayAppliedAllFourMigrations() {
+    void flywayAppliedAllSevenMigrations() {
         Integer applied = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM flyway_schema_history WHERE success = TRUE",
                 Integer.class);
-        assertThat(applied).isEqualTo(4);
+        assertThat(applied).isEqualTo(7);
     }
 
     // --- All tables exist ---
 
     @Test
-    void allFourTablesExist() {
+    void allFiveTablesExist() {
         List<String> tables = jdbc.queryForList(
                 """
                 SELECT table_name
@@ -63,7 +63,8 @@ class PostgresIntegrationTest extends AbstractInfrastructureIntegrationTest {
                 "shadow_ledger_transaction_log",
                 "saga_state",
                 "idempotency_keys",
-                "reconciliation_run"
+                "reconciliation_run",
+                "admin_audit_log"
         );
     }
 

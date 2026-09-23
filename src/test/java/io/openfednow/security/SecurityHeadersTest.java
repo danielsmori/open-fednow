@@ -20,11 +20,15 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>Drives a real HTTP port via {@link TestRestTemplate} so the full filter
  * chain is exercised end-to-end.
  */
+@org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class SecurityHeadersTest extends AbstractInfrastructureIntegrationTest {
 
     @Autowired
     private TestRestTemplate restTemplate;
+
+    @Autowired
+    private org.springframework.test.web.servlet.MockMvc mvc;
 
     @Test
     void responseHasXContentTypeOptionsHeader() {
@@ -40,13 +44,17 @@ class SecurityHeadersTest extends AbstractInfrastructureIntegrationTest {
     }
 
     @Test
-    void responseHasStrictTransportSecurity() {
-        HttpHeaders headers = anyEndpointHeaders();
-        String hsts = headers.getFirst("Strict-Transport-Security");
-        assertThat(hsts).isNotNull();
-        // Configured to 2 years (63072000 seconds) with includeSubDomains
-        assertThat(hsts).contains("max-age=63072000");
-        assertThat(hsts).contains("includeSubDomains");
+    void secureRequestsHaveStrictTransportSecurity() throws Exception {
+        for (String path : new String[]{"/actuator/health", "/fednow/health"}) {
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(path).secure(true))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                            .string("Strict-Transport-Security", "max-age=63072000 ; includeSubDomains"));
+        }
+    }
+
+    @Test
+    void plaintextRequestsDoNotAdvertiseStrictTransportSecurity() {
+        assertThat(anyEndpointHeaders().getFirst("Strict-Transport-Security")).isNull();
     }
 
     @Test
@@ -66,7 +74,8 @@ class SecurityHeadersTest extends AbstractInfrastructureIntegrationTest {
         HttpHeaders headers = response.getHeaders();
         assertThat(headers.getFirst("X-Content-Type-Options")).isEqualTo("nosniff");
         assertThat(headers.getFirst("X-Frame-Options")).isEqualTo("DENY");
-        assertThat(headers.getFirst("Strict-Transport-Security")).isNotNull();
+        // Spring Security only emits HSTS for secure requests.
+        assertThat(headers.getFirst("Strict-Transport-Security")).isNull();
     }
 
     private HttpHeaders anyEndpointHeaders() {

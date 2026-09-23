@@ -28,3 +28,14 @@ The existing branch contains a Trivy migration, dependency upgrades and vulnerab
 - **E:** removed the vendor-verification claim and corrected Redis concurrency and provisional-status explanations. Exact vendor compatibility review requires the applicable vendor specification and an independent reviewer.
 
 The binary whitepaper, CV, petition and outreach are outside this development change. At the time of this evaluation, no messages had been sent, no commits created, no changes pushed, and `main` had not been modified. Subsequent publication of the development branch for pull-request review does not change the recorded test results.
+
+
+## CI repair follow-up
+
+The first PR run exposed an integration workflow command that selected the `integration` tag without clearing the default exclusion. The job now clears it explicitly and still fails if no tests run. The full suite revealed stale schema/header/cancellation fixtures, a container-lifecycle problem, and a real audit-data bug: a state-only saga advance erased previously persisted failure details. The advance now preserves those fields and the recovery regression checks both code and description.
+
+Shared infrastructure now lives for the test JVM while Spring contexts close after each class. The isolated Redis-outage test has a bounded command timeout and checks that a Redis data-access error is exposed rather than accepting a fabricated balance. These test changes follow the [Testcontainers lifecycle guidance](https://testcontainers.com/guides/testcontainers-container-lifecycle/). HTTPS-only HSTS behavior is checked with a secure request through the Spring filter chain, alongside plaintext HTTP checks; see [Spring Security headers](https://docs.spring.io/spring-security/reference/servlet/exploits/headers.html).
+
+The NVD-key-dependent workflow is replaced with Trivy 0.74.0, using an action pinned to its commit. It fails on HIGH/CRITICAL findings and uploads JSON/SARIF. No vulnerability suppressions are retained. The scan required Netty 4.2.17.Final, Tomcat 10.1.59, and RabbitMQ client 5.34.0. The last version also addresses a finding newer than the separate security branch's 5.33.1 override. The original security branch remains separate.
+
+Local verification of the CI repair: **613 default tests and 188 integration tests passed**, with no failures, errors or skips. The full integration run completed without the previous forced-JVM-exit warning. Trivy scanned 138 Maven packages and reported zero HIGH/CRITICAL findings; SARIF conversion also succeeded. Fault-injection tests still deliberately log simulated failures. These results do not close the separate uncertain-submission defect.

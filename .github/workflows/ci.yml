@@ -28,7 +28,7 @@ jobs:
       - name: Run unit tests
         # Runs the default test suite. Integration tests (tagged "integration") require
         # Testcontainers / Docker and are excluded here — see the integration-tests job
-        # below. Run integration tests locally with: mvn test -Dgroups=integration
+        # below. Run integration tests locally with: mvn test -Dgroups=integration -DexcludedGroups=
         run: mvn -B test --no-transfer-progress
 
       - name: Upload unit test results
@@ -56,21 +56,18 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      # Docker is preinstalled on ubuntu-latest GitHub runners, so Testcontainers
-      # works out of the box. The Reuse env var keeps the same containers across
-      # @SpringBootTest classes within a single mvn invocation; combined with
-      # Surefire's default forking model this materially reduces test time.
+      # The shared infrastructure lives for the test JVM. Each class closes its
+      # Spring context before the next class starts; no cross-run reuse is needed.
       - name: Verify Docker availability
         run: docker version
 
       - name: Run integration tests
         env:
-          TESTCONTAINERS_REUSE_ENABLE: "true"
           # Skip Ryuk because GitHub runners already clean up the VM after the
           # job finishes, and Ryuk occasionally fails on the first container
           # creation on a cold runner.
           TESTCONTAINERS_RYUK_DISABLED: "true"
-        run: mvn -B test -Dgroups=integration --no-transfer-progress
+        run: mvn -B test -Dgroups=integration -DexcludedGroups= --no-transfer-progress
 
       - name: Upload integration test results
         if: always()

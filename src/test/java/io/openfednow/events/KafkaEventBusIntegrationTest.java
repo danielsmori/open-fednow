@@ -44,8 +44,8 @@ import static org.mockito.Mockito.when;
  * PostgreSQL containers, and adds its own Kafka container via a {@code @Container}
  * static field.
  *
- * <p>{@code @Testcontainers(disabledWithoutDocker = true)} is inherited from the
- * parent class: all tests in this class are skipped when Docker is unavailable.
+ * <p>Docker is required, as for the other infrastructure tests; unavailable
+ * infrastructure fails the run rather than silently skipping coverage.
  *
  * <p>A raw Kafka consumer is used to verify message delivery — no
  * {@code @KafkaListener} lifecycle complexity involved.
