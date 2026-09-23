@@ -69,7 +69,7 @@ class MessageRouterCurrencyGuardTest {
                 fraudScreeningPort,
                 new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
                 1500L,
-                true);
+                true, false);
     }
 
     // ── Inbound ──────────────────────────────────────────────────────────────

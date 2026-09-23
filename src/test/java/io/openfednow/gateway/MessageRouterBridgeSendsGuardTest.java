@@ -121,6 +121,18 @@ class MessageRouterBridgeSendsGuardTest {
         verify(f.idempotencyService, times(1)).recordOutcome(eq("E2E-SHORT"), any());
     }
 
+    @Test
+    void duplicateKeepsRecordedOutcomeWhenCoreGoesOffline() {
+        Fixture f = new Fixture(false, true);
+        Pacs002Message completed = accepted();
+        when(f.idempotencyService.checkDuplicate("E2E-COMPLETED"))
+                .thenReturn(Optional.of(completed));
+        assertThat(f.router.routeOutbound(message("E2E-COMPLETED")).getBody()).isSameAs(completed);
+        verify(f.idempotencyService, never()).recordOutcome(any(), any());
+        verify(f.fraudScreeningPort, never()).screen(any());
+        assertThat(f.meterRegistry.counter(MessageRouter.BRIDGE_SENDS_BLOCKED_METRIC).count()).isZero();
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static Pacs008Message message(String e2e) {
@@ -178,7 +190,7 @@ class MessageRouterBridgeSendsGuardTest {
                     fraudScreeningPort,
                     meterRegistry,
                     1500L,
-                    bridgeSendsAllowed);
+                    bridgeSendsAllowed, false);
         }
     }
 }

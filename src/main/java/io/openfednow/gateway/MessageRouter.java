@@ -70,6 +70,7 @@ public class MessageRouter {
     private final PaymentEventPublisher eventPublisher;
     private final FraudScreeningPort fraudScreeningPort;
     private final long fraudTimeoutMillis;
+    private final boolean screeningFailOpen;
 
     /** Metric emitted every time the bridge-mode-off guard rejects an outbound send. */
     static final String BRIDGE_SENDS_BLOCKED_METRIC = "bridge_mode.sends.blocked";
@@ -77,10 +78,9 @@ public class MessageRouter {
     /**
      * Controls whether outbound FedNow sends are allowed while
      * {@link AvailabilityBridge#isInBridgeMode()} is {@code true}.
-     * Defaults to {@code true} for backwards compatibility: existing deployments
-     * see no behavioural change. Institutions running a receive-only on-ramp
-     * flip this to {@code false} so that if the core goes offline, the framework
-     * refuses to authorize sends against the potentially-stale Shadow Ledger.
+     * Defaults to {@code false}: an offline core must not authorize sends
+     * against a potentially stale Shadow Ledger. Enabling this is an explicit
+     * opt-in to the documented cross-channel balance risks.
      */
     private final boolean bridgeSendsAllowed;
     private final Counter bridgeSendsBlockedCounter;
@@ -97,7 +97,8 @@ public class MessageRouter {
                          FraudScreeningPort fraudScreeningPort,
                          MeterRegistry meterRegistry,
                          @Value("${openfednow.fraud.screening-timeout-millis:1500}") long fraudTimeoutMillis,
-                         @Value("${openfednow.bridge-mode.allow-sends:true}") boolean bridgeSendsAllowed) {
+                         @Value("${openfednow.bridge-mode.allow-sends:false}") boolean bridgeSendsAllowed,
+                         @Value("${openfednow.fraud.fail-open:false}") boolean screeningFailOpen) {
         this.fedNowClient = fedNowClient;
         this.coreBankingAdapter = coreBankingAdapter;
         this.idempotencyService = idempotencyService;
@@ -114,47 +115,44 @@ public class MessageRouter {
         }
         this.fraudTimeoutMillis = fraudTimeoutMillis;
         this.bridgeSendsAllowed = bridgeSendsAllowed;
+        this.screeningFailOpen = screeningFailOpen;
         this.bridgeSendsBlockedCounter = Counter.builder(BRIDGE_SENDS_BLOCKED_METRIC)
                 .description("Outbound FedNow sends rejected by the bridge-mode allow-sends guard")
                 .register(meterRegistry);
     }
 
     /**
-     * Invokes the fraud screening port with a hard timeout.
-     *
-     * <p>A production {@link FraudScreeningPort} implementation may call out to a
-     * hosted scoring service. If that call hangs, the entire payment thread would
-     * block past the FedNow 20-second SLA window. The hard timeout caps the wait
-     * at {@code openfednow.fraud.screening-timeout-millis} (default 1500 ms);
-     * on timeout the framework fails <em>open</em> — the payment proceeds as if
-     * the screening result were {@code PASS} — and a WARN is logged. Failing open
-     * is the right default for a payment system: a momentarily-degraded fraud
-     * service should not turn into a blanket service outage, and the screening
-     * service's downstream alerting will catch its own unavailability.
-     *
-     * <p>Institutions that prefer fail-closed semantics can wrap their port
-     * implementation with that policy in their own bean.
+     * Bounds the screening wait. Unavailable or invalid results reject with TS01
+     * by default; fail-open is an explicit sandbox/operator policy. Interruptions
+     * always stop processing. Cancelling a future does not guarantee cancellation
+     * of the underlying call; external ports must enforce their own I/O deadlines.
      */
     private ScreeningResult screenWithTimeout(Pacs008Message message) {
         CompletableFuture<ScreeningResult> future = CompletableFuture.supplyAsync(
                 () -> fraudScreeningPort.screen(message));
         try {
-            return future.get(fraudTimeoutMillis, TimeUnit.MILLISECONDS);
+            ScreeningResult result = future.get(fraudTimeoutMillis, TimeUnit.MILLISECONDS);
+            if (result == null || result.decision() == null) {
+                return screeningUnavailable(message, "invalid result");
+            }
+            return result;
         } catch (TimeoutException e) {
             future.cancel(true);
-            log.warn("Fraud screening timed out after {}ms e2e={} — failing open",
-                    fraudTimeoutMillis, message.getEndToEndId());
-            return ScreeningResult.pass();
+            return screeningUnavailable(message, "timeout");
         } catch (InterruptedException e) {
+            future.cancel(true);
             Thread.currentThread().interrupt();
-            log.warn("Fraud screening interrupted e2e={} — failing open",
-                    message.getEndToEndId());
-            return ScreeningResult.pass();
+            return ScreeningResult.block("TS01", "Screening interrupted");
         } catch (ExecutionException e) {
-            log.warn("Fraud screening threw e2e={} — failing open",
-                    message.getEndToEndId(), e.getCause());
-            return ScreeningResult.pass();
+            return screeningUnavailable(message, "service error");
         }
+    }
+
+    private ScreeningResult screeningUnavailable(Pacs008Message message, String cause) {
+        log.warn("Screening unavailable e2e={} cause={} failOpen={}",
+                message.getEndToEndId(), cause, screeningFailOpen);
+        return screeningFailOpen ? ScreeningResult.pass()
+                : ScreeningResult.block("TS01", "Screening unavailable: " + cause);
     }
 
     /**
@@ -353,8 +351,15 @@ public class MessageRouter {
             return ResponseEntity.ok(rjct);
         }
 
-        // Step 0.5 — bridge-mode send guard. When the operator has opted a
-        // deployment into receive-only mode (openfednow.bridge-mode.allow-sends
+        // Step 1 — idempotency check
+        Optional<Pacs002Message> cached = idempotencyService.checkDuplicate(message.getEndToEndId());
+        if (cached.isPresent()) {
+            log.info("Duplicate outbound payment suppressed e2e={}", message.getEndToEndId());
+            return ResponseEntity.ok(cached.get());
+        }
+
+        // Bridge-mode send guard, after duplicate lookup. When a
+        // deployment uses receive-only mode (openfednow.bridge-mode.allow-sends
         // = false), refuse to authorize sends while the core is offline —
         // the Shadow Ledger balance is stale relative to any card-processor
         // STIP activity that happened during the maintenance window, so a
@@ -372,13 +377,6 @@ public class MessageRouter {
             idempotencyService.recordOutcome(message.getEndToEndId(), rjct);
             eventPublisher.publish(event(message, EventType.OUTBOUND_PAYMENT_REJECTED, "TS01"));
             return ResponseEntity.ok(rjct);
-        }
-
-        // Step 1 — idempotency check
-        Optional<Pacs002Message> cached = idempotencyService.checkDuplicate(message.getEndToEndId());
-        if (cached.isPresent()) {
-            log.info("Duplicate outbound payment suppressed e2e={}", message.getEndToEndId());
-            return ResponseEntity.ok(cached.get());
         }
 
         // Step 1.5 — fraud pre-screening before any side effects.
@@ -409,7 +407,7 @@ public class MessageRouter {
         }
 
         // Step 3 — initiate saga. routeOutbound is only invoked by FedNowGateway today;
-        // RTP outbound goes straight through RtpClient. If outbound routing is ever extended
+        // RTP outbound initiation is disabled. If outbound routing is ever extended
         // to RTP, this constant should be threaded through as a parameter.
         PaymentSaga saga = sagaOrchestrator.initiate(message, Rail.FEDNOW);
 

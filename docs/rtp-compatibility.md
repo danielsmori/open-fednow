@@ -72,9 +72,9 @@ The gateway layer is the extensibility point. `FedNowGateway.java` handles FedNo
 - Parses the FedNow JSON envelope into `Pacs008Message`
 - Returns `Pacs002Message` in the FedNow JSON format
 
-`RtpGateway.java` (`io.openfednow.gateway`) handles both the RTP inbound and outbound paths, symmetric with `FedNowGateway`:
+`RtpGateway.java` (`io.openfednow.gateway`) implements inbound reference routing; outbound initiation is disabled:
 - **Inbound:** Parses the RTP canonical ISO 20022 XML envelope via `RtpXmlParser`; validates TCH client certificates via `CertificateManager`; returns pacs.002 as XML
-- **Outbound:** Accepts pacs.008, validates TCH client certificates, delegates to `RtpClient` for XML serialization and TCH submission
+- **Outbound:** `/rtp/send` returns HTTP 503 / TS01 without calling `RtpClient`. The previous direct-client path bypassed screening, balance reservation, and idempotency. This release evaluates FedNow only.
 - **Transport:** `SandboxRtpClient` is active by default; `HttpRtpClient` is activated when `RTP_ENDPOINT` is set (same conditional pattern as `HttpFedNowClient` / `FEDNOW_ENDPOINT`)
 
 Both gateways feed into the same `MessageRouter`, which routes to the same layers regardless of source. The `Pacs008Message` that `MessageRouter.routeInbound()` receives does not carry a "which rail" field — it doesn't need one, because the message follows the same rail-agnostic shared pipeline.
@@ -91,7 +91,7 @@ FedNow Service  ──→  FedNowGateway  ──┐
 RTP Network     ──→  RtpGateway     ──┘
 ```
 
-The `MessageRouter` and everything downstream sees no difference. The only operational distinction is that `Pacs002Message` responses must be returned to the correct rail — the router would need to track the inbound source and dispatch accordingly. This is a small addition to `MessageRouter`, not a new pipeline.
+The inbound router records the source `Rail` on each saga for response and return dispatch. This shared inbound code does not establish outbound parity or valid live message semantics. See the [capability matrix](capability-matrix.md).
 
 ---
 

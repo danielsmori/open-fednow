@@ -12,7 +12,7 @@ These are deliberate design choices with known trade-offs. They are not bugs.
 
 **What happens:** If the core banking system rejects a transaction that was provisionally accepted during a maintenance window (for example, because the account was frozen or the funds were seized between when the Shadow Ledger reserved them and when the core came back online), the compensation path sends a pacs.004 return payment to FedNow. The sender's institution receives a credit — and then receives a return of that credit.
 
-**Why this exists:** The architecture accepts ACSP (provisional acceptance) before the core has confirmed. This is the correct ISO 20022 response for this scenario and within FedNow's rules, but it creates a bounded window of financial exposure.
+**Why this exists:** The architecture accepts ACSP (provisional acceptance) before the core has confirmed. This is a reference behavior, not an established FedNow-compliant response. The official readiness guide describes acceptance without posting using ACWP; the project's ACSP behavior needs review against the applicable operating procedures and message specifications before live use.
 
 **Consequence:** Depending on regulatory context and the reason for rejection, the institution may be required to notify the sender, the sender's institution, or both. The specific notification requirements depend on the rejection reason code (e.g., account seizure vs. technical failure) and the institution's compliance obligations under Regulation J and its FedNow participation agreement.
 
@@ -20,16 +20,11 @@ These are deliberate design choices with known trade-offs. They are not bugs.
 
 ---
 
-### 2. Single middleware instance assumption
+### 2. Redis concurrency is not cross-store atomicity
 
-**What happens:** The Shadow Ledger's optimistic locking (`WATCH`/`MULTI`/`EXEC` on Redis) is correct for a single middleware deployment. Under concurrent load on a single instance, WATCH conflicts cause retries (up to `MAX_RETRY_ATTEMPTS = 3`) and the balance always converges to the correct value.
+Redis WATCH detects changes to watched keys by **other clients**, including clients on other pods. The previous explanation that WATCH could not coordinate across connections was incorrect. See [Redis transaction documentation](https://redis.io/docs/latest/develop/using-commands/transactions/) (living documentation, reviewed September 23, 2026).
 
-**Why this is a limit:** In a horizontally scaled deployment (multiple middleware pods behind a load balancer), two instances could both pass a balance check and both proceed to decrement the same balance within the same WATCH cycle. Redis WATCH is per-connection — it does not coordinate across connections from different pods. This would require either:
-- A Redis distributed lock (Redlock) per account before the WATCH/MULTI/EXEC block
-- Routing all operations for a given account to the same pod (consistent hashing)
-- Replacing WATCH/MULTI/EXEC with a Lua script, which is atomic but has the same single-shard constraint in Redis Cluster
-
-**Current behavior:** Safe and correct for a single pod. Scaling to multiple pods without one of the above mitigations introduces a race condition on balance decrements.
+`ShadowLedger.applyDebit` checks and decrements inside WATCH/MULTI/EXEC, then writes its SQL audit record separately. Crashes between these operations, duplicate delivery, retries, and concurrent reversals need cross-store validation. The repository does not establish deployment correctness for either one pod or multiple pods merely by using WATCH. A distributed lock alone would not make Redis and SQL commits atomic.
 
 ---
 
@@ -49,7 +44,7 @@ These are deliberate design choices with known trade-offs. They are not bugs.
 
 **What happens:** During a maintenance window, the institution returns ACSP to FedNow before the core has seen the transaction. The Shadow Ledger is the decision-maker for that window. This is architecturally necessary — but it is not zero-risk.
 
-**The bounded risk:** The Shadow Ledger's balance is initialized from the core and updated atomically on each transaction. Two sources of divergence exist: a core-side rejection of a provisionally accepted payment (see limitation #1 above), and card-processor STIP activity that authorizes debits on the same account outside the Shadow Ledger during the window — the "STIP gap." All other sources of balance drift are prevented by design.
+**The bounded risk:** The Shadow Ledger's balance is initialized from the core and updated atomically on each transaction. Two sources of divergence exist: a core-side rejection of a provisionally accepted payment (see limitation #1 above), and card-processor STIP activity that authorizes debits on the same account outside the Shadow Ledger during the window — the "STIP gap." Other sources of drift, including cross-store crash windows and concurrent external activity, have not been excluded by this evaluation.
 
 **Why this is documented:** Compliance teams at regulated institutions should understand that for the duration of a maintenance window (typically 2–4 hours), the core is not the ledger of record. The Shadow Ledger is. The full analysis of the STIP gap and the four-step mitigation roadmap (kill switch, aggregate cap, real-time card authorization port, and configuration postures from receive-only through STIP-aware) is in [ADR-0010](adr/0010-bridge-mode-fraud-risk.md). This should be disclosed in the institution's internal control documentation.
 
@@ -59,7 +54,7 @@ These are deliberate design choices with known trade-offs. They are not bugs.
 
 These are features that are not yet built. They are explicitly tracked as future work.
 
-### 5. No remaining implementation gaps for the three primary vendors
+### 5. Vendor compatibility remains unverified
 
 `FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` are implemented and tested in reference mode. Production use is credential-, endpoint-, and certification-dependent. Each uses OAuth 2.0 and maps vendor rejection codes to ISO 20022.
 
@@ -97,7 +92,7 @@ The `FedNowClientConfig` bean is conditional: `HttpFedNowClient` is only created
 
 `RtpClientConfig` is conditional: `HttpRtpClient` is only created when `openfednow.gateway.rtp-endpoint` is present. When absent, `SandboxRtpClient` activates via `@ConditionalOnMissingBean`. The TCH certificate-validation hook is invoked on every request via `CertificateManager.validateTchClientCertificate()`; in sandbox mode (no `TCH_TRUSTSTORE_PATH`) it is a no-op.
 
-Layer 1 (inbound XML parsing, outbound XML serialization, certificate-validation hook, conditional HTTP transport) is implemented and tested in reference mode and is symmetric with the FedNow rail at the framework level. Layers 2–4 require no changes — they are rail-agnostic. See [rtp-compatibility.md](rtp-compatibility.md) and [ADR-0005](adr/0005-dual-rail-architecture-fednow-rtp.md).
+Inbound XML parsing, serialization, certificate hooks, and transport utilities exist in reference mode. Outbound RTP previously bypassed router financial controls and is now disabled. Live message semantics and control parity remain unverified. See [rtp-compatibility.md](rtp-compatibility.md) and [ADR-0005](adr/0005-dual-rail-architecture-fednow-rtp.md).
 
 Inbound source rail (FedNow vs. RTP) is now persisted on every `saga_state` row via the `source_rail` column (V5 migration). Asynchronous response paths can therefore dispatch through the correct gateway. The wiring for those asynchronous paths — reconciliation-time pacs.002 notifications and compensation-time pacs.004 returns to the originating rail — is still pending.
 
@@ -196,3 +191,9 @@ For production, deploy Redis with at minimum one replica (Sentinel or Cluster), 
 - [ADR-0004](adr/0004-eventual-consistency-shadow-ledger-and-core.md) — why eventual consistency was chosen over 2PC
 - [shadow-ledger.md](shadow-ledger.md) — Shadow Ledger operational detail and failure modes
 - [saga-pattern.md](saga-pattern.md) — compensation path for post-reconciliation core rejections
+
+## Evaluation release: unresolved submission outcomes
+
+`UncertainSubmissionReproducerTest` characterizes a server receiving a request and delaying its acceptance beyond the HTTP client's deadline. The current client synthesizes RJCT and the router invokes compensation. This is an open defect, not an acceptable rail policy. The test uses WireMock and mocked financial services; it does not reproduce real settlement.
+
+Automatic HTTP retries, startup compensation, saga timeout compensation, and late responses must be addressed together. See [evaluation scope and follow-up](evaluation.md). Do not treat a timeout as proof of rejection or the passing characterization test as financial correctness.

@@ -72,7 +72,7 @@ The distributed transaction problem — a payment spanning FedNow, the Shadow Le
 
 ## What PIX Proves About FedNow
 
-**The architecture is correct.** Every technical challenge in FedNow integration — batch-to-real-time mismatch, 24/7 availability, ISO 20022 protocol translation, distributed transaction safety — was encountered and resolved in the PIX deployment. The solutions are not theoretical; they operated at hundreds of millions of transactions per month.
+**Prior experience informs the design.** Experience with PIX may motivate integration patterns, but it does not validate this separate implementation or establish that FedNow and RTP rules are interchangeable. Claims about the prior deployment require their own supporting evidence; this repository provides synthetic tests of its own code.
 
 **The 87/13 principle holds at scale.** The framework was applied across multiple institutions during the PIX rollout, each with different core banking systems. In each case, the shared framework was unchanged; only the adapter layer varied. This validates the design principle that makes OpenFedNow reusable across all U.S. financial institutions.
 

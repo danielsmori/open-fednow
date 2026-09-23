@@ -30,6 +30,7 @@
 
     <properties>
         <java.version>17</java.version>
+        <excludedGroups>integration</excludedGroups>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Override Lombok to a version that supports Java 21+ -->
         <lombok.version>1.18.38</lombok.version>
@@ -233,9 +234,10 @@
                       Integration tests (tagged "integration") require Docker for Testcontainers.
                       They are excluded from the default "mvn test" run so that CI stays fast
                       and reliable without Docker image pull overhead.
-                      To run integration tests locally: mvn test -Dgroups=integration
+                      To run integration tests locally: mvn test -Dgroups=integration -DexcludedGroups=
                     -->
-                    <excludedGroups>integration</excludedGroups>
+                    <excludedGroups>${excludedGroups}</excludedGroups>
+                    <failIfNoTests>true</failIfNoTests>
                 </configuration>
             </plugin>
             <plugin>

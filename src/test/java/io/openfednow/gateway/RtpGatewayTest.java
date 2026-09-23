@@ -29,12 +29,11 @@ import static org.mockito.Mockito.*;
  *
  * <h2>Coverage</h2>
  * <ul>
- *   <li>/rtp/health — reflects sandbox vs. live mode</li>
+ *   <li>/rtp/health — reports configured transport, not verified live connectivity</li>
  *   <li>/rtp/receive (JSON) — routes through {@link MessageRouter#routeInbound}</li>
  *   <li>/rtp/receive (JSON) — propagates RJCT response unmodified</li>
  *   <li>/rtp/receive (XML) — invokes TCH certificate validation and returns XML response</li>
- *   <li>/rtp/send — delegates to {@link RtpClient#submitCreditTransfer}</li>
- *   <li>/rtp/send — invokes TCH certificate validation</li>
+ *   <li>/rtp/send — unavailable without transport or financial effects</li>
  * </ul>
  */
 class RtpGatewayTest {
@@ -55,6 +54,17 @@ class RtpGatewayTest {
         rtpClient = mock(RtpClient.class);
         gateway = new RtpGateway(messageRouter, certificateManager, xmlParser, xmlSerializer, rtpClient,
                 mock(io.openfednow.processing.cancellation.CancellationService.class));
+    }
+
+    @Test
+    void sendEndpointReturns503OverHttp() throws Exception {
+        var mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(gateway).build();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/rtp/send")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(toJson(buildMessage("E2E-HTTP", "TX-HTTP", "10.00"))))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isServiceUnavailable())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.rejectReasonCode").value("TS01"));
+        verifyNoInteractions(rtpClient, messageRouter, certificateManager);
     }
 
     // ── health ───────────────────────────────────────────────────────────────
@@ -145,39 +155,25 @@ class RtpGatewayTest {
     // ── sendTransfer ──────────────────────────────────────────────────────────
 
     @Test
-    void sendTransfer_delegatesToRtpClient() {
-        Pacs008Message outbound = buildMessage("E2E-SEND-001", "TXN-SEND-001", "300.00");
-        Pacs002Message acsc = Pacs002Message.accepted("E2E-SEND-001", "TXN-SEND-001");
-        when(rtpClient.submitCreditTransfer(any())).thenReturn(acsc);
+    void sendTransfer_isUnavailableWithoutCallingTransportOrRouter() {
+        ResponseEntity<Pacs002Message> response = gateway.sendTransfer(
+                buildMessage("E2E-SEND-001", "TXN-SEND-001", "300.00"));
 
-        ResponseEntity<Pacs002Message> response = gateway.sendTransfer(outbound);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody().getTransactionStatus()).isEqualTo(ACSC);
-        verify(rtpClient).submitCreditTransfer(any());
-    }
-
-    @Test
-    void sendTransfer_invokesTchCertificateValidation() {
-        when(rtpClient.submitCreditTransfer(any()))
-                .thenReturn(Pacs002Message.accepted("E2E-CERT-OUT-001", "TXN-CERT-OUT-001"));
-
-        gateway.sendTransfer(buildMessage("E2E-CERT-OUT-001", "TXN-CERT-OUT-001", "200.00"));
-
-        verify(certificateManager).validateTchClientCertificate();
-    }
-
-    @Test
-    void sendTransfer_propagatesRjctFromRtpClient() {
-        Pacs002Message rjct = Pacs002Message.rejected(
-                "E2E-RJCT-001", "TXN-RJCT-001", "AC06", "Account blocked");
-        when(rtpClient.submitCreditTransfer(any())).thenReturn(rjct);
-
-        ResponseEntity<Pacs002Message> response =
-                gateway.sendTransfer(buildMessage("E2E-RJCT-001", "TXN-RJCT-001", "100.00"));
-
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(response.getBody().getTransactionStatus()).isEqualTo(RJCT);
-        assertThat(response.getBody().getRejectReasonCode()).isEqualTo("AC06");
+        assertThat(response.getBody().getRejectReasonCode()).isEqualTo("TS01");
+        verifyNoInteractions(rtpClient, messageRouter, certificateManager);
+    }
+
+    @Test
+    void configuredHttpClientCannotBypassOutboundRestriction() {
+        RtpClient http = mock(HttpRtpClient.class);
+        RtpGateway configured = new RtpGateway(messageRouter, certificateManager,
+                xmlParser, xmlSerializer, http,
+                mock(io.openfednow.processing.cancellation.CancellationService.class));
+        assertThat(configured.sendTransfer(buildMessage("E2E-HTTP", "TXN-HTTP", "1.00"))
+                .getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        verifyNoInteractions(http, messageRouter);
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────
