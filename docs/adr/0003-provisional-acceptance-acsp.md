@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted
+Historical reference design; live rail semantics require re-evaluation.
+
+September 23, 2026: the [Federal Reserve readiness guide](https://explore.fednow.org/resources/readiness-guide-understanding-the-payment-timeout-clock.pdf), page 2, describes acceptance without posting as ACWP. This ADR does not establish that the implemented ACSP response is permitted for this flow. Its rationale below records the original design assumptions; validate against applicable current operating procedures and message specifications before live use.
 
 ## Context
 
@@ -45,7 +47,7 @@ CompletableFuture.supplyAsync(() -> adapter.postCreditTransfer(message))
 
 **Why 15 seconds, not 20:** The remaining 5 seconds are reserved for network transit to FedNow, serialization, and any upstream middleware latency. A 20-second timeout would leave no margin and risk missing FedNow's window on a slow network day.
 
-**What ACSP means:** ACSP is ISO 20022's "settlement in process" status. It is a legitimate, defined response for exactly this scenario — the payment has been accepted but final settlement confirmation is pending. FedNow's rules explicitly permit ACSP in the context of provisional acceptance. The distinction from ACSC ("settlement completed") is meaningful: ACSP signals that the institution intends to settle but has not yet confirmed it with the core.
+**What ACSP means:** ACSP is ISO 20022's "settlement in process" status. This project uses it to represent an internal pending state. That choice has not been established as a valid FedNow wire response for this scenario. The distinction from ACSC ("settlement completed") is meaningful: ACSP signals that the institution intends to settle but has not yet confirmed it with the core.
 
 When ACSP is returned, the payment is registered with the `SyncAsyncBridge` for reconciliation. When the core eventually confirms (on return from maintenance window or when the slow response arrives), the Saga advances to completion. If the core rejects the provisionally accepted payment, the Saga triggers a FedNow return payment (pacs.004) as compensation.
 
@@ -57,7 +59,7 @@ The simplest approach: block the response thread and wait. The problem is tail l
 
 **Optimistic acceptance (ACSC without core confirmation)**
 
-Return ACSC immediately after Shadow Ledger validation, treating the Shadow Ledger balance as authoritative for settlement. Simpler than ACSP (no reconciliation path needed), but misleading: ACSC represents completed settlement, not a reservation. If the core later rejects the payment (e.g., account closed, compliance hold), OpenFedNow has already told FedNow the payment was completed. The resulting pacs.004 return payment would look like a reversal, not an error — a regulatory and audit concern. Rejected because ACSP is semantically correct and ACSC is not.
+Return ACSC immediately after Shadow Ledger validation, treating the Shadow Ledger balance as authoritative for settlement. Simpler than ACSP (no reconciliation path needed), but misleading: ACSC represents completed settlement, not a reservation. If the core later rejects the payment (e.g., account closed, compliance hold), OpenFedNow has already told FedNow the payment was completed. The resulting pacs.004 return payment would look like a reversal, not an error — a regulatory and audit concern. Rejected in the original reference design; valid rail-specific response semantics remain under review.
 
 **Reject on timeout**
 

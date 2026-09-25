@@ -18,10 +18,8 @@ import org.springframework.web.bind.annotation.*;
 /**
  * Layer 1 — API Gateway &amp; Security (RTP® rail)
  *
- * <p>Handles the full inbound and outbound payment lifecycle for The Clearing
- * House RTP® network. Layer 1 is the only component that varies between rails;
- * Layers 2–4 are rail-agnostic and operate on parsed ISO 20022 domain objects
- * regardless of whether a message arrived via FedNow or RTP.
+ * <p>Provides reference inbound routing for The Clearing House RTP® network.
+ * Outbound initiation is disabled pending equivalent financial controls.
  *
  * <h2>Inbound path ({@code /rtp/receive})</h2>
  * <p>Accepts an ISO 20022 pacs.008.001.08 credit transfer in either XML
@@ -32,11 +30,8 @@ import org.springframework.web.bind.annotation.*;
  * status report is serialized back to XML via {@link RtpXmlSerializer}.
  *
  * <h2>Outbound path ({@code /rtp/send})</h2>
- * <p>Accepts an outbound pacs.008 to initiate a credit transfer via the RTP®
- * network. The message is serialized to XML by {@link RtpXmlSerializer} and
- * submitted to the TCH endpoint via {@link RtpClient}. In local development,
- * {@link SandboxRtpClient} returns synthetic responses; when {@code RTP_ENDPOINT}
- * is set, {@link HttpRtpClient} transmits to a configured TCH endpoint.
+ * <p>Returns HTTP 503 without financial effects. Serialization and client
+ * utilities remain available for synthetic tests and existing return paths.
  *
  * <h2>Certificate validation</h2>
  * <p>Inbound TCH certificate validation is handled by
@@ -57,11 +52,11 @@ import org.springframework.web.bind.annotation.*;
 @Tag(
     name = "RTP Gateway",
     description = """
-        RTP® gateway — full Layer 1 implementation symmetric with the FedNow gateway. \
+        RTP® inbound reference gateway; outbound payment initiation is disabled. \
         Inbound: accepts application/xml (canonical ISO 20022 envelope via RtpXmlParser) \
         or application/json (sandbox/simulator); routes through the shared Layers 2–4 pipeline; \
         returns pacs.002 in the same format as the request. \
-        Outbound: serializes pacs.008 to XML and submits via RtpClient \
+        Outbound: /rtp/send returns HTTP 503 without submitting a payment; transport utilities use RtpClient \
         (SandboxRtpClient by default; HttpRtpClient when RTP_ENDPOINT is set). \
         TCH PKI certificates and private-network transport require TCH institutional onboarding. \
         See docs/rtp-compatibility.md and ADR-0005."""
@@ -161,38 +156,17 @@ public class RtpGateway {
     }
 
     /**
-     * Submits an outbound credit transfer to the RTP® network.
-     *
-     * <p>Serializes the pacs.008 to canonical ISO 20022 XML via {@link RtpXmlSerializer}
-     * and submits it to the TCH endpoint via {@link RtpClient}. In local development,
-     * {@link SandboxRtpClient} returns deterministic synthetic responses. When
-     * {@code RTP_ENDPOINT} is configured, {@link HttpRtpClient} is used to transmit
-     * to a live or simulator TCH endpoint.
+     * Outbound RTP is outside the evaluated release. The previous direct-client
+     * path bypassed screening, funds reservation, and idempotency. Keep the
+     * endpoint explicit but unavailable until equivalent controls are validated.
      */
     @PostMapping("/send")
-    @Operation(
-        summary = "Submit outbound credit transfer (RTP)",
-        description = """
-            Submits an outbound pacs.008.001.08 to the RTP® network via RtpClient. \
-            SandboxRtpClient returns synthetic responses in local development; \
-            HttpRtpClient (activated by RTP_ENDPOINT) transmits to a configured TCH endpoint \
-            using canonical ISO 20022 XML serialization. \
-            Live TCH connectivity requires institutional participation, \
-            TCH PKI certificates, and private-network transport."""
-    )
-    @ApiResponses({
-        @ApiResponse(
-            responseCode = "200",
-            description = "Payment status report from RTP® network",
-            content = @Content(mediaType = "application/json",
-                               schema = @Schema(implementation = Pacs002Message.class))),
-        @ApiResponse(responseCode = "400",
-            description = "Malformed or schema-invalid ISO 20022 pacs.008 message")
-    })
+    @Operation(summary = "Outbound RTP unavailable in this evaluation release")
+    @ApiResponse(responseCode = "503", description = "Outbound RTP controls not implemented")
     public ResponseEntity<Pacs002Message> sendTransfer(@RequestBody Pacs008Message message) {
-        certificateManager.validateTchClientCertificate();
-        Pacs002Message result = rtpClient.submitCreditTransfer(message);
-        return ResponseEntity.ok(result);
+        return ResponseEntity.status(503).body(Pacs002Message.rejected(
+                message.getEndToEndId(), message.getTransactionId(), "TS01",
+                "Outbound RTP disabled: financial controls have not been validated"));
     }
 
     /**
@@ -233,21 +207,21 @@ public class RtpGateway {
         summary = "RTP gateway health check",
         description = """
             Returns the current operational status of the RTP gateway. \
-            Both inbound XML parsing (RtpXmlParser) and outbound XML serialization \
-            (RtpXmlSerializer) are active. Live TCH connectivity is activated by \
+            Inbound XML parsing (RtpXmlParser) and XML serialization \
+            (RtpXmlSerializer) utilities exist; outbound sends are disabled. HTTP transport is configured by \
             setting RTP_ENDPOINT; in its absence, SandboxRtpClient is active. \
             TCH PKI certificate validation requires TCH_TRUSTSTORE_PATH."""
     )
     @ApiResponse(responseCode = "200", description = "RTP gateway is reachable",
         content = @Content(mediaType = "text/plain",
                            schema = @Schema(type = "string",
-                               example = "OpenFedNow RTP Gateway — XML parsing and serialization active; set RTP_ENDPOINT for live TCH connectivity")))
+                               example = "OpenFedNow RTP Gateway — outbound sends disabled; sandbox mode active")))
     public ResponseEntity<String> health() {
         boolean liveMode = rtpClient instanceof HttpRtpClient;
         String connectivity = liveMode
-                ? "live TCH connectivity active (RTP_ENDPOINT configured)"
-                : "sandbox mode active (set RTP_ENDPOINT for live TCH transport)";
+                ? "HTTP transport configured; live connectivity not verified"
+                : "sandbox mode active";
         return ResponseEntity.ok(
-                "OpenFedNow RTP Gateway — XML parsing and serialization active; " + connectivity);
+                "OpenFedNow RTP Gateway — outbound sends disabled; XML parsing and serialization active; " + connectivity);
     }
 }

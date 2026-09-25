@@ -118,9 +118,9 @@ class Camt056MessageTest {
     @Test
     void forPaymentCancellationWithFraudReasonCode() {
         Camt056Message cncl = Camt056Message.forPaymentCancellation(
-                sampleTransfer(), "FRAUD", "Unauthorised transaction detected");
+                sampleTransfer(), "FRAD", "Unauthorised transaction detected");
 
-        assertThat(cncl.getCancellationReasonCode()).isEqualTo("FRAUD");
+        assertThat(cncl.getCancellationReasonCode()).isEqualTo("FRAD");
     }
 
     @Test

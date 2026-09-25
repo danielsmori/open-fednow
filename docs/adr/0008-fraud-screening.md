@@ -71,7 +71,7 @@ Simpler enum. Rejected because operations teams have repeatedly asked for a "fla
 - The port is narrow enough that swapping the implementation requires no router or message-model changes.
 - Default rules are operationally useful out of the box. The Redis-backed velocity check is constant-time per call.
 - The feature is opt-in, so the existing test suite and CI continue to work without configuration changes.
-- Both rails (FedNow + RTP) and both directions (inbound + outbound) share the same screen call — one port covers all four paths.
+- Inbound FedNow/RTP and outbound FedNow use the screen call. Outbound RTP initiation is disabled; it previously bypassed the router.
 
 **Negative:**
 - The four default rules are useful but not sufficient for production at scale. The README and known-limitations both note that institutions are expected to provide their own implementation for production deployments.
@@ -86,3 +86,9 @@ Simpler enum. Rejected because operations teams have repeatedly asked for a "fla
 - `NoOpFraudScreeningService.java` — default-active fallback
 - `MessageRouter.routeInbound` / `routeOutbound` — call sites
 - [ADR-0003](0003-provisional-acceptance-acsp.md) and [ADR-0004](0004-eventual-consistency-shadow-ledger-and-core.md) — why synchronous fraud rejection is preferred over async ACSP-then-reverse
+
+## Evaluation policy update — September 23, 2026
+
+`openfednow.fraud.fail-open` defaults to `false`. Timeout, port errors, and invalid results return RJCT TS01 before financial effects; this is unavailability, not a determination of fraud. Setting the flag to `true` explicitly permits processing after screening unavailability. An interrupted request always stops processing. Rules remain disabled unless `openfednow.fraud.enabled=true` or a custom port is provided; fail-closed does not turn a no-op port into a screening engine.
+
+The deadline bounds the caller's wait, not the lifetime of the underlying task. Ports must enforce their own I/O deadlines. The shared executor is not an isolated, bounded screening bulkhead.

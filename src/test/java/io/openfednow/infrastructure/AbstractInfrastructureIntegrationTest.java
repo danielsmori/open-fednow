@@ -7,52 +7,33 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.RabbitMQContainer;
-import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.lifecycle.Startables;
+import org.springframework.test.annotation.DirtiesContext;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 /**
- * Base class for infrastructure integration tests.
- *
- * <p>Declares Redis, RabbitMQ, and PostgreSQL containers as {@code @Container} static
- * fields so that the Testcontainers JUnit 5 extension manages their lifecycle:
- * containers are started once before the first test class that references them and
- * shared across all subclasses (because the fields are {@code static}).
- *
- * <p>{@code @Testcontainers(disabledWithoutDocker = true)} causes the entire test
- * class to be <em>skipped</em> (rather than failing) when the Docker daemon is not
- * available. This prevents cascading {@code NoClassDefFoundError} errors in local
- * environments where Docker is not running.
- *
- * <p>Each subclass should be annotated with {@code @SpringBootTest} and focus its
- * tests on a single infrastructure concern. All three containers must be available
- * for the Spring context to start cleanly, regardless of which concern is under test.
- *
- * <h2>Container images</h2>
- * Pinned to the same major versions used in {@code docker-compose.yml} and the
- * GitHub Actions CI service definitions:
- * <ul>
- *   <li>Redis 7 (Alpine)</li>
- *   <li>RabbitMQ 3 with management plugin</li>
- *   <li>PostgreSQL 16 (Alpine)</li>
- * </ul>
+ * Shared Redis, RabbitMQ and PostgreSQL infrastructure for integration tests.
+ * Containers live for the test JVM, so cached Spring connections cannot point
+ * at ports stopped by another class. Each class closes its Spring context to
+ * stop listeners/schedulers before the next class starts. Ryuk cleans containers
+ * when the JVM exits; CI runners also dispose their Docker environment.
+ * Integration tests require Docker; they must not silently skip when it is absent.
  */
 @Tag("integration")
-@Testcontainers(disabledWithoutDocker = true)
+@Testcontainers
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 public abstract class AbstractInfrastructureIntegrationTest {
 
-    @Container
     @SuppressWarnings("resource")
     static final GenericContainer<?> REDIS =
             new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
                     .withExposedPorts(6379);
 
-    @Container
     static final RabbitMQContainer RABBITMQ =
             new RabbitMQContainer(DockerImageName.parse("rabbitmq:3-management"));
 
-    @Container
     @SuppressWarnings("resource")
     static final PostgreSQLContainer<?> POSTGRES =
             new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"))
@@ -62,6 +43,7 @@ public abstract class AbstractInfrastructureIntegrationTest {
 
     @DynamicPropertySource
     static void overrideProperties(DynamicPropertyRegistry registry) {
+        Startables.deepStart(REDIS, RABBITMQ, POSTGRES).join();
         // Redis
         registry.add("spring.data.redis.host", REDIS::getHost);
         registry.add("spring.data.redis.port", REDIS::getFirstMappedPort);

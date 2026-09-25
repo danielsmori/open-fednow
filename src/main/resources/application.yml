@@ -197,11 +197,12 @@ openfednow:
     # Hard ceiling on how long MessageRouter waits for FraudScreeningPort.screen()
     # to return. A production implementation calling out to a hosted scoring
     # service must not block the payment thread past the FedNow 20s SLA window
-    # if that service stalls. On timeout the framework fails open (PASS) and logs;
-    # the screening service's own alerting catches its unavailability.
+    # if that service stalls. Unavailability rejects with TS01 by default.
+    # fail-open=true explicitly permits payments when screening is unavailable.
     screening-timeout-millis: ${FRAUD_SCREENING_TIMEOUT_MS:1500}
+    fail-open: ${FRAUD_FAIL_OPEN:false}
 
-  # Bridge-mode policy — see docs/known-limitations.md and ADR-0011.
+  # Bridge-mode policy — see docs/known-limitations.md and ADR-0010.
   # When the core banking system is offline (`AvailabilityBridge.isInBridgeMode()`),
   # the framework accepts inbound payments against the Shadow Ledger and queues
   # them for replay when the core returns. Outbound sends during bridge mode
@@ -215,7 +216,7 @@ openfednow:
   # Every rejection increments the `bridge_mode.sends.blocked` Micrometer
   # counter so ops can measure how often the guard trips.
   bridge-mode:
-    allow-sends: ${BRIDGE_MODE_ALLOW_SENDS:true}
+    allow-sends: ${BRIDGE_MODE_ALLOW_SENDS:false}
 
   # Admin audit log retention (audit #15). Default 365 days — long enough for
   # typical compliance review windows. The sweep runs daily.

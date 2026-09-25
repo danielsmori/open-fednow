@@ -29,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * call hangs, the entire payment thread would block past the FedNow 20-second
  * SLA window. The router wraps every {@code screen()} invocation in a
  * {@link java.util.concurrent.CompletableFuture} with a hard deadline; on
- * timeout the framework fails open (PASS) so the payment proceeds.
+ * timeout the framework fails closed (RJCT TS01) before financial effects.
  *
  * <p>This test pins {@code openfednow.fraud.screening-timeout-millis} to 100ms
  * for speed; the slow port delays 5 seconds, comfortably exceeding the bound.
@@ -54,7 +54,7 @@ class FraudTimeoutIntegrationTest extends AbstractInfrastructureIntegrationTest 
     }
 
     @Test
-    void slowFraudPortTimesOutAndFailsOpen() {
+    void slowFraudPortTimesOutAndFailsClosed() {
         // Delay 5 seconds — well past the 100ms timeout
         fraudPort.setDelayMillis(5_000);
 
@@ -66,19 +66,13 @@ class FraudTimeoutIntegrationTest extends AbstractInfrastructureIntegrationTest 
         // Request returned in well under the port's 5-second delay — the timeout fired
         assertThat(elapsed).isLessThan(2_000);
 
-        // Failed open — the payment proceeded as if the screen had returned PASS.
-        // The exact downstream outcome depends on the sandbox adapter, but it must
-        // not be FRAD (which is what a BLOCK would produce).
-        if (response.getBody() != null
-                && response.getBody().getTransactionStatus() == Pacs002Message.TransactionStatus.RJCT) {
-            assertThat(response.getBody().getRejectReasonCode()).isNotEqualTo("FRAD");
-        }
+        assertThat(response.getBody().getTransactionStatus()).isEqualTo(Pacs002Message.TransactionStatus.RJCT);
+        assertThat(response.getBody().getRejectReasonCode()).isEqualTo("TS01");
 
-        // A saga was created — the timeout did NOT short-circuit before saga init
         Integer sagaCount = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM saga_state WHERE transaction_id = 'TXN-TIMEOUT'",
                 Integer.class);
-        assertThat(sagaCount).isEqualTo(1);
+        assertThat(sagaCount).isZero();
     }
 
     @Test
@@ -97,18 +91,16 @@ class FraudTimeoutIntegrationTest extends AbstractInfrastructureIntegrationTest 
     }
 
     @Test
-    void portThatThrowsAlsoFailsOpen() {
+    void portThatThrowsAlsoFailsClosed() {
         fraudPort.setException(new RuntimeException("simulated scoring-service outage"));
 
         ResponseEntity<Pacs002Message> response = messageRouter.routeInbound(
                 pacs008("TXN-THROW", "E2E-THROW"), Rail.FEDNOW);
 
-        // Failed open — exceptions from the port don't short-circuit the payment
-        assertThat(response.getStatusCodeValue()).isEqualTo(200);
-        if (response.getBody() != null
-                && response.getBody().getTransactionStatus() == Pacs002Message.TransactionStatus.RJCT) {
-            assertThat(response.getBody().getRejectReasonCode()).isNotEqualTo("FRAD");
-        }
+        assertThat(response.getBody().getTransactionStatus()).isEqualTo(Pacs002Message.TransactionStatus.RJCT);
+        assertThat(response.getBody().getRejectReasonCode()).isEqualTo("TS01");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM saga_state", Integer.class)).isZero();
+
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────

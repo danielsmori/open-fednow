@@ -171,11 +171,11 @@ class CancellationServiceTest {
     void cancellationReasonCodeFromRequestIsPropagatedToSaga() {
         stubSaga("SAGA-REASON", PaymentSaga.SagaState.FUNDS_RESERVED);
         Camt056Message req = request("TXN-REASON");
-        req.setCancellationReasonCode("FRAUD");
+        req.setCancellationReasonCode("FRAD");
 
         service.handleCancellationRequest(req);
 
-        verify(orchestrator).cancelInboundSaga(eq("SAGA-REASON"), eq("FRAUD"));
+        verify(orchestrator).cancelInboundSaga(eq("SAGA-REASON"), eq("FRAD"));
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

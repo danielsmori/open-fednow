@@ -55,3 +55,6 @@ dump.rdb
 
 # Cowork / Claude session files — not project content
 .claude/
+
+# Python evaluation runner bytecode
+__pycache__/

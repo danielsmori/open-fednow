@@ -254,7 +254,7 @@ public class SagaOrchestrator {
      * terminal saga.
      *
      * @param sagaId      identifier of the saga to cancel
-     * @param reasonCode  ISO 20022 reason code from the camt.056 (e.g., DUPL, FRAUD, CUST)
+     * @param reasonCode  ISO 20022 reason code from the camt.056 (e.g., DUPL, FRAD, CUST)
      */
     @Transactional(rollbackFor = Exception.class)
     public void cancelInboundSaga(String sagaId, String reasonCode) {
@@ -303,7 +303,10 @@ public class SagaOrchestrator {
      */
     public void advance(PaymentSaga saga, PaymentSaga.SagaState nextState) {
         saga.advance(nextState);
-        persistState(saga, null, null);
+        // A state-only transition must preserve audit details loaded before a
+        // restart (notably COMPENSATING -> FAILED during recovery).
+        jdbc.update("UPDATE saga_state SET state = ?, updated_at = NOW() WHERE saga_id = ?",
+                saga.getState().name(), saga.getSagaId());
         log.debug("Saga advanced sagaId={} state={}", saga.getSagaId(), nextState);
     }
 
