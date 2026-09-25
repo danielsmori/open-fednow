@@ -9,7 +9,7 @@ on:
     branches: [ main ]
     paths:
       - "pom.xml"
-      - ".github/workflows/dependency-check.yml"
+      - ".github/workflows/trivy-scan.yml"
       - ".trivyignore*"
   workflow_dispatch:
 
