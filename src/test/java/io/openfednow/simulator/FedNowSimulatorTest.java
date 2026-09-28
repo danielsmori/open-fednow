@@ -3,6 +3,7 @@ package io.openfednow.simulator;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import io.openfednow.gateway.HttpFedNowClient;
+import io.openfednow.gateway.SubmissionOutcomeUnknownException;
 import io.openfednow.iso20022.Pacs002Message;
 import io.openfednow.iso20022.Pacs008Message;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +15,7 @@ import java.time.OffsetDateTime;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static io.openfednow.iso20022.Pacs002Message.TransactionStatus.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * FedNow Simulator — integration tests for the outbound FedNow HTTP path.
@@ -146,15 +148,9 @@ class FedNowSimulatorTest {
                         .withHeader("Content-Type", "application/json")
                         .withBody("{\"error\": \"Unprocessable message format\"}")));
 
-        Pacs002Message response = client.submitCreditTransfer(
-                buildMessage("E2E-ERR-001", "TXN-ERR-001", "100.00"));
-
-        assertThat(response.getTransactionStatus()).isEqualTo(RJCT);
-        assertThat(response.getRejectReasonCode()).isEqualTo("NARR");
-        assertThat(response.getRejectReasonDescription()).contains("422");
-        // Original IDs are preserved so the saga can correlate the failure
-        assertThat(response.getOriginalEndToEndId()).isEqualTo("E2E-ERR-001");
-        assertThat(response.getOriginalTransactionId()).isEqualTo("TXN-ERR-001");
+        assertThatThrownBy(() -> client.submitCreditTransfer(
+                buildMessage("E2E-ERR-001", "TXN-ERR-001", "100.00")))
+                .isInstanceOf(SubmissionOutcomeUnknownException.class);
     }
 
     // --- Network timeout → synthetic RJCT NARR ---
@@ -170,12 +166,9 @@ class FedNowSimulatorTest {
 
         // Client with 1-second read timeout — must trigger before WireMock responds
         HttpFedNowClient shortTimeoutClient = new HttpFedNowClient(wmInfo.getHttpBaseUrl(), 1);
-        Pacs002Message response = shortTimeoutClient.submitCreditTransfer(
-                buildMessage("E2E-TOUT-001", "TXN-TOUT-001", "300.00"));
-
-        assertThat(response.getTransactionStatus()).isEqualTo(RJCT);
-        assertThat(response.getRejectReasonCode()).isEqualTo("NARR");
-        assertThat(response.getRejectReasonDescription()).containsIgnoringCase("timeout");
+        assertThatThrownBy(() -> shortTimeoutClient.submitCreditTransfer(
+                buildMessage("E2E-TOUT-001", "TXN-TOUT-001", "300.00")))
+                .isInstanceOf(SubmissionOutcomeUnknownException.class);
     }
 
     // --- Request payload verification ---

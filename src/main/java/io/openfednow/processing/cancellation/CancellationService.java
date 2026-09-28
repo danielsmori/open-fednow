@@ -85,7 +85,7 @@ public class CancellationService {
         return switch (state) {
             case INITIATED, FUNDS_RESERVED ->
                     cancel(request, snapshot);
-            case CORE_SUBMITTED, COMPENSATING ->
+            case SUBMITTING, OUTCOME_UNKNOWN, CORE_SUBMITTED, COMPENSATING ->
                     pending(request, state);
             case FEDNOW_CONFIRMED, COMPLETED ->
                     alreadySettled(request, state);

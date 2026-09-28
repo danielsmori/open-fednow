@@ -30,9 +30,9 @@ import java.util.function.Supplier;
  *
  * <p>POSTs pacs.008 messages as JSON to
  * {@code {fednowEndpoint}/transfers} and deserializes the pacs.002 response.
- * Network errors and HTTP error responses are caught and converted to a
- * synthetic RJCT pacs.002 — callers always receive a well-formed
- * {@link Pacs002Message}, never a raw exception.
+ * For credit transfers, network and HTTP failures leave the outcome unknown:
+ * the client makes one attempt and throws {@link SubmissionOutcomeUnknownException}.
+ * Return submissions retain their existing retry and synthetic-response behavior.
  *
  * <p>This class is not a {@code @Component}; it is created by
  * {@link FedNowClientConfig} as a Spring bean so the endpoint URL and timeout
@@ -65,8 +65,8 @@ public class HttpFedNowClient implements FedNowClient {
     }
 
     /**
-     * Retry-enabled constructor without a signer — preserved for tests that
-     * exercise the retry behavior without needing to set up a keypair.
+     * Retry-enabled constructor without a signer. Retries apply to returns;
+     * credit transfers always make one attempt.
      */
     public HttpFedNowClient(String fednowEndpoint, int timeoutSeconds, Retry retry) {
         this(fednowEndpoint, timeoutSeconds, retry, null);
@@ -75,12 +75,9 @@ public class HttpFedNowClient implements FedNowClient {
     /**
      * Full constructor: endpoint, timeout, retry policy, and optional JWS signer.
      *
-     * <p>When a {@link Retry} is provided, transient network failures and 5xx
-     * responses from FedNow are retried per the policy's configured backoff
-     * before falling through to the synthetic RJCT path. 4xx responses are
-     * <em>not</em> retried — a malformed message won't become well-formed by
-     * trying again, and a duplicate-detection rejection should be surfaced
-     * to the caller immediately.
+     * <p>When a {@link Retry} is provided, return submissions may retry after
+     * configured failures. Credit transfers make one attempt; a lost reply may
+     * follow rail acceptance and must not trigger an automatic resubmission.
      *
      * <p>When a {@link FedNowJwsSigner} is provided, the client installs a
      * {@link ClientHttpRequestInterceptor} that computes a JWS detached signature
@@ -115,7 +112,17 @@ public class HttpFedNowClient implements FedNowClient {
     public Pacs002Message submitCreditTransfer(Pacs008Message message) {
         String url = fednowEndpoint + TRANSFERS_PATH;
         log.info("Submitting pacs.008 to FedNow endpoint={}", url);
-        return post(url, message, message.getEndToEndId(), message.getTransactionId());
+        // A transport failure cannot prove that the rail did not accept the
+        // payment. Never retry a transfer automatically after an ambiguous send.
+        try {
+            Pacs002Message response = restTemplate.postForObject(url, message, Pacs002Message.class);
+            if (response == null || response.getTransactionStatus() == null) {
+                throw new SubmissionOutcomeUnknownException("Missing authoritative payment status", null);
+            }
+            return response;
+        } catch (org.springframework.web.client.RestClientException e) {
+            throw new SubmissionOutcomeUnknownException("Payment submission outcome unknown", e);
+        }
     }
 
     @Override

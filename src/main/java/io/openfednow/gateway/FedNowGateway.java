@@ -108,9 +108,9 @@ public class FedNowGateway {
         summary = "Submit outbound credit transfer",
         description = """
             Submits an outbound pacs.008.001.08 credit transfer to the FedNow Service. \
-            Returns the pacs.002 status report from FedNow, or a synthetic RJCT response \
-            with reason code NARR if FedNow is unreachable within the configured \
-            response-timeout-seconds (default 18 s)."""
+            Returns a pacs.002 only when an authoritative status is received. \
+            If the outcome is unknown, returns HTTP 503 and retains the debit \
+            for operational status verification; do not blindly retry."""
     )
     @ApiResponses({
         @ApiResponse(
@@ -120,6 +120,8 @@ public class FedNowGateway {
                                schema = @Schema(implementation = Pacs002Message.class))),
         @ApiResponse(responseCode = "400",
             description = "Malformed or schema-invalid ISO 20022 pacs.008 message"),
+        @ApiResponse(responseCode = "503",
+            description = "Submission outcome unknown or a prior saga exists; inspect /admin/sagas/{transactionId}"),
         @ApiResponse(responseCode = "500",
             description = "Internal processing error")
     })

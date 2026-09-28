@@ -31,9 +31,9 @@ public interface FedNowClient {
      * to leave headroom for upstream processing.
      *
      * @param message the ISO 20022 pacs.008.001.08 credit transfer to submit
-     * @return pacs.002 status report from FedNow; never {@code null}. On
-     *         network error or timeout a synthetic RJCT response with reason
-     *         code {@code NARR} is returned rather than propagating an exception.
+     * @return an authoritative pacs.002 status report
+     * @throws SubmissionOutcomeUnknownException when transport fails or no valid
+     *         status arrives; callers must retain funds and investigate
      */
     Pacs002Message submitCreditTransfer(Pacs008Message message);
 

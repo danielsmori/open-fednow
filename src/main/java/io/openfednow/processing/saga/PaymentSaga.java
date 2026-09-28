@@ -33,6 +33,8 @@ public class PaymentSaga {
     public enum SagaState {
         INITIATED,
         FUNDS_RESERVED,
+        SUBMITTING,
+        OUTCOME_UNKNOWN,
         CORE_SUBMITTED,
         FEDNOW_CONFIRMED,
         COMPLETED,
@@ -105,7 +107,11 @@ public class PaymentSaga {
     private static void validateTransition(SagaState from, SagaState to) {
         boolean valid = switch (from) {
             case INITIATED        -> to == SagaState.FUNDS_RESERVED   || to == SagaState.COMPENSATING;
-            case FUNDS_RESERVED   -> to == SagaState.CORE_SUBMITTED    || to == SagaState.COMPENSATING;
+            case FUNDS_RESERVED   -> to == SagaState.SUBMITTING || to == SagaState.CORE_SUBMITTED
+                    || to == SagaState.COMPENSATING;
+            case SUBMITTING       -> to == SagaState.OUTCOME_UNKNOWN || to == SagaState.CORE_SUBMITTED
+                    || to == SagaState.FEDNOW_CONFIRMED || to == SagaState.COMPENSATING;
+            case OUTCOME_UNKNOWN  -> to == SagaState.FEDNOW_CONFIRMED || to == SagaState.COMPENSATING;
             case CORE_SUBMITTED   -> to == SagaState.FEDNOW_CONFIRMED  || to == SagaState.COMPENSATING;
             case FEDNOW_CONFIRMED -> to == SagaState.COMPLETED         || to == SagaState.COMPENSATING;
             case COMPENSATING     -> to == SagaState.FAILED;

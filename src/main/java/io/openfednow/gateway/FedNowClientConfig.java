@@ -33,10 +33,8 @@ public class FedNowClientConfig {
      * activates instead via {@code @ConditionalOnMissingBean(name = "httpFedNowClient")}.
      *
      * <p>The Retry policy is looked up from the {@link RetryRegistry} by the well-known
-     * name {@code fednow}; if the registry does not contain a configuration for that
-     * name, Resilience4j returns a sensible default (3 attempts, fixed wait). The
-     * production configuration in {@code application.yml} overrides this with a
-     * predicate that retries network failures and 5xx but not 4xx.
+     * name {@code fednow}. It applies to return submissions; outbound credit
+     * transfers make one attempt because a lost response may follow acceptance.
      */
     @Bean(name = "httpFedNowClient")
     @ConditionalOnProperty(name = "openfednow.gateway.fednow-endpoint", matchIfMissing = false)

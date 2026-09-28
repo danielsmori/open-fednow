@@ -26,11 +26,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-/** Characterizes an OPEN defect; passing this test does not certify safe settlement. */
+/** A delayed acknowledgement must not be converted into a definite rejection. */
 @WireMockTest
 class UncertainSubmissionReproducerTest {
     @Test
-    void delayedAcceptanceIsCurrentlyMisclassifiedAsRejection(WireMockRuntimeInfo server) {
+    void delayedAcceptanceRetainsReservationAndNeedsReview(WireMockRuntimeInfo server) {
         stubFor(post(urlEqualTo("/transfers")).willReturn(aResponse()
                 .withFixedDelay(1500).withHeader("Content-Type", "application/json")
                 .withBody("{\"transactionStatus\":\"ACSC\"}")));
@@ -43,6 +43,7 @@ class UncertainSubmissionReproducerTest {
         when(screening.screen(any())).thenReturn(ScreeningResult.pass());
         when(sagas.initiate(any(), eq(Rail.FEDNOW)))
                 .thenReturn(new PaymentSaga("SAGA-UNCERTAIN", "TX-UNCERTAIN", Rail.FEDNOW));
+        when(sagas.findByEndToEndId(any())).thenReturn(Optional.empty());
         var router = new MessageRouter(new HttpFedNowClient(server.getHttpBaseUrl(), 1),
                 mock(CoreBankingAdapter.class), idempotency, mock(AvailabilityBridge.class),
                 mock(SyncAsyncBridge.class), new ObjectMapper(), ledger, sagas,
@@ -56,10 +57,12 @@ class UncertainSubmissionReproducerTest {
 
         // The server received the request, but the caller missed its delayed success.
         com.github.tomakehurst.wiremock.client.WireMock.verify(1, postRequestedFor(urlEqualTo("/transfers")));
-        assertThat(response.getBody().getRejectReasonCode()).isEqualTo("NARR");
+        assertThat(response.getStatusCode().value()).isEqualTo(503);
+        assertThat(response.getBody()).isNull();
         org.mockito.Mockito.verify(ledger).applyDebit("SYNTHETIC-DEBTOR", new BigDecimal("10.00"), "TX-UNCERTAIN");
-        org.mockito.Mockito.verify(sagas).compensate("SAGA-UNCERTAIN", "NARR");
-        // These assertions expose existing compensation, not the desired behavior.
+        org.mockito.Mockito.verify(sagas).markOutcomeUnknown(any());
+        org.mockito.Mockito.verify(sagas, never()).compensate(any(), any());
+        org.mockito.Mockito.verify(idempotency, never()).recordOutcome(any(), any());
         // WireMock simulates delayed acceptance; no real rail settlement occurs.
     }
 }
