@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "target" / "evaluation"
 UNIT = "MessageRouterScreeningPolicyTest,MessageRouterBridgeSendsGuardTest,MessageRouterCurrencyGuardTest,RtpGatewayTest,JackHenryAdapterTest,UncertainSubmissionReproducerTest"
-INTEGRATION = "OutboundPaymentIntegrationTest,FraudTimeoutIntegrationTest,FraudRoutingIntegrationTest"
+INTEGRATION = "OutboundPaymentIntegrationTest,SagaRecoveryServiceIntegrationTest,SagaTimeoutIntegrationTest,PostgresIntegrationTest,FraudTimeoutIntegrationTest,FraudRoutingIntegrationTest"
 
 
 def capture(args):
@@ -91,6 +91,30 @@ def main():
             counts = report(mutant, OUT / "negative-control")
             detected = code != 0 and counts == dict(tests=1, failures=1, errors=0, skipped=0)
             results["negative_control"] = {"command": command, "exit_code": code, "mutation_detected": detected, **counts}
+            ok &= detected
+        # Deliberately restore the old unsafe action after a lost response.
+        # The delayed-acceptance regression must fail if compensation returns.
+        with tempfile.TemporaryDirectory(prefix="openfednow-uncertainty-mutant-") as temp:
+            mutant = Path(temp)
+            for f in files:
+                dest = mutant / f
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(ROOT / f, dest)
+            router = mutant / "src/main/java/io/openfednow/gateway/MessageRouter.java"
+            source = router.read_text()
+            old = 'sagaOrchestrator.markOutcomeUnknown(saga);'
+            if source.count(old) != 3:
+                raise RuntimeError("Uncertainty mutation target changed; review the script")
+            router.write_text(source.replace(old,
+                    'sagaOrchestrator.compensate(saga.getSagaId(), "NARR");', 1))
+            command = ["mvn", "-B", "--no-transfer-progress",
+                       "-Dtest=UncertainSubmissionReproducerTest#delayedAcceptanceRetainsReservationAndNeedsReview", "test"]
+            code = run(command, mutant, "uncertainty-negative-control")
+            counts = report(mutant, OUT / "uncertainty-negative-control")
+            detected = code != 0 and counts == dict(tests=1, failures=1, errors=0, skipped=0)
+            results["uncertainty_negative_control"] = {
+                "command": command, "exit_code": code,
+                "mutation_detected": detected, **counts}
             ok &= detected
     results["evaluation_passed"] = bool(ok)
     (OUT / "results.json").write_text(json.dumps(results, indent=2) + "\n")
