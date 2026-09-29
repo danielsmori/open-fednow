@@ -1,0 +1,34 @@
+{
+  "command": [
+    "docker",
+    "compose",
+    "-p",
+    "openfednow-release-clean",
+    "up",
+    "-d",
+    "postgres",
+    "redis",
+    "rabbitmq"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 0.26156212500000003,
+  "stdout": "",
+  "stderr": " Network openfednow-release-clean_default Creating \n Network openfednow-release-clean_default Created \n Volume openfednow-release-clean_rabbitmq-data Creating \n Volume openfednow-release-clean_rabbitmq-data Created \n Volume openfednow-release-clean_postgres-data Creating \n Volume openfednow-release-clean_postgres-data Created \n Volume openfednow-release-clean_redis-data Creating \n Volume openfednow-release-clean_redis-data Created \n Container openfednow-redis Creating \n Container openfednow-rabbitmq Creating \n Container openfednow-postgres Creating \n Container openfednow-redis Created \n Container openfednow-postgres Created \n Container openfednow-rabbitmq Created \n Container openfednow-postgres Starting \n Container openfednow-redis Starting \n Container openfednow-rabbitmq Starting \n Container openfednow-postgres Started \n Container openfednow-rabbitmq Started \n Container openfednow-redis Started \n",
+  "platform": "macOS-27.0-arm64-arm-64bit",
+  "readiness_command": [
+    "docker",
+    "compose",
+    "-p",
+    "openfednow-release-clean",
+    "up",
+    "-d",
+    "--wait",
+    "postgres",
+    "redis",
+    "rabbitmq"
+  ],
+  "readiness_exit_code": 0,
+  "readiness_elapsed_seconds": 0.6218358749999999,
+  "readiness_stdout": "",
+  "readiness_stderr": " Container openfednow-rabbitmq Running \n Container openfednow-postgres Running \n Container openfednow-redis Running \n Container openfednow-rabbitmq Waiting \n Container openfednow-postgres Waiting \n Container openfednow-redis Waiting \n Container openfednow-redis Healthy \n Container openfednow-rabbitmq Healthy \n Container openfednow-postgres Healthy \n"
+}

@@ -4,12 +4,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.openfednow.iso20022.Pacs002Message;
 import io.openfednow.iso20022.Pacs008Message;
+import io.openfednow.reliability.ReliablePaymentService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.mock.env.MockEnvironment;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -17,6 +20,7 @@ import java.time.OffsetDateTime;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -34,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *   <li>Missing {@code endToEndId} → 400 with field error</li>
  *   <li>Invalid ABA routing number (non-digit / wrong length) → 400 with field error</li>
  *   <li>Amount below minimum (zero) → 400 with field error</li>
- *   <li>Fully valid message → 200 (delegates to {@link MessageRouter})</li>
+ *   <li>Fully valid message → 503 while the legacy send route is disabled</li>
  * </ul>
  */
 class FedNowGatewayValidationTest {
@@ -113,14 +117,25 @@ class FedNowGatewayValidationTest {
     }
 
     @Test
-    void validMessage_returns200() throws Exception {
-        when(messageRouter.routeOutbound(any()))
-                .thenReturn(ResponseEntity.ok(Pacs002Message.accepted("E2E-001", "TXN-001")));
-
+    void validMessage_refusesLegacySendByDefault() throws Exception {
         mockMvc.perform(post("/fednow/send")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(validMessage())))
-                .andExpect(status().isOk());
+                .andExpect(status().isServiceUnavailable());
+    }
+
+    @Test
+    void productionProfileCannotEnableSyntheticBridge() {
+        ReliablePaymentService service = mock(ReliablePaymentService.class);
+        MockEnvironment environment = new MockEnvironment();
+        environment.setActiveProfiles("prod");
+        FedNowGateway gateway = new FedNowGateway(messageRouter, mock(CertificateManager.class),
+                mock(io.openfednow.processing.cancellation.CancellationService.class),
+                mock(FedNowClient.class), service, environment);
+        ReflectionTestUtils.setField(gateway, "reliabilityBridgeEnabled", true);
+        org.assertj.core.api.Assertions.assertThat(gateway.sendTransfer(validMessage()).getStatusCode().value())
+                .isEqualTo(503);
+        verifyNoInteractions(service);
     }
 
     private Pacs008Message validMessage() {

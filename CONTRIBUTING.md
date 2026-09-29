@@ -1,6 +1,6 @@
 # Contributing to OpenFedNow
 
-Thank you for your interest in contributing. OpenFedNow is an open-source project with a specific goal: making FedNow participation accessible to the thousands of U.S. community banks and credit unions currently blocked by legacy core banking systems. Every contribution moves that goal forward.
+OpenFedNow is an open-source synthetic reference project for studying legacy-core and instant-payment integration. It has not measured the number of institutions blocked by core systems or validated a live deployment. Contributions should preserve the distinction between local fixture behavior and verified rail or vendor behavior.
 
 ---
 
@@ -8,13 +8,13 @@ Thank you for your interest in contributing. OpenFedNow is an open-source projec
 
 ### Core Banking Adapters
 
-Each adapter implements the `CoreBankingAdapter` interface for a specific vendor platform. All three primary U.S. cores are covered:
+The three vendor-shaped adapters implement the `CoreBankingAdapter` interface and have local fixture tests. Product compatibility and market coverage are unverified:
 
 | Adapter | Platforms | Status | Reference |
 |---------|-----------|--------|-----------|
-| `FiservAdapter` | DNA, Precision, Premier, Cleartouch | Implemented | Phase 2 |
-| `FisAdapter` | Horizon, IBS | Implemented | Phase 2 |
-| `JackHenryAdapter` | SilverLake, Symitar, CIF 20/20 (jXchange SOAP) | Implemented | Phase 3 |
+| `FiservAdapter` | REST/JSON-shaped fixture | Local WireMock tests | [Capability matrix](docs/reliability/adapter-capabilities-v1.md) |
+| `FisAdapter` | REST/JSON-shaped fixture | Local WireMock tests | [Capability matrix](docs/reliability/adapter-capabilities-v1.md) |
+| `JackHenryAdapter` | jXchange SOAP-shaped fixture | Local WireMock tests | [Capability matrix](docs/reliability/adapter-capabilities-v1.md) |
 
 If you have access to a Fiserv, FIS, or Jack Henry sandbox environment, testing against a real vendor endpoint — rather than the WireMock suite — remains one of the most valuable contributions.
 
@@ -34,7 +34,7 @@ If you have access to a Fiserv, FIS, or Jack Henry sandbox environment, testing 
 
 - Java 17+
 - Maven 3.8+
-- Docker (for local PostgreSQL, Redis, and RabbitMQ via `docker-compose`)
+- Docker with Compose (for local PostgreSQL, Redis, and RabbitMQ)
 
 ### Local Setup
 
@@ -44,13 +44,14 @@ git clone https://github.com/danielsmori/open-fednow.git
 cd open-fednow
 
 # Start local dependencies (PostgreSQL + Redis + RabbitMQ)
-docker-compose up -d
+docker compose up -d
 
 # Build
-mvn clean install
+mvn -B --no-transfer-progress package -DskipTests
 
-# Run tests (uses H2 in Postgres-compatibility mode — no Docker required for tests)
+# Default tests use H2; run the tagged integration suite with Docker separately
 mvn test
+mvn test -Dgroups=integration -DexcludedGroups=
 ```
 
 ### Running the Application Locally
@@ -85,7 +86,7 @@ The application requires PostgreSQL at runtime (the idempotency INSERT uses `ON 
 
 ## A Note on Core Banking Vendor Access
 
-Implementing a vendor adapter requires access to that vendor's API documentation and ideally a sandbox environment. If you work at a financial institution or fintech that has this access and are willing to contribute an adapter implementation, please open an issue or reach out directly — this is exactly the kind of contribution that makes the project viable for real-world deployment.
+Implementing a vendor adapter requires access to that vendor's API documentation and ideally a sandbox environment. If you have authorized access to a vendor sandbox, please propose a scoped test plan that identifies the exact product and API version. Do not include credentials, customer data, or proprietary specifications in an issue or pull request. Local WireMock behavior must remain labeled as fixture evidence.
 
 ---
 

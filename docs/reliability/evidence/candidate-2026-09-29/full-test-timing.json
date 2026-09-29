@@ -1,0 +1,26 @@
+{
+  "full_unit": {
+    "command": [
+      "mvn",
+      "-B",
+      "--no-transfer-progress",
+      "test"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 15.216922,
+    "log": "/tmp/openfednow-release-fresh-full_unit-final.log"
+  },
+  "full_integration": {
+    "command": [
+      "mvn",
+      "-B",
+      "--no-transfer-progress",
+      "test",
+      "-Dgroups=integration",
+      "-DexcludedGroups="
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 41.00703129199999,
+    "log": "/tmp/openfednow-release-fresh-full_integration-final.log"
+  }
+}

@@ -90,6 +90,25 @@ class SagaRecoveryServiceIntegrationTest extends AbstractInfrastructureIntegrati
     }
 
     @Test
+    void restartDuringSubmissionQuarantinesAndRetainsDebit() {
+        redis.opsForValue().set("balance:ACC-REC-UNKNOWN", "20000");
+        PaymentSaga saga = orchestrator.initiate(
+                message("TXN-REC-UNKNOWN", "E2E-REC-UNKNOWN"), Rail.FEDNOW);
+        shadowLedger.applyDebit("ACC-REC-UNKNOWN", new BigDecimal("75.00"), "TXN-REC-UNKNOWN");
+        orchestrator.advance(saga, PaymentSaga.SagaState.FUNDS_RESERVED);
+        orchestrator.advance(saga, PaymentSaga.SagaState.SUBMITTING);
+
+        recoveryService.recoverInflightSagas();
+
+        assertThat(loadState(saga.getSagaId())).isEqualTo("OUTCOME_UNKNOWN");
+        assertThat(redis.opsForValue().get("balance:ACC-REC-UNKNOWN")).isEqualTo("12500");
+        assertThat(orchestrator.findTimedOutSagaIds(1)).doesNotContain(saga.getSagaId());
+        recoveryService.recoverInflightSagas();
+        assertThat(loadState(saga.getSagaId())).isEqualTo("OUTCOME_UNKNOWN");
+        assertThat(redis.opsForValue().get("balance:ACC-REC-UNKNOWN")).isEqualTo("12500");
+    }
+
+    @Test
     void fednowConfirmedSagaIsAdvancedToCompleted() {
         redis.opsForValue().set("balance:ACC-REC-CONF", "30000"); // $300.00
         PaymentSaga saga = orchestrator.initiate(

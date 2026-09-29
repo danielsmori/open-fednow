@@ -6,15 +6,15 @@ This document catalogs the genuine limitations of the OpenFedNow framework — b
 
 ## Architecture-Level Limitations
 
-These are deliberate design choices with known trade-offs. They are not bugs.
+These are observed design and implementation risks. Some behavior is deliberately modeled in the sandbox; its suitability for a live payment service remains unverified.
 
-### 1. Post-reconciliation reversals are customer-visible
+### 1. Post-reconciliation return behavior is unverified
 
-**What happens:** If the core banking system rejects a transaction that was provisionally accepted during a maintenance window (for example, because the account was frozen or the funds were seized between when the Shadow Ledger reserved them and when the core came back online), the compensation path sends a pacs.004 return payment to FedNow. The sender's institution receives a credit — and then receives a return of that credit.
+**What the sandbox models:** If a synthetic core rejects a transaction that the bridge fixture provisionally accepted, the compensation path constructs a pacs.004-shaped return. The return gateway is disabled by default; no live rail submission, settlement or customer-visible result was verified.
 
 **Why this exists:** The architecture accepts ACSP (provisional acceptance) before the core has confirmed. This is a reference behavior, not an established FedNow-compliant response. The official readiness guide describes acceptance without posting using ACWP; the project's ACSP behavior needs review against the applicable operating procedures and message specifications before live use.
 
-**Consequence:** Depending on regulatory context and the reason for rejection, the institution may be required to notify the sender, the sender's institution, or both. The specific notification requirements depend on the rejection reason code (e.g., account seizure vs. technical failure) and the institution's compliance obligations under Regulation J and its FedNow participation agreement.
+**Consequence:** The customer, legal and operational consequences require institution-specific review before any live adaptation. This repository does not establish them.
 
 **Related:** [ADR-0003](adr/0003-provisional-acceptance-acsp.md), [ADR-0004](adr/0004-eventual-consistency-shadow-ledger-and-core.md)
 
@@ -40,13 +40,13 @@ Redis WATCH detects changes to watched keys by **other clients**, including clie
 
 ---
 
-### 4. ACSP during maintenance window is a deliberate departure from "core is authoritative"
+### 4. Synthetic ACSP-shaped bridge response relies on a cached balance
 
-**What happens:** During a maintenance window, the institution returns ACSP to FedNow before the core has seen the transaction. The Shadow Ledger is the decision-maker for that window. This is architecturally necessary — but it is not zero-risk.
+**What the sandbox models:** During a simulated maintenance window, the local bridge can return an ACSP-shaped response before the synthetic core has processed the transaction. This is not verified live FedNow behavior. The Redis Shadow Ledger is the fixture's decision input for that window; it cannot establish the bank's true available funds across other channels.
 
-**The bounded risk:** The Shadow Ledger's balance is initialized from the core and updated atomically on each transaction. Two sources of divergence exist: a core-side rejection of a provisionally accepted payment (see limitation #1 above), and card-processor STIP activity that authorizes debits on the same account outside the Shadow Ledger during the window — the "STIP gap." Other sources of drift, including cross-store crash windows and concurrent external activity, have not been excluded by this evaluation.
+**The unbounded institution-specific risk:** The Shadow Ledger's balance is initialized from the core and updated atomically within Redis on each transaction, but other systems may change the bank's true available balance. Documented sources of divergence include: a core-side rejection of a provisionally accepted payment (see limitation #1 above), and card-processor STIP activity that authorizes debits on the same account outside the Shadow Ledger during the window — the "STIP gap." Other sources of drift, including cross-store crash windows and concurrent external activity, have not been excluded by this evaluation.
 
-**Why this is documented:** Compliance teams at regulated institutions should understand that for the duration of a maintenance window (typically 2–4 hours), the core is not the ledger of record. The Shadow Ledger is. The full analysis of the STIP gap and the four-step mitigation roadmap (kill switch, aggregate cap, real-time card authorization port, and configuration postures from receive-only through STIP-aware) is in [ADR-0010](adr/0010-bridge-mode-fraud-risk.md). This should be disclosed in the institution's internal control documentation.
+**Why this is documented:** The sandbox design temporarily authorizes from a cached balance during a simulated maintenance window. It does not transfer legal or operational authority from an institution's core to this software. The full analysis of the STIP gap and the four-step mitigation roadmap (kill switch, aggregate cap, real-time card authorization port, and configuration postures from receive-only through STIP-aware) is in [ADR-0010](adr/0010-bridge-mode-fraud-risk.md). This should be disclosed in the institution's internal control documentation.
 
 ---
 
@@ -56,19 +56,9 @@ These are features that are not yet built. They are explicitly tracked as future
 
 ### 5. Vendor compatibility remains unverified
 
-`FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` are implemented and tested in reference mode. Production use is credential-, endpoint-, and certification-dependent. Each uses OAuth 2.0 and maps vendor rejection codes to ISO 20022.
+`FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` are vendor-shaped reference implementations. Their local WireMock suites exercise JSON/SOAP construction, authentication and response mapping. They have not been tested in an actual vendor environment and are not verified for any particular product. The [v1 reliability capability matrix](reliability/adapter-capabilities-v1.md) records fixture-only evidence and unsupported all-channel reservation, expiry, posting/reversal deduplication and outcome lookup. The guarded SQL reliability bridge does not call these adapters. A vendor-backed live send must fail closed until an institution establishes the missing capabilities and applicable specifications.
 
-| Adapter | Protocol | Auth | Tests |
-|---------|----------|------|-------|
-| `FiservAdapter` | REST/JSON | OAuth 2.0 (form body) | WireMock, 12 tests |
-| `FisAdapter` | REST/JSON | OAuth 2.0 (Basic auth header) | WireMock, 11 tests |
-| `JackHenryAdapter` | SOAP/XML (jXchange) | OAuth 2.0 (Basic auth header) | WireMock, 12 tests |
-
-`MockVendorAdapter` is a functional reference implementation — it provides a full in-memory balance ledger and configurable failure modes (timeout simulation, core availability toggle), and is activated via `openfednow.adapter=mock`. It is suitable for development and contract-testing, but is not a substitute for a real vendor integration.
-
-`CoreBankingAdapterContractTest` defines the shared behavioral contract. `SandboxAdapterContractTest`, `MockVendorAdapterContractTest`, and `JackHenryAdapterContractTest` extend it. Fiserv and FIS are covered by dedicated WireMock integration tests.
-
-**Production deployment note:** Each adapter requires institution-specific credentials (OAuth client ID, client secret, and base URL) obtained from the respective vendor. The `JackHenryAdapter` additionally requires an institution routing ID (9-digit ABA number) used as `InstRtId` in the jXchange SOAP header. The adapter interface (`CoreBankingAdapter`) is the only contract point — the rest of the framework does not need to change.
+`MockVendorAdapter` has an in-memory balance ledger and configurable failures for local development. It is not a substitute for a real institution core. The existing adapter contract tests cover the narrow `CoreBankingAdapter` methods, not the stronger financial guarantees needed for live outbound payments.
 
 ---
 
@@ -77,7 +67,7 @@ These are features that are not yet built. They are explicitly tracked as future
 `FedNowClient` is an interface with two implementations:
 
 - **`SandboxFedNowClient`** — active by default (when `FEDNOW_ENDPOINT` is not set). Returns synthetic in-memory responses for local development and testing.
-- **`HttpFedNowClient`** — activated when `FEDNOW_ENDPOINT` is set. Provides HTTP transport with retry-on-transient-failures + optional JWS detached message signing (activate via `openfednow.fednow.signing.enabled=true`; see [ADR-0009](adr/0009-fednow-jws-message-signing.md)). Live FedNow production additionally requires Federal Reserve PKI client certificates and mutual TLS. These are institution-provided credentials and are outside the scope of the framework.
+- **`HttpFedNowClient`** — activated when `FEDNOW_ENDPOINT` is set. Provides a synthetic JSON HTTP transport with one attempt for credit transfers and returns, plus optional JWS detached signing (activate via `openfednow.fednow.signing.enabled=true`; see [ADR-0009](adr/0009-fednow-jws-message-signing.md)). It is not a verified live FedNow transport. Production requires the applicable restricted specifications, institution access, authenticated status handling and certification in addition to credentials and mutual TLS.
 
 The `FedNowClientConfig` bean is conditional: `HttpFedNowClient` is only created when `openfednow.gateway.fednow-endpoint` is present. When that property is absent, `SandboxFedNowClient` activates via `@ConditionalOnMissingBean`. This means `mvn spring-boot:run` without any environment variables uses the sandbox client throughout.
 
@@ -116,7 +106,7 @@ These are implemented and worth calling out so deployers know what they get with
 
 ### Saga lifecycle resilience
 
-- **Saga recovery on restart.** `SagaRecoveryService` listens to `ApplicationReadyEvent` and dispatches every non-terminal saga to a terminal state on startup. `INITIATED` / `FUNDS_RESERVED` / `CORE_SUBMITTED` sagas are compensated (reason `NARR`); `FEDNOW_CONFIRMED` advances to `COMPLETED`; `COMPENSATING` is finalized to `FAILED` preserving the original reason code.
+- **Saga recovery on restart.** `SagaRecoveryService` listens to `ApplicationReadyEvent` and processes legacy in-flight sagas on startup. It quarantines interrupted `SUBMITTING` as `OUTCOME_UNKNOWN`; those unknown obligations remain unresolved rather than being forced terminal. `INITIATED` / `FUNDS_RESERVED` / `CORE_SUBMITTED` sagas are compensated (reason `NARR`); `FEDNOW_CONFIRMED` advances to `COMPLETED`; `COMPENSATING` is finalized to `FAILED` preserving the original reason code.
 - **Saga timeout monitor.** `SagaTimeoutMonitor` runs on a fixed schedule (`openfednow.saga.timeout-check-interval-seconds`, default 10) and compensates any saga in a forward-progress state whose `created_at` is older than `openfednow.saga.timeout-seconds` (default 30). Reason code `XPIR` (ISO 20022 Expired) distinguishes timeout-driven failures from restart-recovery failures. Each timeout increments the `saga.timeout` Micrometer counter visible at `/actuator/metrics`.
 
 ### Operator endpoints under `/admin`
@@ -166,11 +156,11 @@ The full decision matrix and design tradeoffs are documented in [ADR-0007](adr/0
 
 ## Local Development Limitations
 
-These are behaviors that differ between the local H2-backed development setup and a production PostgreSQL deployment.
+These distinguish the H2-backed default test suite from the PostgreSQL runtime and tagged integration suite.
 
 ### 12. H2 is only used by tests — the runtime uses PostgreSQL
 
-The `application.yml` default datasource is PostgreSQL (`jdbc:postgresql://localhost:5432/openfednow`) and `docker-compose.yml` provides that instance. Running the app on H2 is not supported: the idempotency INSERT uses `ON CONFLICT DO NOTHING`, which H2 does not implement even in Postgres-compat mode. Every table that carries durable state — `shadow_ledger_transaction_log`, `saga_state`, `idempotency_keys`, `reconciliation_run`, `admin_audit_log` — survives restarts under Postgres.
+The `application.yml` default datasource is PostgreSQL (`jdbc:postgresql://localhost:5432/openfednow`) and `docker-compose.yml` provides that instance. Running the app on H2 is not supported: the idempotency INSERT uses `ON CONFLICT DO NOTHING`, which H2 does not implement even in Postgres-compat mode. The PostgreSQL runtime also holds the synthetic reliability tables from migrations V9–V12. PostgreSQL persistence alone does not establish live rail or core correctness.
 
 H2 is still used by the test suite (see `src/test/resources/application.properties`) so tests remain fast and Docker-free. `@Tag("integration")` tests override that with real Postgres via Testcontainers.
 
@@ -180,7 +170,7 @@ H2 is still used by the test suite (see `src/test/resources/application.properti
 
 The `docker-compose.yml` starts a single Redis node with AOF persistence enabled (`redis-server --appendonly yes`), so Shadow Ledger balances survive a Redis restart. What is **not** configured is replication — a single lost Redis node with an unrecoverable AOF would still drop the ledger.
 
-For production, deploy Redis with at minimum one replica (Sentinel or Cluster), and back up the AOF to durable storage on the schedule your recovery objective demands.
+A real deployment would require an institution-defined durability, failover and recovery design. Replication alone would not make the Redis and PostgreSQL effects atomic or validate cross-channel funds availability.
 
 ---
 
@@ -194,6 +184,6 @@ For production, deploy Redis with at minimum one replica (Sentinel or Cluster), 
 
 ## Evaluation release: unresolved submission outcomes
 
-`UncertainSubmissionReproducerTest` characterizes a server receiving a request and delaying its acceptance beyond the HTTP client's deadline. The current client synthesizes RJCT and the router invokes compensation. This is an open defect, not an acceptable rail policy. The test uses WireMock and mocked financial services; it does not reproduce real settlement.
+`UncertainSubmissionReproducerTest` simulates a server receiving a request and delaying its response beyond the client's deadline. Credit transfers now make one HTTP attempt. Before the request, the saga persists `SUBMITTING`; if no valid status arrives, it becomes `OUTCOME_UNKNOWN`. The debit remains reserved, the caller receives HTTP 503 without a synthetic pacs.002, and another request with the same end-to-end ID cannot submit again. Startup recovery moves interrupted `SUBMITTING` sagas to `OUTCOME_UNKNOWN`; the timeout monitor excludes both states. An ACSP response also retains the debit pending final confirmation. The test uses WireMock and mocked financial services; it does not reproduce real settlement.
 
-Automatic HTTP retries, startup compensation, saga timeout compensation, and late responses must be addressed together. See [evaluation scope and follow-up](evaluation.md). Do not treat a timeout as proof of rejection or the passing characterization test as financial correctness.
+An operator can locate a legacy saga at `/admin/sagas/{transactionId}` and compare it with an authoritative rail or institution record. That legacy path has no implemented status inquiry or verified resolution action and its gateway send is disabled by default. The separate `/reference/v1/payments` synthetic slice has SQL ownership, holds, inquiry and an external simulator; see [reliability architecture](reliability/architecture.md) and [scenario register](reliability/requirements.csv). Neither path may release funds or retry based only on HTTP status, elapsed time or a synthetic simulator. Live status authentication and institution core capabilities remain unverified.

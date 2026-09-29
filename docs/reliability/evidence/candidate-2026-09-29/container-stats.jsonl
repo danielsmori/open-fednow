@@ -1,0 +1,3 @@
+{"BlockIO":"0B / 60MB","CPUPerc":"0.00%","Container":"openfednow-postgres","ID":"31e85c40cc5e","MemPerc":"0.36%","MemUsage":"28.3MiB / 7.748GiB","Name":"openfednow-postgres","NetIO":"682kB / 845kB","PIDs":"6"}
+{"BlockIO":"16.4kB / 8.19kB","CPUPerc":"0.54%","Container":"openfednow-redis","ID":"5f28e307ec90","MemPerc":"0.12%","MemUsage":"9.598MiB / 7.748GiB","Name":"openfednow-redis","NetIO":"1.83kB / 126B","PIDs":"6"}
+{"BlockIO":"0B / 659kB","CPUPerc":"0.28%","Container":"openfednow-rabbitmq","ID":"32750261b600","MemPerc":"1.86%","MemUsage":"147.6MiB / 7.748GiB","Name":"openfednow-rabbitmq","NetIO":"2kB / 126B","PIDs":"60"}

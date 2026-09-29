@@ -3,15 +3,15 @@
 # Runs against a locally started app (http://localhost:8080)
 #
 # Usage:
-#   docker-compose up -d
-#   mvn spring-boot:run &   (wait for "Started OpenFedNowApplication")
+#   docker compose up -d postgres redis rabbitmq
+#   LEGACY_OUTBOUND_SANDBOX_ENABLED=true LEGACY_RETURN_SANDBOX_ENABLED=true mvn spring-boot:run &
+#   (wait for "Started OpenFedNowApplication")
 #   ./demo/run-demo.sh
 #
 # The demo is deterministic: it sends fixed messageId / endToEndId /
 # transactionId values and asserts on the responses. Re-running against a
-# fresh Redis + H2 (the default in-memory profile) is a clean start; running
-# against a live Redis with prior state will surface duplicates as ACSC
-# (via the idempotency cache), which is intentional.
+# fresh local PostgreSQL and Redis is a clean start; existing synthetic state
+# can change expected responses. This script does not access a live rail.
 
 set -euo pipefail
 
@@ -37,7 +37,8 @@ jget()   { python3 -c "import sys,json; print(json.load(sys.stdin)$1)"; }
 header "Preflight check"
 if ! curl -sf "$BASE/fednow/health" > /dev/null; then
   echo "App is not running at $BASE — start it with:"
-  echo "  docker-compose up -d && mvn spring-boot:run"
+  echo "  docker compose up -d postgres redis rabbitmq"
+  echo "  LEGACY_OUTBOUND_SANDBOX_ENABLED=true LEGACY_RETURN_SANDBOX_ENABLED=true mvn spring-boot:run"
   exit 1
 fi
 ok "App is up at $BASE"

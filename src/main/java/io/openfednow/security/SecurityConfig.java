@@ -124,6 +124,7 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/admin/**").hasRole("ADMIN")
+                .requestMatchers("/reference/**").hasRole("ADMIN")
                 .anyRequest().permitAll()
             )
             // Spring Security 6 enables a default header set (X-Content-Type-Options,

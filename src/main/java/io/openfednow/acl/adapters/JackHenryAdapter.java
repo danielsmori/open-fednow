@@ -4,6 +4,7 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.openfednow.acl.adapters.jackhenry.JackHenrySoapClient;
 import io.openfednow.acl.adapters.jackhenry.JackHenryTokenManager;
 import io.openfednow.acl.core.CoreBankingAdapter;
+import io.openfednow.acl.core.CoreReliabilityCapabilities;
 import io.openfednow.acl.core.CoreBankingResponse;
 import io.openfednow.iso20022.Pacs008Message;
 import jakarta.annotation.PostConstruct;
@@ -149,6 +150,11 @@ public class JackHenryAdapter implements CoreBankingAdapter {
     @Override
     public String getVendorName() {
         return "Jack Henry";
+    }
+
+    @Override
+    public CoreReliabilityCapabilities reliabilityCapabilities() {
+        return CoreReliabilityCapabilities.vendorShapedFixture();
     }
 
     // ── Circuit breaker fallbacks ─────────────────────────────────────────────

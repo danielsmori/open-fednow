@@ -6,6 +6,7 @@ import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
 import io.openfednow.iso20022.Pacs002Message;
 import io.openfednow.iso20022.Pacs008Message;
+import io.openfednow.iso20022.Pacs004Message;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
@@ -23,6 +24,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Unit tests for the retry behavior added to {@link HttpFedNowClient} — audit item #16.
@@ -61,10 +63,9 @@ class HttpFedNowClientRetryTest {
                         .withBody(acscJson("E2E-001", "TXN-001"))));
 
         HttpFedNowClient client = newClient(wmInfo, retryOf3());
-        Pacs002Message response = client.submitCreditTransfer(pacs008("E2E-001", "TXN-001"));
-
-        assertThat(response.getTransactionStatus()).isEqualTo(Pacs002Message.TransactionStatus.ACSC);
-        verify(3, postRequestedFor(urlPathEqualTo(TRANSFERS_PATH)));
+        assertThatThrownBy(() -> client.submitCreditTransfer(pacs008("E2E-001", "TXN-001")))
+                .isInstanceOf(SubmissionOutcomeUnknownException.class);
+        verify(1, postRequestedFor(urlPathEqualTo(TRANSFERS_PATH)));
     }
 
     @Test
@@ -75,11 +76,9 @@ class HttpFedNowClientRetryTest {
                 .willReturn(aResponse().withStatus(503)));
 
         HttpFedNowClient client = newClient(wmInfo, retryOf3());
-        Pacs002Message response = client.submitCreditTransfer(pacs008("E2E-EXH", "TXN-EXH"));
-
-        assertThat(response.getTransactionStatus()).isEqualTo(Pacs002Message.TransactionStatus.RJCT);
-        assertThat(response.getRejectReasonDescription()).contains("503");
-        verify(3, postRequestedFor(urlPathEqualTo(TRANSFERS_PATH)));
+        assertThatThrownBy(() -> client.submitCreditTransfer(pacs008("E2E-EXH", "TXN-EXH")))
+                .isInstanceOf(SubmissionOutcomeUnknownException.class);
+        verify(1, postRequestedFor(urlPathEqualTo(TRANSFERS_PATH)));
     }
 
     // ── 4xx: NOT retried ──────────────────────────────────────────────────────
@@ -91,10 +90,8 @@ class HttpFedNowClientRetryTest {
                 .willReturn(aResponse().withStatus(400)));
 
         HttpFedNowClient client = newClient(wmInfo, retryOf3());
-        Pacs002Message response = client.submitCreditTransfer(pacs008("E2E-400", "TXN-400"));
-
-        assertThat(response.getTransactionStatus()).isEqualTo(Pacs002Message.TransactionStatus.RJCT);
-        assertThat(response.getRejectReasonDescription()).contains("400");
+        assertThatThrownBy(() -> client.submitCreditTransfer(pacs008("E2E-400", "TXN-400")))
+                .isInstanceOf(SubmissionOutcomeUnknownException.class);
         // Only one attempt was made — 4xx is on the ignoreExceptions list
         verify(1, postRequestedFor(urlPathEqualTo(TRANSFERS_PATH)));
     }
@@ -107,7 +104,8 @@ class HttpFedNowClientRetryTest {
                 .willReturn(aResponse().withStatus(409)));
 
         HttpFedNowClient client = newClient(wmInfo, retryOf3());
-        client.submitCreditTransfer(pacs008("E2E-409", "TXN-409"));
+        assertThatThrownBy(() -> client.submitCreditTransfer(pacs008("E2E-409", "TXN-409")))
+                .isInstanceOf(SubmissionOutcomeUnknownException.class);
 
         verify(1, postRequestedFor(urlPathEqualTo(TRANSFERS_PATH)));
     }
@@ -120,9 +118,8 @@ class HttpFedNowClientRetryTest {
                 .willReturn(aResponse().withStatus(503)));
 
         HttpFedNowClient client = new HttpFedNowClient(wmInfo.getHttpBaseUrl(), 5);  // legacy constructor
-        Pacs002Message response = client.submitCreditTransfer(pacs008("E2E-NORE", "TXN-NORE"));
-
-        assertThat(response.getTransactionStatus()).isEqualTo(Pacs002Message.TransactionStatus.RJCT);
+        assertThatThrownBy(() -> client.submitCreditTransfer(pacs008("E2E-NORE", "TXN-NORE")))
+                .isInstanceOf(SubmissionOutcomeUnknownException.class);
         verify(1, postRequestedFor(urlPathEqualTo(TRANSFERS_PATH)));
     }
 
@@ -141,6 +138,27 @@ class HttpFedNowClientRetryTest {
 
         assertThat(response.getTransactionStatus()).isEqualTo(Pacs002Message.TransactionStatus.ACSC);
         verify(1, postRequestedFor(urlPathEqualTo(TRANSFERS_PATH)));
+    }
+
+    @Test
+    void lostReturnReplyIsUnknownAndNeverRetried(WireMockRuntimeInfo wmInfo) {
+        stubFor(post(urlPathEqualTo(HttpFedNowClient.RETURNS_PATH))
+                .willReturn(aResponse().withStatus(200).withFixedDelay(1200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(acscJson("E2E-RETURN", "TXN-RETURN"))));
+        Pacs004Message paymentReturn = Pacs004Message.builder()
+                .messageId("MSG-RETURN").creationDateTime(OffsetDateTime.now())
+                .returnId("RETURN-001").originalMessageId("MSG-ORIGINAL")
+                .originalEndToEndId("E2E-RETURN")
+                .originalTransactionId("TXN-RETURN")
+                .returnedAmount(new BigDecimal("25.00"))
+                .returnedAmountCurrency("USD").returnReasonCode("AC04")
+                .returningAgentRoutingNumber("021000021")
+                .receivingAgentRoutingNumber("026009593").build();
+        HttpFedNowClient client = new HttpFedNowClient(wmInfo.getHttpBaseUrl(), 1, retryOf3());
+        assertThatThrownBy(() -> client.submitReturn(paymentReturn))
+                .isInstanceOf(SubmissionOutcomeUnknownException.class);
+        verify(1, postRequestedFor(urlPathEqualTo(HttpFedNowClient.RETURNS_PATH)));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

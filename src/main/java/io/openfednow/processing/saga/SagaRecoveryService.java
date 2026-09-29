@@ -73,7 +73,7 @@ public class SagaRecoveryService {
         List<String> staleSagaIds = jdbc.queryForList(
                 """
                 SELECT saga_id FROM saga_state
-                WHERE state NOT IN ('COMPLETED', 'FAILED')
+                WHERE state NOT IN ('COMPLETED', 'FAILED', 'OUTCOME_UNKNOWN')
                 ORDER BY updated_at ASC
                 """,
                 String.class);
@@ -112,6 +112,12 @@ public class SagaRecoveryService {
                     orchestrator.advance(saga, SagaState.COMPLETED);
             case COMPENSATING ->
                     orchestrator.advance(saga, SagaState.FAILED);
+            case SUBMITTING -> {
+                log.warn("Submission may have reached rail sagaId={} action=QUARANTINE", sagaId);
+                orchestrator.markOutcomeUnknown(saga);
+            }
+            case OUTCOME_UNKNOWN ->
+                    log.warn("Rail outcome still unknown sagaId={} action=MANUAL_REVIEW", sagaId);
             case INITIATED, FUNDS_RESERVED, CORE_SUBMITTED ->
                     orchestrator.compensate(sagaId, RECOVERY_REASON);
             case COMPLETED, FAILED -> {

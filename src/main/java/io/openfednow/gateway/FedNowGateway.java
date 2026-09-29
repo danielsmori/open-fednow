@@ -6,6 +6,8 @@ import io.openfednow.iso20022.Pacs002Message;
 import io.openfednow.iso20022.Pacs004Message;
 import io.openfednow.iso20022.Pacs008Message;
 import io.openfednow.processing.cancellation.CancellationService;
+import io.openfednow.reliability.PaymentView;
+import io.openfednow.reliability.ReliablePaymentService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -14,33 +16,34 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.web.bind.annotation.*;
 
 /**
  * Layer 1 — API Gateway &amp; Security
  *
- * <p>Primary entry point for all communication with the Federal Reserve's
- * FedNow Service. Handles:
+ * <p>Reference gateway for synthetic FedNow-shaped messages. Live access and
+ * protocol mapping are not established. It handles:
  * <ul>
- *   <li>TLS mutual authentication using Federal Reserve PKI certificates</li>
- *   <li>ISO 20022 message parsing and validation</li>
+ *   <li>Optional certificate-validation hook (skipped without configured trust material)</li>
+ *   <li>Validation of selected ISO 20022-shaped model fields</li>
  *   <li>Rate limiting on inbound and outbound paths</li>
  *   <li>Fraud pre-screening before messages are forwarded to Layer 2</li>
  *   <li>Routing of pacs.008 credit transfers and pacs.002 status reports</li>
  * </ul>
  *
- * <p>All messages must pass validation against the ISO 20022 schema before
- * being forwarded to the Anti-Corruption Layer.
+ * <p>These local checks do not establish a complete live ISO 20022 profile.
  */
 @RestController
 @RequestMapping("/fednow")
 @Tag(
     name = "FedNow Gateway",
     description = """
-        ISO 20022 message routing between the FedNow Service and the core banking system. \
+        Synthetic ISO 20022-shaped routing between local fixtures and core adapters. \
         Handles pacs.008 credit transfers (inbound and outbound) and returns pacs.002 \
-        payment status reports. All endpoints require mutual TLS using Federal Reserve \
-        PKI certificates in production."""
+        payment status reports. This controller does not establish live rail access."""
 )
 public class FedNowGateway {
 
@@ -48,21 +51,43 @@ public class FedNowGateway {
     private final CertificateManager certificateManager;
     private final CancellationService cancellationService;
     private final FedNowClient fedNowClient;
+    private final ReliablePaymentService reliablePayments;
+    private final Environment environment;
 
+    @Value("${openfednow.reliability.legacy-entry-bridge-enabled:false}")
+    private boolean reliabilityBridgeEnabled;
+
+    @Value("${openfednow.legacy-outbound-sandbox-enabled:false}")
+    private boolean legacyOutboundSandboxEnabled;
+
+    @Value("${openfednow.legacy-return-sandbox-enabled:false}")
+    private boolean legacyReturnSandboxEnabled;
+
+    @Autowired
     public FedNowGateway(MessageRouter messageRouter,
                          CertificateManager certificateManager,
                          CancellationService cancellationService,
-                         FedNowClient fedNowClient) {
+                         FedNowClient fedNowClient,
+                         ReliablePaymentService reliablePayments,
+                         Environment environment) {
         this.messageRouter = messageRouter;
         this.certificateManager = certificateManager;
         this.cancellationService = cancellationService;
         this.fedNowClient = fedNowClient;
+        this.reliablePayments = reliablePayments;
+        this.environment = environment;
+    }
+
+    /** Keeps standalone legacy controller tests compatible; Spring uses the injected constructor. */
+    FedNowGateway(MessageRouter messageRouter, CertificateManager certificateManager,
+                  CancellationService cancellationService, FedNowClient fedNowClient) {
+        this(messageRouter, certificateManager, cancellationService, fedNowClient, null, null);
     }
 
     /**
-     * Receives an inbound FI-to-FI credit transfer (pacs.008) from FedNow.
-     * Validates the message, runs fraud pre-screening, and routes to the
-     * Anti-Corruption Layer for core banking processing.
+     * Receives a synthetic inbound FI-to-FI credit transfer (pacs.008-shaped).
+     * Validates the message, runs configured pre-screening, and routes to the
+     * reference core-adapter path.
      *
      * @param message the ISO 20022 pacs.008.001.08 credit transfer message
      * @return pacs.002 payment status report confirming acceptance or rejection
@@ -71,23 +96,19 @@ public class FedNowGateway {
     @Operation(
         summary = "Receive inbound credit transfer",
         description = """
-            Accepts an inbound pacs.008.001.08 FI-to-FI credit transfer from the FedNow \
-            Service. Validates the message, verifies the Federal Reserve PKI client \
-            certificate, applies fraud pre-screening, and routes to the Anti-Corruption \
-            Layer for core banking processing. A pacs.002 status report is returned \
-            within FedNow's 20-second response window."""
+            Accepts a pacs.008-shaped JSON fixture, applies configured certificate \
+            hook and screening checks, and routes to a core-shaped adapter. Returns a \
+            local pacs.002-shaped status. This route has no verified live FedNow \
+            message profile, status authority or response-time guarantee."""
     )
     @ApiResponses({
         @ApiResponse(
             responseCode = "200",
-            description = "Message processed — inspect transactionStatus for ACSC (settled), " +
-                          "ACSP (settlement in process), or RJCT (rejected with reason code)",
+            description = "Synthetic result — inspect transactionStatus; it is not live settlement evidence",
             content = @Content(mediaType = "application/json",
                                schema = @Schema(implementation = Pacs002Message.class))),
         @ApiResponse(responseCode = "400",
             description = "Malformed or schema-invalid ISO 20022 pacs.008 message"),
-        @ApiResponse(responseCode = "401",
-            description = "Client certificate absent or not issued by the Federal Reserve PKI"),
         @ApiResponse(responseCode = "500",
             description = "Internal processing error")
     })
@@ -97,42 +118,66 @@ public class FedNowGateway {
     }
 
     /**
-     * Initiates an outbound FI-to-FI credit transfer to FedNow.
-     * Called by the core banking system (via the ACL) to send a payment.
+     * Initiates a synthetic outbound evaluation payment only when an explicit
+     * non-production bridge or legacy sandbox flag is enabled.
      *
      * @param message the ISO 20022 pacs.008.001.08 credit transfer message
-     * @return pacs.002 payment status report from FedNow
+     * @return a reliability PaymentView on the bridge, or a legacy sandbox pacs.002-shaped response
      */
     @PostMapping("/send")
     @Operation(
         summary = "Submit outbound credit transfer",
         description = """
-            Submits an outbound pacs.008.001.08 credit transfer to the FedNow Service. \
-            Returns the pacs.002 status report from FedNow, or a synthetic RJCT response \
-            with reason code NARR if FedNow is unreachable within the configured \
-            response-timeout-seconds (default 18 s)."""
+            Disabled by default. In an explicitly enabled non-production reliability \
+            bridge, delegates to the synthetic SQL service and returns PaymentView \
+            (200 final, 202 pending). A separate legacy sandbox flag permits a \
+            pacs.002-shaped demonstration only with SandboxFedNowClient. Neither \
+            path establishes a live FedNow outcome."""
     )
     @ApiResponses({
         @ApiResponse(
             responseCode = "200",
-            description = "FedNow response received — inspect transactionStatus for ACSC, ACSP, or RJCT",
+            description = "Final synthetic PaymentView on the reliability bridge, or legacy sandbox status",
             content = @Content(mediaType = "application/json",
-                               schema = @Schema(implementation = Pacs002Message.class))),
+                               schema = @Schema(oneOf = {PaymentView.class, Pacs002Message.class}))),
+        @ApiResponse(responseCode = "202",
+            description = "Synthetic reliability operation remains pending or under investigation",
+            content = @Content(mediaType = "application/json",
+                               schema = @Schema(implementation = PaymentView.class))),
         @ApiResponse(responseCode = "400",
             description = "Malformed or schema-invalid ISO 20022 pacs.008 message"),
+        @ApiResponse(responseCode = "503",
+            description = "Outbound route disabled in this profile or legacy sandbox outcome unavailable"),
         @ApiResponse(responseCode = "500",
             description = "Internal processing error")
     })
-    public ResponseEntity<Pacs002Message> sendTransfer(@Valid @RequestBody Pacs008Message message) {
+    public ResponseEntity<?> sendTransfer(@Valid @RequestBody Pacs008Message message) {
+        // Controlled synthetic bridge: the original entry point delegates to
+        // the same SQL ownership, reservation, intent and inquiry service.
+        // Never enable this demonstration in the production profile.
+        if (reliabilityBridgeEnabled) {
+            if (reliablePayments == null || environment == null ||
+                    java.util.Arrays.asList(environment.getActiveProfiles()).contains("prod")) {
+                return ResponseEntity.status(503).build();
+            }
+            PaymentView view = reliablePayments.submit(message);
+            boolean pending = !"SETTLED".equals(view.state()) && !"REJECTED".equals(view.state());
+            return ResponseEntity.status(pending ? 202 : 200).body(view);
+        }
+        // The legacy route has no atomic cross-store claim or authoritative
+        // core reservation. Keep it available only as an explicit sandbox demo.
+        if (!legacyOutboundSandboxEnabled || !(fedNowClient instanceof SandboxFedNowClient)) {
+            return ResponseEntity.status(503).build();
+        }
         return messageRouter.routeOutbound(message);
     }
 
     /**
-     * Receives an inbound camt.056 payment cancellation request from FedNow and
-     * returns a camt.029 resolution describing the outcome.
+     * Receives a synthetic inbound camt.056 cancellation request and returns a
+     * local camt.029-shaped resolution.
      *
      * <p>The framework's response is always synchronous: the camt.029 returned in
-     * the HTTP response body is the same message FedNow expects. Decision logic
+     * the HTTP response body is a reference fixture. Decision logic
      * lives in {@link CancellationService} — see ADR-0007 for the full state-to-
      * response matrix.
      */
@@ -140,7 +185,7 @@ public class FedNowGateway {
     @Operation(
         summary = "Receive inbound cancellation request (camt.056)",
         description = """
-            Accepts an inbound camt.056 cancellation request for a payment we previously \
+            Accepts a synthetic inbound camt.056-shaped cancellation for a payment previously \
             received. Returns the corresponding camt.029 resolution: \
             CNCL if the payment is still cancellable and was successfully reversed; \
             RJCR/ARDT if the payment already settled and must be returned via pacs.004; \
@@ -162,50 +207,49 @@ public class FedNowGateway {
     }
 
     /**
-     * Submits an outbound payment return (pacs.004) to FedNow.
+     * Demonstrates an outbound pacs.004-shaped return only in the sandbox.
      *
      * <p>Used by operations tooling and by the saga-compensation path when a
-     * provisionally-accepted payment must be returned to the sender's institution
-     * — typically after the core banking system rejects a transaction that was
-     * already ACSP-accepted during a maintenance window. The FedNow response
-     * (pacs.002) is returned to the caller so they can confirm acceptance of the
-     * return itself.
+     * provisionally-accepted payment has a later local core rejection. This
+     * path is disabled by default and has no durable return outcome lifecycle.
      *
      * @param message the ISO 20022 pacs.004.001.09 payment return
-     * @return pacs.002 status report from FedNow acknowledging the return
+     * @return a synthetic pacs.002-shaped result when the sandbox flag is enabled
      */
     @PostMapping("/return")
     @Operation(
         summary = "Submit outbound payment return (pacs.004)",
         description = """
-            Submits an outbound pacs.004.001.09 payment return to the FedNow Service. \
-            Returns the pacs.002 status report from FedNow. Idempotency is enforced at \
-            the FedNow side via the return's returnId. The same retry and JWS-signing \
-            behavior as /fednow/send applies."""
+            Disabled by default. The synthetic sandbox can demonstrate a pacs.004-shaped \
+            response, but no durable return operation or rail-side deduplication is established."""
     )
     @ApiResponses({
         @ApiResponse(
             responseCode = "200",
-            description = "FedNow response received — inspect transactionStatus for ACSC, ACSP, or RJCT",
+            description = "Synthetic sandbox response; not a verified FedNow return outcome",
             content = @Content(mediaType = "application/json",
                                schema = @Schema(implementation = Pacs002Message.class))),
         @ApiResponse(responseCode = "400",
             description = "Malformed or schema-invalid ISO 20022 pacs.004 message"),
+        @ApiResponse(responseCode = "503",
+            description = "Return route disabled outside the explicit sandbox configuration"),
         @ApiResponse(responseCode = "500",
             description = "Internal processing error")
     })
     public ResponseEntity<Pacs002Message> submitReturn(@Valid @RequestBody Pacs004Message message) {
+        if (!legacyReturnSandboxEnabled || !(fedNowClient instanceof SandboxFedNowClient)) {
+            return ResponseEntity.status(503).build();
+        }
         return ResponseEntity.ok(fedNowClient.submitReturn(message));
     }
 
     /**
-     * Health check endpoint for FedNow connectivity monitoring.
-     * Returns the current gateway status and certificate validity.
+     * Local gateway health check; does not test FedNow connectivity or certificates.
      */
     @GetMapping("/health")
     @Operation(
         summary = "Gateway health check",
-        description = "Returns the operational status of the OpenFedNow Gateway. " +
+        description = "Returns local gateway availability, not live rail connectivity. " +
                       "For detailed per-layer health (Redis, RabbitMQ, PostgreSQL, core adapter), " +
                       "see the Spring Actuator endpoint at /actuator/health."
     )

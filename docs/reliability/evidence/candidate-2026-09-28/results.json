@@ -1,0 +1,145 @@
+{
+  "dependency_resolution_exit_code": 0,
+  "controls": {
+    "command": [
+      "mvn",
+      "-B",
+      "--no-transfer-progress",
+      "-Dtest=MessageRouterScreeningPolicyTest,MessageRouterBridgeSendsGuardTest,MessageRouterCurrencyGuardTest,RtpGatewayTest,JackHenryAdapterTest,UncertainSubmissionReproducerTest",
+      "test"
+    ],
+    "exit_code": 0,
+    "tests": 48,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "integration": {
+    "command": [
+      "mvn",
+      "-B",
+      "--no-transfer-progress",
+      "-Dtest=OutboundPaymentIntegrationTest,SagaRecoveryServiceIntegrationTest,SagaTimeoutIntegrationTest,PostgresIntegrationTest,FraudTimeoutIntegrationTest,FraudRoutingIntegrationTest,ReliablePaymentIntegrationTest",
+      "-Dgroups=integration",
+      "-DexcludedGroups=",
+      "test"
+    ],
+    "exit_code": 0,
+    "tests": 63,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "negative_control": {
+    "command": [
+      "mvn",
+      "-B",
+      "--no-transfer-progress",
+      "-Dtest=MessageRouterScreeningPolicyTest#outageMustNotReachFundsCheck",
+      "test"
+    ],
+    "exit_code": 1,
+    "mutation_detected": true,
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "uncertainty_negative_control": {
+    "command": [
+      "mvn",
+      "-B",
+      "--no-transfer-progress",
+      "-Dtest=UncertainSubmissionReproducerTest#delayedAcceptanceRetainsReservationAndNeedsReview",
+      "test"
+    ],
+    "exit_code": 1,
+    "mutation_detected": true,
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "atomic-claim-negative-control": {
+    "command": [
+      "mvn",
+      "-B",
+      "--no-transfer-progress",
+      "-DexcludedGroups=",
+      "-Dtest=ReliablePaymentIntegrationTest#acceptancePostsOnceAndDuplicateRetrievesSameOperation",
+      "test"
+    ],
+    "exit_code": 1,
+    "mutation_detected": true,
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "premature-release-negative-control": {
+    "command": [
+      "mvn",
+      "-B",
+      "--no-transfer-progress",
+      "-DexcludedGroups=",
+      "-Dtest=ReliablePaymentIntegrationTest#lostAcceptanceStaysUnknownUntilInquiryAndNeverSubmitsAgain",
+      "test"
+    ],
+    "exit_code": 1,
+    "mutation_detected": true,
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "duplicate-event-negative-control": {
+    "command": [
+      "mvn",
+      "-B",
+      "--no-transfer-progress",
+      "-DexcludedGroups=",
+      "-Dtest=ReliablePaymentIntegrationTest#lostAcceptanceStaysUnknownUntilInquiryAndNeverSubmitsAgain",
+      "test"
+    ],
+    "exit_code": 1,
+    "mutation_detected": true,
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "missing-intent-negative-control": {
+    "command": [
+      "mvn",
+      "-B",
+      "--no-transfer-progress",
+      "-DexcludedGroups=",
+      "-Dtest=ReliablePaymentIntegrationTest#possibleSendIntentSurvivesWorkerCrashWithoutReplay",
+      "test"
+    ],
+    "exit_code": 1,
+    "mutation_detected": true,
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "external": {
+    "package_command": [
+      "mvn",
+      "-B",
+      "--no-transfer-progress",
+      "-DskipTests",
+      "package"
+    ],
+    "package_exit_code": 0,
+    "command": [
+      "python3",
+      "harness/evaluate_external.py"
+    ],
+    "exit_code": 0,
+    "results_file": "/Users/danielmori/Developer/open-fednow-reliability/target/evaluation/external-results.json",
+    "results_present": true
+  },
+  "evaluation_passed": true
+}

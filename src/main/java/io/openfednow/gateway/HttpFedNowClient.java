@@ -16,23 +16,19 @@ import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.function.Supplier;
 
 /**
  * HTTP implementation of {@link FedNowClient}.
  *
  * <p>POSTs pacs.008 messages as JSON to
  * {@code {fednowEndpoint}/transfers} and deserializes the pacs.002 response.
- * Network errors and HTTP error responses are caught and converted to a
- * synthetic RJCT pacs.002 — callers always receive a well-formed
- * {@link Pacs002Message}, never a raw exception.
+ * For credit transfers, network and HTTP failures leave the outcome unknown:
+ * the client makes one attempt and throws {@link SubmissionOutcomeUnknownException}.
+ * Return submissions also make one attempt and preserve ambiguous outcomes.
  *
  * <p>This class is not a {@code @Component}; it is created by
  * {@link FedNowClientConfig} as a Spring bean so the endpoint URL and timeout
@@ -54,7 +50,6 @@ public class HttpFedNowClient implements FedNowClient {
 
     private final String fednowEndpoint;
     private final RestTemplate restTemplate;
-    private final Retry retry;
 
     /**
      * Creates a client with no retry behavior and no request signing. Test paths
@@ -65,22 +60,18 @@ public class HttpFedNowClient implements FedNowClient {
     }
 
     /**
-     * Retry-enabled constructor without a signer — preserved for tests that
-     * exercise the retry behavior without needing to set up a keypair.
+     * Compatibility constructor. The configured retry object is intentionally
+     * unused for financial submissions with ambiguous network outcomes.
      */
     public HttpFedNowClient(String fednowEndpoint, int timeoutSeconds, Retry retry) {
         this(fednowEndpoint, timeoutSeconds, retry, null);
     }
 
     /**
-     * Full constructor: endpoint, timeout, retry policy, and optional JWS signer.
+     * Full constructor: endpoint, timeout, compatibility retry argument, and signer.
      *
-     * <p>When a {@link Retry} is provided, transient network failures and 5xx
-     * responses from FedNow are retried per the policy's configured backoff
-     * before falling through to the synthetic RJCT path. 4xx responses are
-     * <em>not</em> retried — a malformed message won't become well-formed by
-     * trying again, and a duplicate-detection rejection should be surfaced
-     * to the caller immediately.
+     * <p>Neither transfer nor return submission retries after an ambiguous
+     * response. A lost reply may follow a remote effect.
      *
      * <p>When a {@link FedNowJwsSigner} is provided, the client installs a
      * {@link ClientHttpRequestInterceptor} that computes a JWS detached signature
@@ -89,14 +80,13 @@ public class HttpFedNowClient implements FedNowClient {
      * (including retries) because the body bytes are handed to the interceptor
      * on every call.
      *
-     * <p>Idempotency is guaranteed at the FedNow side via the message's
-     * {@code EndToEndId} — a retried submission with the same signature and
-     * body is treated as a resubmission of the same logical message.
+     * <p>No rail-side idempotency guarantee is inferred from {@code EndToEndId}.
+     * The public procedures describe a distinct message identifier and inquiry
+     * process; this JSON endpoint is a synthetic transport, not a live mapping.
      *
      * @param fednowEndpoint base URL of the FedNow endpoint (no trailing slash)
      * @param timeoutSeconds connect and read timeout applied to every individual request
-     * @param retry          retry policy from {@code resilience4j.retry.instances.fednow},
-     *                       or {@code null} to disable retries
+     * @param retry          retained for source compatibility, not applied
      * @param signer         JWS signer bean from {@code FedNowSigningConfig},
      *                       or {@code null} to send unsigned requests (sandbox / dev)
      */
@@ -108,71 +98,40 @@ public class HttpFedNowClient implements FedNowClient {
             this.restTemplate.setInterceptors(List.of(new JwsSigningInterceptor(signer)));
             log.info("FedNow outbound signing active — every submission carries X-JWS-Signature");
         }
-        this.retry = retry;
     }
 
     @Override
     public Pacs002Message submitCreditTransfer(Pacs008Message message) {
         String url = fednowEndpoint + TRANSFERS_PATH;
         log.info("Submitting pacs.008 to FedNow endpoint={}", url);
-        return post(url, message, message.getEndToEndId(), message.getTransactionId());
+        // A transport failure cannot prove that the rail did not accept the
+        // payment. Never retry a transfer automatically after an ambiguous send.
+        try {
+            Pacs002Message response = restTemplate.postForObject(url, message, Pacs002Message.class);
+            if (response == null || response.getTransactionStatus() == null) {
+                throw new SubmissionOutcomeUnknownException("Missing authoritative payment status", null);
+            }
+            return response;
+        } catch (org.springframework.web.client.RestClientException e) {
+            throw new SubmissionOutcomeUnknownException("Payment submission outcome unknown", e);
+        }
     }
 
     @Override
     public Pacs002Message submitReturn(Pacs004Message message) {
         String url = fednowEndpoint + RETURNS_PATH;
-        log.info("Submitting pacs.004 return to FedNow endpoint={} returnId={} originalTxn={}",
-                url, message.getReturnId(), message.getOriginalTransactionId());
-        // pacs.002 correlates on the original pacs.008's IDs, not the returnId,
-        // so the synthetic-RJCT fallback surfaces them for the caller.
-        return post(url, message,
-                message.getOriginalEndToEndId(), message.getOriginalTransactionId());
-    }
-
-    /**
-     * Shared HTTP submission path used by both {@link #submitCreditTransfer} and
-     * {@link #submitReturn}. Applies the configured retry policy, catches every
-     * failure mode, and synthesizes a well-formed RJCT pacs.002 rather than
-     * propagating exceptions.
-     */
-    private Pacs002Message post(String url, Object payload,
-                                String correlationEndToEndId, String correlationTransactionId) {
-        Supplier<Pacs002Message> attempt = () -> restTemplate.postForObject(url, payload, Pacs002Message.class);
-        if (retry != null) {
-            attempt = Retry.decorateSupplier(retry, attempt);
-        }
-
+        log.info("Submitting synthetic pacs.004-shaped return endpoint={} returnId={}",
+                url, message.getReturnId());
         try {
-            Pacs002Message response = attempt.get();
-            if (response == null) {
-                log.warn("FedNow returned empty response body");
-                return Pacs002Message.rejected(
-                        correlationEndToEndId, correlationTransactionId,
-                        "NARR", "FedNow returned an empty response body");
+            Pacs002Message response = restTemplate.postForObject(url, message, Pacs002Message.class);
+            if (response == null || response.getTransactionStatus() == null
+                    || !message.getOriginalEndToEndId().equals(response.getOriginalEndToEndId())
+                    || !message.getOriginalTransactionId().equals(response.getOriginalTransactionId())) {
+                throw new SubmissionOutcomeUnknownException("Return status missing or uncorrelated", null);
             }
-            log.debug("FedNow raw response messageId={}", response.getMessageId());
             return response;
-        } catch (HttpClientErrorException e) {
-            // 4xx — client error; the retry policy is configured not to attempt these
-            log.warn("FedNow returned client error status={}", e.getStatusCode().value());
-            return Pacs002Message.rejected(
-                    correlationEndToEndId, correlationTransactionId,
-                    "NARR",
-                    "FedNow returned HTTP " + e.getStatusCode().value());
-        } catch (HttpStatusCodeException e) {
-            // 5xx after exhausted retries (or no retry policy configured)
-            log.warn("FedNow returned server error status={} (after retries if any)",
-                    e.getStatusCode().value());
-            return Pacs002Message.rejected(
-                    correlationEndToEndId, correlationTransactionId,
-                    "NARR",
-                    "FedNow returned HTTP " + e.getStatusCode().value());
-        } catch (ResourceAccessException e) {
-            log.warn("FedNow connection error (after retries if any): {}", e.getMessage());
-            return Pacs002Message.rejected(
-                    correlationEndToEndId, correlationTransactionId,
-                    "NARR",
-                    "FedNow connection timeout or network error: " + e.getMessage());
+        } catch (org.springframework.web.client.RestClientException e) {
+            throw new SubmissionOutcomeUnknownException("Return outcome unknown; do not retry blindly", e);
         }
     }
 
