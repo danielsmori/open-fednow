@@ -246,6 +246,35 @@ class ReliablePaymentIntegrationTest extends AbstractInfrastructureIntegrationTe
     }
 
     @Test
+    void reviewResolutionAndAuditCommitTogetherOrRollBackTogether() {
+        Pacs008Message request = payment("E2E-AUDIT-ATOMIC", "TX-AUDIT-ATOMIC", "35.00");
+        when(rail.submit(any(), anyString())).thenReturn(null);
+        PaymentView pending = payments.submit(request);
+        for (int i = 0; i < 3; i++) {
+            payments.makeSyntheticInquiryDue(pending.operationId());
+            payments.finishInquiry(payments.claimDueInquiries(1).get(0), null);
+        }
+        when(rail.inquire(any())).thenReturn(status(request, "SETTLED", "R-REVIEW"));
+
+        jdbc.update("UPDATE reliability_account SET held_minor = 0 WHERE account_id = 'SYN-DEBTOR'");
+        assertThatThrownBy(() -> payments.review(pending.operationId(), "operator", "rail check", "SIM-1"))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(payments.get(pending.operationId()).state()).isEqualTo("INVESTIGATION");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM reliability_investigation_audit WHERE operation_id = ?",
+                Integer.class, pending.operationId())).isZero();
+
+        jdbc.update("UPDATE reliability_account SET held_minor = 3500 WHERE account_id = 'SYN-DEBTOR'");
+        PaymentView settled = payments.review(pending.operationId(), "operator", "rail check", "SIM-2");
+        assertThat(settled.state()).isEqualTo("SETTLED");
+        assertThat(payments.account("SYN-DEBTOR").ledgerMinor()).isEqualTo(96_500);
+        assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM reliability_investigation_audit
+                WHERE operation_id = ? AND prior_state = 'INVESTIGATION'
+                  AND resulting_state = 'SETTLED' AND evidence_reference = 'SIM-2'
+                """, Integer.class, pending.operationId())).isEqualTo(1);
+    }
+
+    @Test
     void uncorrelatedReplyEntersInvestigationWithoutFabricatedRejection() {
         Pacs008Message request = payment("E2E-MALFORMED", "TX-MALFORMED", "55.00");
         when(rail.submit(any(), anyString())).thenReturn(new RailObservation(

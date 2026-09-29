@@ -265,29 +265,29 @@ public class ReliablePaymentService {
                 log.warn("Synthetic review inquiry unavailable operationId={}", operationId);
             }
         }
-        if (observation != null && observation.finalPaymentStatus()) {
-            final RailObservation verified = observation;
-            transaction.executeWithoutResult(status -> {
-                PaymentView current = lock(operationId);
-                if ("INVESTIGATION".equals(current.state())
-                        && current.investigationReason() != null
-                        && current.investigationReason().startsWith("Synthetic inquiry unavailable")) {
+        final RailObservation verified = observation;
+        return Objects.requireNonNull(transaction.execute(status -> {
+            PaymentView prior = lock(operationId);
+            if (verified != null && verified.finalPaymentStatus()) {
+                if ("INVESTIGATION".equals(prior.state())
+                        && prior.investigationReason() != null
+                        && prior.investigationReason().startsWith("Synthetic inquiry unavailable")) {
                     jdbc.update("""
                             UPDATE reliability_payment SET state = 'OUTCOME_UNKNOWN',
                                 version = version + 1, updated_at = NOW()
                             WHERE operation_id = ?
                             """, operationId);
                 }
-            });
-            observe(operationId, verified);
-        }
-        PaymentView after = get(operationId);
-        jdbc.update("""
-                INSERT INTO reliability_investigation_audit
-                    (operation_id, actor, reason, prior_state, resulting_state, evidence_reference)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """, operationId, actor, reason, before.state(), after.state(), evidenceReference);
-        return after;
+                applyObservation(operationId, verified);
+            }
+            PaymentView after = get(operationId);
+            jdbc.update("""
+                    INSERT INTO reliability_investigation_audit
+                        (operation_id, actor, reason, prior_state, resulting_state, evidence_reference)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """, operationId, actor, reason, prior.state(), after.state(), evidenceReference);
+            return after;
+        }));
     }
 
     /** Test-fixture provisioning is exposed only by the non-production fixture API. */
