@@ -53,8 +53,5 @@ docker-compose.override.yml
 # (either via docker-compose or a bare `redis-server` in this directory).
 dump.rdb
 
-# Cowork / Claude session files — not project content
-.claude/
-
 # Python evaluation runner bytecode
 __pycache__/
