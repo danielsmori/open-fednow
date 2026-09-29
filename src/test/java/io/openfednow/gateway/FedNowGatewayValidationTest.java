@@ -34,7 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *   <li>Missing {@code endToEndId} → 400 with field error</li>
  *   <li>Invalid ABA routing number (non-digit / wrong length) → 400 with field error</li>
  *   <li>Amount below minimum (zero) → 400 with field error</li>
- *   <li>Fully valid message → 200 (delegates to {@link MessageRouter})</li>
+ *   <li>Fully valid message → 503 while the legacy send route is disabled</li>
  * </ul>
  */
 class FedNowGatewayValidationTest {
@@ -113,14 +113,11 @@ class FedNowGatewayValidationTest {
     }
 
     @Test
-    void validMessage_returns200() throws Exception {
-        when(messageRouter.routeOutbound(any()))
-                .thenReturn(ResponseEntity.ok(Pacs002Message.accepted("E2E-001", "TXN-001")));
-
+    void validMessage_refusesLegacySendByDefault() throws Exception {
         mockMvc.perform(post("/fednow/send")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(validMessage())))
-                .andExpect(status().isOk());
+                .andExpect(status().isServiceUnavailable());
     }
 
     private Pacs008Message validMessage() {

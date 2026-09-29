@@ -14,13 +14,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 /**
  * Layer 1 — API Gateway &amp; Security
  *
- * <p>Primary entry point for all communication with the Federal Reserve's
- * FedNow Service. Handles:
+ * <p>Reference gateway for synthetic FedNow-shaped messages. Live access and
+ * protocol mapping are not established. It handles:
  * <ul>
  *   <li>TLS mutual authentication using Federal Reserve PKI certificates</li>
  *   <li>ISO 20022 message parsing and validation</li>
@@ -37,10 +38,9 @@ import org.springframework.web.bind.annotation.*;
 @Tag(
     name = "FedNow Gateway",
     description = """
-        ISO 20022 message routing between the FedNow Service and the core banking system. \
+        Synthetic ISO 20022-shaped routing between local fixtures and core adapters. \
         Handles pacs.008 credit transfers (inbound and outbound) and returns pacs.002 \
-        payment status reports. All endpoints require mutual TLS using Federal Reserve \
-        PKI certificates in production."""
+        payment status reports. This controller does not establish live rail access."""
 )
 public class FedNowGateway {
 
@@ -48,6 +48,12 @@ public class FedNowGateway {
     private final CertificateManager certificateManager;
     private final CancellationService cancellationService;
     private final FedNowClient fedNowClient;
+
+    @Value("${openfednow.legacy-outbound-sandbox-enabled:false}")
+    private boolean legacyOutboundSandboxEnabled;
+
+    @Value("${openfednow.legacy-return-sandbox-enabled:false}")
+    private boolean legacyReturnSandboxEnabled;
 
     public FedNowGateway(MessageRouter messageRouter,
                          CertificateManager certificateManager,
@@ -109,8 +115,9 @@ public class FedNowGateway {
         description = """
             Submits an outbound pacs.008.001.08 credit transfer to the FedNow Service. \
             Returns a pacs.002 only when an authoritative status is received. \
-            If the outcome is unknown, returns HTTP 503 and retains the debit \
-            for operational status verification; do not blindly retry."""
+            Disabled by default: the legacy Redis/SQL financial path is a sandbox \
+            demonstration only. Use /reference/v1/payments for the synthetic SQL \
+            reliability evaluation."""
     )
     @ApiResponses({
         @ApiResponse(
@@ -126,6 +133,11 @@ public class FedNowGateway {
             description = "Internal processing error")
     })
     public ResponseEntity<Pacs002Message> sendTransfer(@Valid @RequestBody Pacs008Message message) {
+        // The legacy route has no atomic cross-store claim or authoritative
+        // core reservation. Keep it available only as an explicit sandbox demo.
+        if (!legacyOutboundSandboxEnabled || !(fedNowClient instanceof SandboxFedNowClient)) {
+            return ResponseEntity.status(503).build();
+        }
         return messageRouter.routeOutbound(message);
     }
 
@@ -180,10 +192,8 @@ public class FedNowGateway {
     @Operation(
         summary = "Submit outbound payment return (pacs.004)",
         description = """
-            Submits an outbound pacs.004.001.09 payment return to the FedNow Service. \
-            Returns the pacs.002 status report from FedNow. Idempotency is enforced at \
-            the FedNow side via the return's returnId. The same retry and JWS-signing \
-            behavior as /fednow/send applies."""
+            Disabled by default. The synthetic sandbox can demonstrate a pacs.004-shaped \
+            response, but no durable return operation or rail-side deduplication is established."""
     )
     @ApiResponses({
         @ApiResponse(
@@ -197,6 +207,9 @@ public class FedNowGateway {
             description = "Internal processing error")
     })
     public ResponseEntity<Pacs002Message> submitReturn(@Valid @RequestBody Pacs004Message message) {
+        if (!legacyReturnSandboxEnabled || !(fedNowClient instanceof SandboxFedNowClient)) {
+            return ResponseEntity.status(503).build();
+        }
         return ResponseEntity.ok(fedNowClient.submitReturn(message));
     }
 

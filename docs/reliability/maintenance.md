@@ -1,0 +1,7 @@
+# Maintenance and release practice
+
+This is a release-candidate workflow, not a promise of staffing or support. Keep changes in reviewable PRs with passing unit, PostgreSQL integration, external harness and negative-control runs. Record exact source SHA, manifest hash, environment and any skipped/failed case in each candidate. Review public operating-procedure changes against `requirements.csv`; credentialed specifications require an authorized participant/provider reviewer before any live mapping is attempted. Do not infer compliance from a public-rule-derived synthetic pass.
+
+For defects, preserve a small synthetic reproducer, add its observable invariant to the versioned scenario manifest, then implement a fix in the relevant target without weakening the oracle. Recheck other target applicability and call unsupported behavior unsupported. Migrations remain additive; historical ambiguous records must not be silently reclassified. Retain unresolved-operation data until a separately verified disposition, regardless of ordinary cache/idempotency TTLs.
+
+The next engineering work is to extend external cases for inquiry expiry, broker redelivery/outbox behavior, full post/return failure handling, and institution-specific core capability validation. Public release, archive/DOI update, external pilot, and maintenance resourcing require Daniel's own decisions. No external adoption or scheduled staffing commitment is claimed here.
