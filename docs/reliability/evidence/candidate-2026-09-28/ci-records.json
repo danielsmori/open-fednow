@@ -13,8 +13,15 @@
       "mergeable": "MERGEABLE",
       "statusCheckRollup": [],
       "url": "https://github.com/danielsmori/open-fednow/pull/85"
+    },
+    "86": {
+      "baseRefName": "development/reliability-reference",
+      "headRefName": "development/reliability-evidence",
+      "mergeable": "UNKNOWN",
+      "statusCheckRollup": [],
+      "url": "https://github.com/danielsmori/open-fednow/pull/86"
     }
   },
   "workflow_trigger": "pull_request branches: [ main ]; push branches: [ main ]",
-  "interpretation": "No GitHub CI status checks exist for the two stacked development PRs at evidence creation. Local Maven results are archived separately; CI is unverified until each PR is retargeted to main or merged in order."
+  "interpretation": "No GitHub CI status checks exist for the stacked development PRs at evidence creation. Local Maven results are archived separately; CI is unverified until each PR is retargeted to main or merged in order."
 }

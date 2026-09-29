@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="io.openfednow.gateway.RtpGatewayTest" time="0.204" tests="10" errors="0" skipped="0" failures="0" flakes="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="io.openfednow.gateway.RtpGatewayTest" time="0.211" tests="10" errors="0" skipped="0" failures="0" flakes="0">
   <properties>
     <property name="java.specification.version" value="17"/>
     <property name="sun.jnu.encoding" value="UTF-8"/>
@@ -13,7 +13,7 @@
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
     <property name="user.country" value="US"/>
     <property name="sun.boot.library.path" value="/opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home/lib"/>
-    <property name="sun.java.command" value="/Users/danielmori/Developer/open-fednow-reliability/target/surefire/surefirebooter-20260928232020843_3.jar /Users/danielmori/Developer/open-fednow-reliability/target/surefire 2026-09-28T23-20-20_819-jvmRun1 surefire-20260928232020843_1tmp surefire_0-20260928232020843_2tmp"/>
+    <property name="sun.java.command" value="/Users/danielmori/Developer/open-fednow-reliability/target/surefire/surefirebooter-20260928233126730_3.jar /Users/danielmori/Developer/open-fednow-reliability/target/surefire 2026-09-28T23-31-26_704-jvmRun1 surefire-20260928233126730_1tmp surefire_0-20260928233126730_2tmp"/>
     <property name="http.nonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
     <property name="jdk.debug" value="release"/>
     <property name="test" value="MessageRouterScreeningPolicyTest,MessageRouterBridgeSendsGuardTest,MessageRouterCurrencyGuardTest,RtpGatewayTest,JackHenryAdapterTest,UncertainSubmissionReproducerTest"/>
@@ -30,7 +30,7 @@
     <property name="line.separator" value="&#10;"/>
     <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
     <property name="java.specification.name" value="Java Platform API Specification"/>
-    <property name="surefire.real.class.path" value="/Users/danielmori/Developer/open-fednow-reliability/target/surefire/surefirebooter-20260928232020843_3.jar"/>
+    <property name="surefire.real.class.path" value="/Users/danielmori/Developer/open-fednow-reliability/target/surefire/surefirebooter-20260928233126730_3.jar"/>
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
     <property name="ftp.nonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
     <property name="java.runtime.version" value="17.0.20.1+0"/>
@@ -62,20 +62,20 @@
     <property name="socksNonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
     <property name="java.class.version" value="61.0"/>
   </properties>
-  <testcase name="receiveTransfer_json_returnsMessageRouterResponseUnmodified" classname="io.openfednow.gateway.RtpGatewayTest" time="0.018"/>
+  <testcase name="receiveTransfer_json_returnsMessageRouterResponseUnmodified" classname="io.openfednow.gateway.RtpGatewayTest" time="0.019"/>
   <testcase name="sendTransfer_isUnavailableWithoutCallingTransportOrRouter" classname="io.openfednow.gateway.RtpGatewayTest" time="0.0"/>
-  <testcase name="sendEndpointReturns503OverHttp" classname="io.openfednow.gateway.RtpGatewayTest" time="0.173">
-    <system-out><![CDATA[23:20:23.895 [main] INFO org.hibernate.validator.internal.util.Version -- HV000001: Hibernate Validator 8.0.3.Final
-23:20:23.994 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
-23:20:23.994 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
-23:20:23.994 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+  <testcase name="sendEndpointReturns503OverHttp" classname="io.openfednow.gateway.RtpGatewayTest" time="0.179">
+    <system-out><![CDATA[23:31:29.796 [main] INFO org.hibernate.validator.internal.util.Version -- HV000001: Hibernate Validator 8.0.3.Final
+23:31:29.898 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+23:31:29.898 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+23:31:29.899 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 1 ms
 ]]></system-out>
   </testcase>
-  <testcase name="healthReturns200" classname="io.openfednow.gateway.RtpGatewayTest" time="0.0"/>
+  <testcase name="healthReturns200" classname="io.openfednow.gateway.RtpGatewayTest" time="0.001"/>
   <testcase name="configuredHttpClientCannotBypassOutboundRestriction" classname="io.openfednow.gateway.RtpGatewayTest" time="0.003"/>
   <testcase name="receiveTransfer_json_invokesTchCertificateValidation" classname="io.openfednow.gateway.RtpGatewayTest" time="0.002"/>
   <testcase name="receiveTransfer_json_routesInboundToMessageRouter" classname="io.openfednow.gateway.RtpGatewayTest" time="0.002"/>
-  <testcase name="receiveTransfer_xml_invokesTchCertificateValidation" classname="io.openfednow.gateway.RtpGatewayTest" time="0.001"/>
+  <testcase name="receiveTransfer_xml_invokesTchCertificateValidation" classname="io.openfednow.gateway.RtpGatewayTest" time="0.002"/>
   <testcase name="receiveTransfer_xml_returnsXmlContentType" classname="io.openfednow.gateway.RtpGatewayTest" time="0.001"/>
-  <testcase name="healthBodyIdentifiesGateway" classname="io.openfednow.gateway.RtpGatewayTest" time="0.0"/>
+  <testcase name="healthBodyIdentifiesGateway" classname="io.openfednow.gateway.RtpGatewayTest" time="0.001"/>
 </testsuite>

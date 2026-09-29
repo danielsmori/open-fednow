@@ -25,9 +25,9 @@
 [INFO]  T E S T S
 [INFO] -------------------------------------------------------
 [INFO] Running io.openfednow.processing.fraud.FraudRoutingIntegrationTest
-23:20:25.379 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration io.openfednow.OpenFedNowApplication for test class io.openfednow.processing.fraud.FraudRoutingIntegrationTest
-23:20:25.414 [main] INFO org.testcontainers.images.PullPolicy -- Image pull policy will be performed by: DefaultPullPolicy()
-23:20:25.415 [main] INFO org.testcontainers.utility.ImageNameSubstitutor -- Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+23:31:31.309 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration io.openfednow.OpenFedNowApplication for test class io.openfednow.processing.fraud.FraudRoutingIntegrationTest
+23:31:31.343 [main] INFO org.testcontainers.images.PullPolicy -- Image pull policy will be performed by: DefaultPullPolicy()
+23:31:31.344 [main] INFO org.testcontainers.utility.ImageNameSubstitutor -- Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
 
   .   ____          _            __ _ _
  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
@@ -38,93 +38,93 @@
 
  :: Spring Boot ::               (v3.5.16)
 
-2026-09-28T23:20:25.538-04:00 INFO  [testcontainers-lifecycle-0] org.testcontainers.DockerClientFactory [req=?,e2e=?,txn=?] Testcontainers version: 1.21.4
-2026-09-28T23:20:25.608-04:00 INFO  [testcontainers-lifecycle-0] o.t.d.DockerClientProviderStrategy [req=?,e2e=?,txn=?] Loaded org.testcontainers.dockerclient.UnixSocketClientProviderStrategy from ~/.testcontainers.properties, will try it first
-2026-09-28T23:20:25.692-04:00 INFO  [testcontainers-lifecycle-0] o.t.d.DockerClientProviderStrategy [req=?,e2e=?,txn=?] Found Docker environment with local Unix socket (unix:///var/run/docker.sock)
-2026-09-28T23:20:25.693-04:00 INFO  [testcontainers-lifecycle-0] org.testcontainers.DockerClientFactory [req=?,e2e=?,txn=?] Docker host IP address is localhost
-2026-09-28T23:20:25.701-04:00 INFO  [testcontainers-lifecycle-0] org.testcontainers.DockerClientFactory [req=?,e2e=?,txn=?] Connected to docker: 
+2026-09-28T23:31:31.468-04:00 INFO  [testcontainers-lifecycle-0] org.testcontainers.DockerClientFactory [req=?,e2e=?,txn=?] Testcontainers version: 1.21.4
+2026-09-28T23:31:31.538-04:00 INFO  [testcontainers-lifecycle-0] o.t.d.DockerClientProviderStrategy [req=?,e2e=?,txn=?] Loaded org.testcontainers.dockerclient.UnixSocketClientProviderStrategy from ~/.testcontainers.properties, will try it first
+2026-09-28T23:31:31.623-04:00 INFO  [testcontainers-lifecycle-0] o.t.d.DockerClientProviderStrategy [req=?,e2e=?,txn=?] Found Docker environment with local Unix socket (unix:///var/run/docker.sock)
+2026-09-28T23:31:31.623-04:00 INFO  [testcontainers-lifecycle-0] org.testcontainers.DockerClientFactory [req=?,e2e=?,txn=?] Docker host IP address is localhost
+2026-09-28T23:31:31.633-04:00 INFO  [testcontainers-lifecycle-0] org.testcontainers.DockerClientFactory [req=?,e2e=?,txn=?] Connected to docker: 
   Server Version: 29.7.2
   API Version: 1.55
   Operating System: Docker Desktop
   Total Memory: 7933 MB
   Labels: 
     com.docker.desktop.address=unix:///Users/danielmori/Library/Containers/com.docker.docker/Data/docker-cli.sock
-2026-09-28T23:20:25.953-04:00 INFO  [testcontainers-lifecycle-0] tc.testcontainers/ryuk:0.12.0 [req=?,e2e=?,txn=?] Creating container for image: testcontainers/ryuk:0.12.0
-2026-09-28T23:20:25.980-04:00 INFO  [testcontainers-lifecycle-0] o.t.utility.RegistryAuthLocator [req=?,e2e=?,txn=?] Credential helper/store (docker-credential-desktop) does not have credentials for https://index.docker.io/v1/
-2026-09-28T23:20:26.029-04:00 INFO  [testcontainers-lifecycle-0] tc.testcontainers/ryuk:0.12.0 [req=?,e2e=?,txn=?] Container testcontainers/ryuk:0.12.0 is starting: 1f9253bb9f45c1112e61c61865de92b74d9b6bf52e665dc66a619cb921d4ad85
-2026-09-28T23:20:26.143-04:00 INFO  [testcontainers-lifecycle-0] tc.testcontainers/ryuk:0.12.0 [req=?,e2e=?,txn=?] Container testcontainers/ryuk:0.12.0 started in PT0.189708S
-2026-09-28T23:20:26.146-04:00 INFO  [testcontainers-lifecycle-0] o.t.utility.RyukResourceReaper [req=?,e2e=?,txn=?] Ryuk started - will monitor and terminate Testcontainers containers on JVM exit
-2026-09-28T23:20:26.147-04:00 INFO  [testcontainers-lifecycle-0] org.testcontainers.DockerClientFactory [req=?,e2e=?,txn=?] Checking the system...
-2026-09-28T23:20:26.147-04:00 INFO  [testcontainers-lifecycle-0] org.testcontainers.DockerClientFactory [req=?,e2e=?,txn=?] ✔︎ Docker server version should be at least 1.6.0
-2026-09-28T23:20:26.147-04:00 INFO  [testcontainers-lifecycle-0] tc.redis:7-alpine [req=?,e2e=?,txn=?] Creating container for image: redis:7-alpine
-2026-09-28T23:20:26.147-04:00 INFO  [testcontainers-lifecycle-2] tc.postgres:16-alpine [req=?,e2e=?,txn=?] Creating container for image: postgres:16-alpine
-2026-09-28T23:20:26.147-04:00 INFO  [testcontainers-lifecycle-1] tc.rabbitmq:3-management [req=?,e2e=?,txn=?] Creating container for image: rabbitmq:3-management
-2026-09-28T23:20:26.176-04:00 INFO  [testcontainers-lifecycle-1] tc.rabbitmq:3-management [req=?,e2e=?,txn=?] Container rabbitmq:3-management is starting: c662f9756f0e4a4979944c5f41059cfe0e12f7ad9b91d9976cfa67a795e54536
-2026-09-28T23:20:26.181-04:00 INFO  [testcontainers-lifecycle-2] tc.postgres:16-alpine [req=?,e2e=?,txn=?] Container postgres:16-alpine is starting: b2a270911302169786280ea0c714c366dbd6009cf8117cc7e4fc0e9da736e3b2
-2026-09-28T23:20:26.181-04:00 INFO  [testcontainers-lifecycle-0] tc.redis:7-alpine [req=?,e2e=?,txn=?] Container redis:7-alpine is starting: 919a272a19f55bf87c816cce2c54b5f86d4351e95e290b8b5fb89ce22bd9fe55
-2026-09-28T23:20:26.368-04:00 INFO  [testcontainers-lifecycle-0] tc.redis:7-alpine [req=?,e2e=?,txn=?] Container redis:7-alpine started in PT0.220594S
-2026-09-28T23:20:26.842-04:00 INFO  [testcontainers-lifecycle-2] tc.postgres:16-alpine [req=?,e2e=?,txn=?] Container postgres:16-alpine started in PT0.694921S
-2026-09-28T23:20:26.843-04:00 INFO  [testcontainers-lifecycle-2] tc.postgres:16-alpine [req=?,e2e=?,txn=?] Container is started (JDBC URL: jdbc:postgresql://localhost:65441/openfednow?loggerLevel=OFF)
-2026-09-28T23:20:29.637-04:00 INFO  [testcontainers-lifecycle-1] tc.rabbitmq:3-management [req=?,e2e=?,txn=?] Container rabbitmq:3-management started in PT3.490016S
-2026-09-28T23:20:29.650-04:00 INFO  [main] i.o.p.fraud.FraudRoutingIntegrationTest [req=?,e2e=?,txn=?] Starting FraudRoutingIntegrationTest using Java 17.0.20.1 with PID 74054 (started by danielmori in /Users/danielmori/Developer/open-fednow-reliability)
-2026-09-28T23:20:29.650-04:00 DEBUG [main] i.o.p.fraud.FraudRoutingIntegrationTest [req=?,e2e=?,txn=?] Running with Spring Boot v3.5.16, Spring v6.2.19
-2026-09-28T23:20:29.650-04:00 INFO  [main] i.o.p.fraud.FraudRoutingIntegrationTest [req=?,e2e=?,txn=?] No active profile set, falling back to 1 default profile: "default"
-2026-09-28T23:20:30.003-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-28T23:20:30.004-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2026-09-28T23:20:30.017-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Finished Spring Data repository scanning in 9 ms. Found 0 JPA repository interfaces.
-2026-09-28T23:20:30.021-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-28T23:20:30.022-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Bootstrapping Spring Data Redis repositories in DEFAULT mode.
-2026-09-28T23:20:30.031-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Finished Spring Data repository scanning in 6 ms. Found 0 Redis repository interfaces.
-2026-09-28T23:20:30.458-04:00 INFO  [main] org.flywaydb.core.FlywayExecutor [req=?,e2e=?,txn=?] Database: jdbc:postgresql://localhost:65441/openfednow?loggerLevel=OFF (PostgreSQL 16.15)
-2026-09-28T23:20:30.475-04:00 INFO  [main] o.f.c.i.s.JdbcTableSchemaHistory [req=?,e2e=?,txn=?] Schema history table "public"."flyway_schema_history" does not exist yet
-2026-09-28T23:20:30.477-04:00 INFO  [main] o.f.core.internal.command.DbValidate [req=?,e2e=?,txn=?] Successfully validated 10 migrations (execution time 00:00.007s)
-2026-09-28T23:20:30.486-04:00 INFO  [main] o.f.c.i.s.JdbcTableSchemaHistory [req=?,e2e=?,txn=?] Creating Schema History table "public"."flyway_schema_history" ...
-2026-09-28T23:20:30.520-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Current version of schema "public": << Empty Schema >>
-2026-09-28T23:20:30.525-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "1 - create shadow ledger transaction log"
-2026-09-28T23:20:30.544-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "2 - create saga state"
-2026-09-28T23:20:30.552-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "3 - create idempotency keys"
-2026-09-28T23:20:30.560-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "4 - create reconciliation run"
-2026-09-28T23:20:30.569-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "5 - add source rail to saga state"
-2026-09-28T23:20:30.576-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "6 - create admin audit log"
-2026-09-28T23:20:30.582-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "7 - add request id correlation"
-2026-09-28T23:20:30.588-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "8 - outbound submission uncertainty"
-2026-09-28T23:20:30.593-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "9 - create reliable payment reference"
-2026-09-28T23:20:30.603-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "10 - synthetic async core ack"
-2026-09-28T23:20:30.610-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Successfully applied 10 migrations to schema "public", now at version v10 (execution time 00:00.036s)
-2026-09-28T23:20:30.764-04:00 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo [req=?,e2e=?,txn=?] No LoadTimeWeaver setup: ignoring JPA class transformer
-2026-09-28T23:20:30.959-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=?,txn=?] Initialized JPA EntityManagerFactory for persistence unit 'default'
-2026-09-28T23:20:31.348-04:00 INFO  [main] i.o.reliability.ReliabilityRailConfig [req=?,e2e=?,txn=?] Synthetic reliability rail configured=false
-2026-09-28T23:20:31.402-04:00 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [req=?,e2e=?,txn=?] Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
-2026-09-28T23:20:31.863-04:00 INFO  [main] i.o.p.fraud.FraudRoutingIntegrationTest [req=?,e2e=?,txn=?] Started FraudRoutingIntegrationTest in 6.433 seconds (process running for 6.782)
-2026-09-28T23:20:31.868-04:00 DEBUG [scheduling-1] i.o.shadowledger.AvailabilityBridge [req=?,e2e=?,txn=?] Core availability poll: mode=ONLINE
-2026-09-28T23:20:31.872-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=?,txn=?] Saga recovery: no in-flight sagas found at startup
-2026-09-28T23:20:31.873-04:00 INFO  [main] i.o.shadowledger.BalanceSeedService [req=?,e2e=?,txn=?] Shadow Ledger startup seed: no accounts configured (openfednow.shadow-ledger.seed-accounts is empty)
-2026-09-28T23:20:32.235-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-INB-PASS,txn=TXN-INB-PASS] Inbound credit transfer received amount=100.00 currency=USD sourceRail=FEDNOW
-2026-09-28T23:20:32.240-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-INB-PASS,txn=TXN-INB-PASS] Saga initiated sagaId=SAGA-498c086b-1297-4935-bc28-3e65bdb417f4 transactionId=TXN-INB-PASS e2e=E2E-INB-PASS sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:32.243-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-INB-PASS,txn=TXN-INB-PASS] Shadow Ledger credit applied account=ACC-CREDITOR amount=100.00 balanceAfter=100.00
-2026-09-28T23:20:32.244-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-INB-PASS,txn=TXN-INB-PASS] Saga advanced sagaId=SAGA-498c086b-1297-4935-bc28-3e65bdb417f4 state=FUNDS_RESERVED
-2026-09-28T23:20:32.245-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-INB-PASS,txn=TXN-INB-PASS] Saga advanced sagaId=SAGA-498c086b-1297-4935-bc28-3e65bdb417f4 state=CORE_SUBMITTED
-2026-09-28T23:20:32.245-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-INB-PASS,txn=TXN-INB-PASS] Saga advanced sagaId=SAGA-498c086b-1297-4935-bc28-3e65bdb417f4 state=FEDNOW_CONFIRMED
-2026-09-28T23:20:32.246-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-INB-PASS,txn=TXN-INB-PASS] Saga advanced sagaId=SAGA-498c086b-1297-4935-bc28-3e65bdb417f4 state=COMPLETED
-2026-09-28T23:20:32.246-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-INB-PASS,txn=TXN-INB-PASS] Inbound credit transfer status=ACSC rejectCode=null
-2026-09-28T23:20:32.252-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-INB-PASS,txn=TXN-INB-PASS] Idempotency outcome recorded e2e=E2E-INB-PASS status=ACSC
-2026-09-28T23:20:32.278-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-INB-REVIEW,txn=TXN-INB-REVIEW] Inbound credit transfer received amount=100.00 currency=USD sourceRail=FEDNOW
-2026-09-28T23:20:32.280-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-INB-REVIEW,txn=TXN-INB-REVIEW] Saga initiated sagaId=SAGA-3e1fb41d-61ca-47a7-9901-21a959835f9c transactionId=TXN-INB-REVIEW e2e=E2E-INB-REVIEW sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:32.281-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-INB-REVIEW,txn=TXN-INB-REVIEW] Shadow Ledger credit applied account=ACC-CREDITOR amount=100.00 balanceAfter=100.00
-2026-09-28T23:20:32.281-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-INB-REVIEW,txn=TXN-INB-REVIEW] Saga advanced sagaId=SAGA-3e1fb41d-61ca-47a7-9901-21a959835f9c state=FUNDS_RESERVED
-2026-09-28T23:20:32.282-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-INB-REVIEW,txn=TXN-INB-REVIEW] Saga advanced sagaId=SAGA-3e1fb41d-61ca-47a7-9901-21a959835f9c state=CORE_SUBMITTED
-2026-09-28T23:20:32.283-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-INB-REVIEW,txn=TXN-INB-REVIEW] Saga advanced sagaId=SAGA-3e1fb41d-61ca-47a7-9901-21a959835f9c state=FEDNOW_CONFIRMED
-2026-09-28T23:20:32.283-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-INB-REVIEW,txn=TXN-INB-REVIEW] Saga advanced sagaId=SAGA-3e1fb41d-61ca-47a7-9901-21a959835f9c state=COMPLETED
-2026-09-28T23:20:32.283-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-INB-REVIEW,txn=TXN-INB-REVIEW] Inbound credit transfer status=ACSC rejectCode=null
-2026-09-28T23:20:32.284-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-INB-REVIEW,txn=TXN-INB-REVIEW] Idempotency outcome recorded e2e=E2E-INB-REVIEW status=ACSC
-2026-09-28T23:20:32.291-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-INB-BLOCK,txn=TXN-INB-BLOCK] Inbound credit transfer received amount=100.00 currency=USD sourceRail=FEDNOW
-2026-09-28T23:20:32.292-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-INB-BLOCK,txn=TXN-INB-BLOCK] Idempotency outcome recorded e2e=E2E-INB-BLOCK status=RJCT
-2026-09-28T23:20:32.300-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Outbound credit transfer received amount=100.00 currency=USD
-2026-09-28T23:20:32.302-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Idempotency outcome recorded e2e=E2E-OUT-BLOCK status=RJCT
-2026-09-28T23:20:32.315-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Closing JPA EntityManagerFactory for persistence unit 'default'
-[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 7.015 s -- in io.openfednow.processing.fraud.FraudRoutingIntegrationTest
+2026-09-28T23:31:31.880-04:00 INFO  [testcontainers-lifecycle-0] tc.testcontainers/ryuk:0.12.0 [req=?,e2e=?,txn=?] Creating container for image: testcontainers/ryuk:0.12.0
+2026-09-28T23:31:31.939-04:00 INFO  [testcontainers-lifecycle-0] o.t.utility.RegistryAuthLocator [req=?,e2e=?,txn=?] Credential helper/store (docker-credential-desktop) does not have credentials for https://index.docker.io/v1/
+2026-09-28T23:31:31.986-04:00 INFO  [testcontainers-lifecycle-0] tc.testcontainers/ryuk:0.12.0 [req=?,e2e=?,txn=?] Container testcontainers/ryuk:0.12.0 is starting: cc8e40fdb18bdf9a4c2927646e9dea0ec498bc82e3ae6361df69910d628aab43
+2026-09-28T23:31:32.101-04:00 INFO  [testcontainers-lifecycle-0] tc.testcontainers/ryuk:0.12.0 [req=?,e2e=?,txn=?] Container testcontainers/ryuk:0.12.0 started in PT0.220823S
+2026-09-28T23:31:32.103-04:00 INFO  [testcontainers-lifecycle-0] o.t.utility.RyukResourceReaper [req=?,e2e=?,txn=?] Ryuk started - will monitor and terminate Testcontainers containers on JVM exit
+2026-09-28T23:31:32.104-04:00 INFO  [testcontainers-lifecycle-0] org.testcontainers.DockerClientFactory [req=?,e2e=?,txn=?] Checking the system...
+2026-09-28T23:31:32.104-04:00 INFO  [testcontainers-lifecycle-0] org.testcontainers.DockerClientFactory [req=?,e2e=?,txn=?] ✔︎ Docker server version should be at least 1.6.0
+2026-09-28T23:31:32.104-04:00 INFO  [testcontainers-lifecycle-0] tc.redis:7-alpine [req=?,e2e=?,txn=?] Creating container for image: redis:7-alpine
+2026-09-28T23:31:32.104-04:00 INFO  [testcontainers-lifecycle-2] tc.postgres:16-alpine [req=?,e2e=?,txn=?] Creating container for image: postgres:16-alpine
+2026-09-28T23:31:32.104-04:00 INFO  [testcontainers-lifecycle-1] tc.rabbitmq:3-management [req=?,e2e=?,txn=?] Creating container for image: rabbitmq:3-management
+2026-09-28T23:31:32.144-04:00 INFO  [testcontainers-lifecycle-1] tc.rabbitmq:3-management [req=?,e2e=?,txn=?] Container rabbitmq:3-management is starting: 49ba8907ff0fb922278dfca25d61de505d03208d9bdd99d3523255f8aad11a9e
+2026-09-28T23:31:32.146-04:00 INFO  [testcontainers-lifecycle-0] tc.redis:7-alpine [req=?,e2e=?,txn=?] Container redis:7-alpine is starting: c99f959579513eb832b178ddaddf1f17afd254022afe9e1453e560a286d4e860
+2026-09-28T23:31:32.148-04:00 INFO  [testcontainers-lifecycle-2] tc.postgres:16-alpine [req=?,e2e=?,txn=?] Container postgres:16-alpine is starting: 57b97a1fde105f84e781eb0b119df2cc4e778ee5664936d0151a64f5d48b147d
+2026-09-28T23:31:32.323-04:00 INFO  [testcontainers-lifecycle-0] tc.redis:7-alpine [req=?,e2e=?,txn=?] Container redis:7-alpine started in PT0.2194S
+2026-09-28T23:31:32.832-04:00 INFO  [testcontainers-lifecycle-2] tc.postgres:16-alpine [req=?,e2e=?,txn=?] Container postgres:16-alpine started in PT0.728173S
+2026-09-28T23:31:32.833-04:00 INFO  [testcontainers-lifecycle-2] tc.postgres:16-alpine [req=?,e2e=?,txn=?] Container is started (JDBC URL: jdbc:postgresql://localhost:50243/openfednow?loggerLevel=OFF)
+2026-09-28T23:31:35.541-04:00 INFO  [testcontainers-lifecycle-1] tc.rabbitmq:3-management [req=?,e2e=?,txn=?] Container rabbitmq:3-management started in PT3.436701S
+2026-09-28T23:31:35.553-04:00 INFO  [main] i.o.p.fraud.FraudRoutingIntegrationTest [req=?,e2e=?,txn=?] Starting FraudRoutingIntegrationTest using Java 17.0.20.1 with PID 75540 (started by danielmori in /Users/danielmori/Developer/open-fednow-reliability)
+2026-09-28T23:31:35.554-04:00 DEBUG [main] i.o.p.fraud.FraudRoutingIntegrationTest [req=?,e2e=?,txn=?] Running with Spring Boot v3.5.16, Spring v6.2.19
+2026-09-28T23:31:35.554-04:00 INFO  [main] i.o.p.fraud.FraudRoutingIntegrationTest [req=?,e2e=?,txn=?] No active profile set, falling back to 1 default profile: "default"
+2026-09-28T23:31:35.915-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-28T23:31:35.916-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-09-28T23:31:35.932-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Finished Spring Data repository scanning in 12 ms. Found 0 JPA repository interfaces.
+2026-09-28T23:31:35.937-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-28T23:31:35.937-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-09-28T23:31:35.944-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Finished Spring Data repository scanning in 3 ms. Found 0 Redis repository interfaces.
+2026-09-28T23:31:36.353-04:00 INFO  [main] org.flywaydb.core.FlywayExecutor [req=?,e2e=?,txn=?] Database: jdbc:postgresql://localhost:50243/openfednow?loggerLevel=OFF (PostgreSQL 16.15)
+2026-09-28T23:31:36.369-04:00 INFO  [main] o.f.c.i.s.JdbcTableSchemaHistory [req=?,e2e=?,txn=?] Schema history table "public"."flyway_schema_history" does not exist yet
+2026-09-28T23:31:36.370-04:00 INFO  [main] o.f.core.internal.command.DbValidate [req=?,e2e=?,txn=?] Successfully validated 10 migrations (execution time 00:00.007s)
+2026-09-28T23:31:36.380-04:00 INFO  [main] o.f.c.i.s.JdbcTableSchemaHistory [req=?,e2e=?,txn=?] Creating Schema History table "public"."flyway_schema_history" ...
+2026-09-28T23:31:36.414-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Current version of schema "public": << Empty Schema >>
+2026-09-28T23:31:36.419-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "1 - create shadow ledger transaction log"
+2026-09-28T23:31:36.437-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "2 - create saga state"
+2026-09-28T23:31:36.444-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "3 - create idempotency keys"
+2026-09-28T23:31:36.451-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "4 - create reconciliation run"
+2026-09-28T23:31:36.457-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "5 - add source rail to saga state"
+2026-09-28T23:31:36.463-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "6 - create admin audit log"
+2026-09-28T23:31:36.469-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "7 - add request id correlation"
+2026-09-28T23:31:36.474-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "8 - outbound submission uncertainty"
+2026-09-28T23:31:36.479-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "9 - create reliable payment reference"
+2026-09-28T23:31:36.489-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "10 - synthetic async core ack"
+2026-09-28T23:31:36.497-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Successfully applied 10 migrations to schema "public", now at version v10 (execution time 00:00.035s)
+2026-09-28T23:31:36.644-04:00 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo [req=?,e2e=?,txn=?] No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-09-28T23:31:36.844-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=?,txn=?] Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-09-28T23:31:37.212-04:00 INFO  [main] i.o.reliability.ReliabilityRailConfig [req=?,e2e=?,txn=?] Synthetic reliability rail configured=false
+2026-09-28T23:31:37.261-04:00 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [req=?,e2e=?,txn=?] Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2026-09-28T23:31:37.689-04:00 INFO  [main] i.o.p.fraud.FraudRoutingIntegrationTest [req=?,e2e=?,txn=?] Started FraudRoutingIntegrationTest in 6.33 seconds (process running for 6.672)
+2026-09-28T23:31:37.693-04:00 DEBUG [scheduling-1] i.o.shadowledger.AvailabilityBridge [req=?,e2e=?,txn=?] Core availability poll: mode=ONLINE
+2026-09-28T23:31:37.697-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=?,txn=?] Saga recovery: no in-flight sagas found at startup
+2026-09-28T23:31:37.698-04:00 INFO  [main] i.o.shadowledger.BalanceSeedService [req=?,e2e=?,txn=?] Shadow Ledger startup seed: no accounts configured (openfednow.shadow-ledger.seed-accounts is empty)
+2026-09-28T23:31:38.056-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-INB-PASS,txn=TXN-INB-PASS] Inbound credit transfer received amount=100.00 currency=USD sourceRail=FEDNOW
+2026-09-28T23:31:38.059-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-INB-PASS,txn=TXN-INB-PASS] Saga initiated sagaId=SAGA-8e625ba9-5e9c-4e6b-9a42-2dd09369e2c3 transactionId=TXN-INB-PASS e2e=E2E-INB-PASS sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:38.062-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-INB-PASS,txn=TXN-INB-PASS] Shadow Ledger credit applied account=ACC-CREDITOR amount=100.00 balanceAfter=100.00
+2026-09-28T23:31:38.063-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-INB-PASS,txn=TXN-INB-PASS] Saga advanced sagaId=SAGA-8e625ba9-5e9c-4e6b-9a42-2dd09369e2c3 state=FUNDS_RESERVED
+2026-09-28T23:31:38.063-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-INB-PASS,txn=TXN-INB-PASS] Saga advanced sagaId=SAGA-8e625ba9-5e9c-4e6b-9a42-2dd09369e2c3 state=CORE_SUBMITTED
+2026-09-28T23:31:38.063-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-INB-PASS,txn=TXN-INB-PASS] Saga advanced sagaId=SAGA-8e625ba9-5e9c-4e6b-9a42-2dd09369e2c3 state=FEDNOW_CONFIRMED
+2026-09-28T23:31:38.064-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-INB-PASS,txn=TXN-INB-PASS] Saga advanced sagaId=SAGA-8e625ba9-5e9c-4e6b-9a42-2dd09369e2c3 state=COMPLETED
+2026-09-28T23:31:38.064-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-INB-PASS,txn=TXN-INB-PASS] Inbound credit transfer status=ACSC rejectCode=null
+2026-09-28T23:31:38.069-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-INB-PASS,txn=TXN-INB-PASS] Idempotency outcome recorded e2e=E2E-INB-PASS status=ACSC
+2026-09-28T23:31:38.097-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-INB-REVIEW,txn=TXN-INB-REVIEW] Inbound credit transfer received amount=100.00 currency=USD sourceRail=FEDNOW
+2026-09-28T23:31:38.099-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-INB-REVIEW,txn=TXN-INB-REVIEW] Saga initiated sagaId=SAGA-b82f4f7a-e4e0-4a23-baf5-ba061e0019b9 transactionId=TXN-INB-REVIEW e2e=E2E-INB-REVIEW sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:38.100-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-INB-REVIEW,txn=TXN-INB-REVIEW] Shadow Ledger credit applied account=ACC-CREDITOR amount=100.00 balanceAfter=100.00
+2026-09-28T23:31:38.100-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-INB-REVIEW,txn=TXN-INB-REVIEW] Saga advanced sagaId=SAGA-b82f4f7a-e4e0-4a23-baf5-ba061e0019b9 state=FUNDS_RESERVED
+2026-09-28T23:31:38.101-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-INB-REVIEW,txn=TXN-INB-REVIEW] Saga advanced sagaId=SAGA-b82f4f7a-e4e0-4a23-baf5-ba061e0019b9 state=CORE_SUBMITTED
+2026-09-28T23:31:38.101-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-INB-REVIEW,txn=TXN-INB-REVIEW] Saga advanced sagaId=SAGA-b82f4f7a-e4e0-4a23-baf5-ba061e0019b9 state=FEDNOW_CONFIRMED
+2026-09-28T23:31:38.101-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-INB-REVIEW,txn=TXN-INB-REVIEW] Saga advanced sagaId=SAGA-b82f4f7a-e4e0-4a23-baf5-ba061e0019b9 state=COMPLETED
+2026-09-28T23:31:38.101-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-INB-REVIEW,txn=TXN-INB-REVIEW] Inbound credit transfer status=ACSC rejectCode=null
+2026-09-28T23:31:38.103-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-INB-REVIEW,txn=TXN-INB-REVIEW] Idempotency outcome recorded e2e=E2E-INB-REVIEW status=ACSC
+2026-09-28T23:31:38.110-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-INB-BLOCK,txn=TXN-INB-BLOCK] Inbound credit transfer received amount=100.00 currency=USD sourceRail=FEDNOW
+2026-09-28T23:31:38.112-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-INB-BLOCK,txn=TXN-INB-BLOCK] Idempotency outcome recorded e2e=E2E-INB-BLOCK status=RJCT
+2026-09-28T23:31:38.120-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Outbound credit transfer received amount=100.00 currency=USD
+2026-09-28T23:31:38.122-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Idempotency outcome recorded e2e=E2E-OUT-BLOCK status=RJCT
+2026-09-28T23:31:38.133-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Closing JPA EntityManagerFactory for persistence unit 'default'
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 6.903 s -- in io.openfednow.processing.fraud.FraudRoutingIntegrationTest
 [INFO] Running io.openfednow.processing.fraud.FraudTimeoutIntegrationTest
-2026-09-28T23:20:32.322-04:00 INFO  [main] o.s.b.t.c.SpringBootTestContextBootstrapper [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Found @SpringBootConfiguration io.openfednow.OpenFedNowApplication for test class io.openfednow.processing.fraud.FraudTimeoutIntegrationTest
+2026-09-28T23:31:38.139-04:00 INFO  [main] o.s.b.t.c.SpringBootTestContextBootstrapper [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Found @SpringBootConfiguration io.openfednow.OpenFedNowApplication for test class io.openfednow.processing.fraud.FraudTimeoutIntegrationTest
 
   .   ____          _            __ _ _
  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
@@ -135,47 +135,47 @@
 
  :: Spring Boot ::               (v3.5.16)
 
-2026-09-28T23:20:32.339-04:00 INFO  [main] i.o.p.fraud.FraudTimeoutIntegrationTest [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Starting FraudTimeoutIntegrationTest using Java 17.0.20.1 with PID 74054 (started by danielmori in /Users/danielmori/Developer/open-fednow-reliability)
-2026-09-28T23:20:32.339-04:00 DEBUG [main] i.o.p.fraud.FraudTimeoutIntegrationTest [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Running with Spring Boot v3.5.16, Spring v6.2.19
-2026-09-28T23:20:32.339-04:00 INFO  [main] i.o.p.fraud.FraudTimeoutIntegrationTest [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] No active profile set, falling back to 1 default profile: "default"
-2026-09-28T23:20:32.433-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-28T23:20:32.434-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2026-09-28T23:20:32.438-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Finished Spring Data repository scanning in 3 ms. Found 0 JPA repository interfaces.
-2026-09-28T23:20:32.439-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-28T23:20:32.439-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Bootstrapping Spring Data Redis repositories in DEFAULT mode.
-2026-09-28T23:20:32.442-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Finished Spring Data repository scanning in 2 ms. Found 0 Redis repository interfaces.
-2026-09-28T23:20:32.517-04:00 INFO  [main] org.flywaydb.core.FlywayExecutor [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Database: jdbc:postgresql://localhost:65441/openfednow?loggerLevel=OFF (PostgreSQL 16.15)
-2026-09-28T23:20:32.530-04:00 INFO  [main] o.f.core.internal.command.DbValidate [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Successfully validated 10 migrations (execution time 00:00.005s)
-2026-09-28T23:20:32.543-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Current version of schema "public": 10
-2026-09-28T23:20:32.544-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Schema "public" is up to date. No migration necessary.
-2026-09-28T23:20:32.563-04:00 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] No LoadTimeWeaver setup: ignoring JPA class transformer
-2026-09-28T23:20:32.575-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Initialized JPA EntityManagerFactory for persistence unit 'default'
-2026-09-28T23:20:32.672-04:00 INFO  [main] i.o.reliability.ReliabilityRailConfig [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Synthetic reliability rail configured=false
-2026-09-28T23:20:32.695-04:00 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
-2026-09-28T23:20:32.895-04:00 INFO  [main] i.o.p.fraud.FraudTimeoutIntegrationTest [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Started FraudTimeoutIntegrationTest in 0.571 seconds (process running for 7.814)
-2026-09-28T23:20:32.895-04:00 DEBUG [scheduling-1] i.o.shadowledger.AvailabilityBridge [req=?,e2e=?,txn=?] Core availability poll: mode=ONLINE
-2026-09-28T23:20:32.899-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Saga recovery: no in-flight sagas found at startup
-2026-09-28T23:20:32.899-04:00 INFO  [main] i.o.shadowledger.BalanceSeedService [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Shadow Ledger startup seed: no accounts configured (openfednow.shadow-ledger.seed-accounts is empty)
-2026-09-28T23:20:32.908-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-TIMEOUT,txn=TXN-TIMEOUT] Inbound credit transfer received amount=50.00 currency=USD sourceRail=FEDNOW
-2026-09-28T23:20:33.011-04:00 WARN  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-TIMEOUT,txn=TXN-TIMEOUT] Screening unavailable e2e=E2E-TIMEOUT cause=timeout failOpen=false
-2026-09-28T23:20:33.014-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-TIMEOUT,txn=TXN-TIMEOUT] Idempotency outcome recorded e2e=E2E-TIMEOUT status=RJCT
-2026-09-28T23:20:33.021-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-FAST,txn=TXN-FAST] Inbound credit transfer received amount=50.00 currency=USD sourceRail=FEDNOW
-2026-09-28T23:20:33.023-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-FAST,txn=TXN-FAST] Saga initiated sagaId=SAGA-e7756ab6-fbbe-4b98-b975-5c6661b85fee transactionId=TXN-FAST e2e=E2E-FAST sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:33.024-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-FAST,txn=TXN-FAST] Shadow Ledger credit applied account=ACC-CREDITOR amount=50.00 balanceAfter=50.00
-2026-09-28T23:20:33.025-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-FAST,txn=TXN-FAST] Saga advanced sagaId=SAGA-e7756ab6-fbbe-4b98-b975-5c6661b85fee state=FUNDS_RESERVED
-2026-09-28T23:20:33.025-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-FAST,txn=TXN-FAST] Saga advanced sagaId=SAGA-e7756ab6-fbbe-4b98-b975-5c6661b85fee state=CORE_SUBMITTED
-2026-09-28T23:20:33.026-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-FAST,txn=TXN-FAST] Saga advanced sagaId=SAGA-e7756ab6-fbbe-4b98-b975-5c6661b85fee state=FEDNOW_CONFIRMED
-2026-09-28T23:20:33.027-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-FAST,txn=TXN-FAST] Saga advanced sagaId=SAGA-e7756ab6-fbbe-4b98-b975-5c6661b85fee state=COMPLETED
-2026-09-28T23:20:33.027-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-FAST,txn=TXN-FAST] Inbound credit transfer status=ACSC rejectCode=null
-2026-09-28T23:20:33.028-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-FAST,txn=TXN-FAST] Idempotency outcome recorded e2e=E2E-FAST status=ACSC
-2026-09-28T23:20:33.034-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-THROW,txn=TXN-THROW] Inbound credit transfer received amount=50.00 currency=USD sourceRail=FEDNOW
-2026-09-28T23:20:33.034-04:00 WARN  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-THROW,txn=TXN-THROW] Screening unavailable e2e=E2E-THROW cause=service error failOpen=false
-2026-09-28T23:20:33.035-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Idempotency outcome recorded e2e=E2E-THROW status=RJCT
-2026-09-28T23:20:33.041-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Closing JPA EntityManagerFactory for persistence unit 'default'
-[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.722 s -- in io.openfednow.processing.fraud.FraudTimeoutIntegrationTest
+2026-09-28T23:31:38.156-04:00 INFO  [main] i.o.p.fraud.FraudTimeoutIntegrationTest [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Starting FraudTimeoutIntegrationTest using Java 17.0.20.1 with PID 75540 (started by danielmori in /Users/danielmori/Developer/open-fednow-reliability)
+2026-09-28T23:31:38.156-04:00 DEBUG [main] i.o.p.fraud.FraudTimeoutIntegrationTest [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Running with Spring Boot v3.5.16, Spring v6.2.19
+2026-09-28T23:31:38.156-04:00 INFO  [main] i.o.p.fraud.FraudTimeoutIntegrationTest [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] No active profile set, falling back to 1 default profile: "default"
+2026-09-28T23:31:38.259-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-28T23:31:38.259-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-09-28T23:31:38.264-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Finished Spring Data repository scanning in 4 ms. Found 0 JPA repository interfaces.
+2026-09-28T23:31:38.265-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-28T23:31:38.265-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-09-28T23:31:38.271-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Finished Spring Data repository scanning in 6 ms. Found 0 Redis repository interfaces.
+2026-09-28T23:31:38.337-04:00 INFO  [main] org.flywaydb.core.FlywayExecutor [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Database: jdbc:postgresql://localhost:50243/openfednow?loggerLevel=OFF (PostgreSQL 16.15)
+2026-09-28T23:31:38.347-04:00 INFO  [main] o.f.core.internal.command.DbValidate [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Successfully validated 10 migrations (execution time 00:00.004s)
+2026-09-28T23:31:38.361-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Current version of schema "public": 10
+2026-09-28T23:31:38.361-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Schema "public" is up to date. No migration necessary.
+2026-09-28T23:31:38.380-04:00 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-09-28T23:31:38.392-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-09-28T23:31:38.487-04:00 INFO  [main] i.o.reliability.ReliabilityRailConfig [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Synthetic reliability rail configured=false
+2026-09-28T23:31:38.508-04:00 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2026-09-28T23:31:38.707-04:00 INFO  [main] i.o.p.fraud.FraudTimeoutIntegrationTest [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Started FraudTimeoutIntegrationTest in 0.565 seconds (process running for 7.69)
+2026-09-28T23:31:38.707-04:00 DEBUG [scheduling-1] i.o.shadowledger.AvailabilityBridge [req=?,e2e=?,txn=?] Core availability poll: mode=ONLINE
+2026-09-28T23:31:38.709-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Saga recovery: no in-flight sagas found at startup
+2026-09-28T23:31:38.709-04:00 INFO  [main] i.o.shadowledger.BalanceSeedService [req=?,e2e=E2E-OUT-BLOCK,txn=TXN-OUT-BLOCK] Shadow Ledger startup seed: no accounts configured (openfednow.shadow-ledger.seed-accounts is empty)
+2026-09-28T23:31:38.718-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-TIMEOUT,txn=TXN-TIMEOUT] Inbound credit transfer received amount=50.00 currency=USD sourceRail=FEDNOW
+2026-09-28T23:31:38.829-04:00 WARN  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-TIMEOUT,txn=TXN-TIMEOUT] Screening unavailable e2e=E2E-TIMEOUT cause=timeout failOpen=false
+2026-09-28T23:31:38.832-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-TIMEOUT,txn=TXN-TIMEOUT] Idempotency outcome recorded e2e=E2E-TIMEOUT status=RJCT
+2026-09-28T23:31:38.840-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-FAST,txn=TXN-FAST] Inbound credit transfer received amount=50.00 currency=USD sourceRail=FEDNOW
+2026-09-28T23:31:38.842-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-FAST,txn=TXN-FAST] Saga initiated sagaId=SAGA-8fc87b49-4556-4c66-a7c5-a44cc52d0ff9 transactionId=TXN-FAST e2e=E2E-FAST sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:38.843-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-FAST,txn=TXN-FAST] Shadow Ledger credit applied account=ACC-CREDITOR amount=50.00 balanceAfter=50.00
+2026-09-28T23:31:38.844-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-FAST,txn=TXN-FAST] Saga advanced sagaId=SAGA-8fc87b49-4556-4c66-a7c5-a44cc52d0ff9 state=FUNDS_RESERVED
+2026-09-28T23:31:38.845-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-FAST,txn=TXN-FAST] Saga advanced sagaId=SAGA-8fc87b49-4556-4c66-a7c5-a44cc52d0ff9 state=CORE_SUBMITTED
+2026-09-28T23:31:38.845-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-FAST,txn=TXN-FAST] Saga advanced sagaId=SAGA-8fc87b49-4556-4c66-a7c5-a44cc52d0ff9 state=FEDNOW_CONFIRMED
+2026-09-28T23:31:38.846-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-FAST,txn=TXN-FAST] Saga advanced sagaId=SAGA-8fc87b49-4556-4c66-a7c5-a44cc52d0ff9 state=COMPLETED
+2026-09-28T23:31:38.846-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-FAST,txn=TXN-FAST] Inbound credit transfer status=ACSC rejectCode=null
+2026-09-28T23:31:38.847-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-FAST,txn=TXN-FAST] Idempotency outcome recorded e2e=E2E-FAST status=ACSC
+2026-09-28T23:31:38.852-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-THROW,txn=TXN-THROW] Inbound credit transfer received amount=50.00 currency=USD sourceRail=FEDNOW
+2026-09-28T23:31:38.853-04:00 WARN  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-THROW,txn=TXN-THROW] Screening unavailable e2e=E2E-THROW cause=service error failOpen=false
+2026-09-28T23:31:38.854-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Idempotency outcome recorded e2e=E2E-THROW status=RJCT
+2026-09-28T23:31:38.859-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Closing JPA EntityManagerFactory for persistence unit 'default'
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.723 s -- in io.openfednow.processing.fraud.FraudTimeoutIntegrationTest
 [INFO] Running io.openfednow.processing.saga.SagaRecoveryServiceIntegrationTest
-2026-09-28T23:20:33.044-04:00 INFO  [main] o.s.t.c.s.AnnotationConfigContextLoaderUtils [req=?,e2e=E2E-THROW,txn=TXN-THROW] Could not detect default configuration classes for test class [io.openfednow.processing.saga.SagaRecoveryServiceIntegrationTest]: SagaRecoveryServiceIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
-2026-09-28T23:20:33.051-04:00 INFO  [main] o.s.b.t.c.SpringBootTestContextBootstrapper [req=?,e2e=E2E-THROW,txn=TXN-THROW] Found @SpringBootConfiguration io.openfednow.OpenFedNowApplication for test class io.openfednow.processing.saga.SagaRecoveryServiceIntegrationTest
+2026-09-28T23:31:38.861-04:00 INFO  [main] o.s.t.c.s.AnnotationConfigContextLoaderUtils [req=?,e2e=E2E-THROW,txn=TXN-THROW] Could not detect default configuration classes for test class [io.openfednow.processing.saga.SagaRecoveryServiceIntegrationTest]: SagaRecoveryServiceIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-09-28T23:31:38.868-04:00 INFO  [main] o.s.b.t.c.SpringBootTestContextBootstrapper [req=?,e2e=E2E-THROW,txn=TXN-THROW] Found @SpringBootConfiguration io.openfednow.OpenFedNowApplication for test class io.openfednow.processing.saga.SagaRecoveryServiceIntegrationTest
 
   .   ____          _            __ _ _
  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
@@ -186,109 +186,109 @@
 
  :: Spring Boot ::               (v3.5.16)
 
-2026-09-28T23:20:33.063-04:00 INFO  [main] i.o.p.s.SagaRecoveryServiceIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Starting SagaRecoveryServiceIntegrationTest using Java 17.0.20.1 with PID 74054 (started by danielmori in /Users/danielmori/Developer/open-fednow-reliability)
-2026-09-28T23:20:33.063-04:00 DEBUG [main] i.o.p.s.SagaRecoveryServiceIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Running with Spring Boot v3.5.16, Spring v6.2.19
-2026-09-28T23:20:33.063-04:00 INFO  [main] i.o.p.s.SagaRecoveryServiceIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] No active profile set, falling back to 1 default profile: "default"
-2026-09-28T23:20:33.143-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-28T23:20:33.143-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2026-09-28T23:20:33.147-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 4 ms. Found 0 JPA repository interfaces.
-2026-09-28T23:20:33.148-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-28T23:20:33.148-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data Redis repositories in DEFAULT mode.
-2026-09-28T23:20:33.153-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 4 ms. Found 0 Redis repository interfaces.
-2026-09-28T23:20:33.216-04:00 INFO  [main] org.flywaydb.core.FlywayExecutor [req=?,e2e=E2E-THROW,txn=TXN-THROW] Database: jdbc:postgresql://localhost:65441/openfednow?loggerLevel=OFF (PostgreSQL 16.15)
-2026-09-28T23:20:33.226-04:00 INFO  [main] o.f.core.internal.command.DbValidate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Successfully validated 10 migrations (execution time 00:00.004s)
-2026-09-28T23:20:33.238-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Current version of schema "public": 10
-2026-09-28T23:20:33.239-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Schema "public" is up to date. No migration necessary.
-2026-09-28T23:20:33.257-04:00 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo [req=?,e2e=E2E-THROW,txn=TXN-THROW] No LoadTimeWeaver setup: ignoring JPA class transformer
-2026-09-28T23:20:33.267-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Initialized JPA EntityManagerFactory for persistence unit 'default'
-2026-09-28T23:20:33.351-04:00 INFO  [main] i.o.reliability.ReliabilityRailConfig [req=?,e2e=E2E-THROW,txn=TXN-THROW] Synthetic reliability rail configured=false
-2026-09-28T23:20:33.370-04:00 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [req=?,e2e=E2E-THROW,txn=TXN-THROW] Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
-2026-09-28T23:20:33.534-04:00 INFO  [main] i.o.p.s.SagaRecoveryServiceIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Started SagaRecoveryServiceIntegrationTest in 0.482 seconds (process running for 8.453)
-2026-09-28T23:20:33.534-04:00 DEBUG [scheduling-1] i.o.shadowledger.AvailabilityBridge [req=?,e2e=?,txn=?] Core availability poll: mode=ONLINE
-2026-09-28T23:20:33.537-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: no in-flight sagas found at startup
-2026-09-28T23:20:33.537-04:00 INFO  [main] i.o.shadowledger.BalanceSeedService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger startup seed: no accounts configured (openfednow.shadow-ledger.seed-accounts is empty)
-2026-09-28T23:20:33.544-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-b4a85baf-66a1-4ca6-9818-d8247d86f018 transactionId=TXN-DONE e2e=E2E-DONE sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:33.544-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-b4a85baf-66a1-4ca6-9818-d8247d86f018 state=FUNDS_RESERVED
-2026-09-28T23:20:33.544-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-b4a85baf-66a1-4ca6-9818-d8247d86f018 state=CORE_SUBMITTED
-2026-09-28T23:20:33.545-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-b4a85baf-66a1-4ca6-9818-d8247d86f018 state=FEDNOW_CONFIRMED
-2026-09-28T23:20:33.545-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-b4a85baf-66a1-4ca6-9818-d8247d86f018 state=COMPLETED
-2026-09-28T23:20:33.546-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: no in-flight sagas found at startup
-2026-09-28T23:20:33.549-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-cbb3408b-7654-4fb3-9d11-4dc60a068e96 transactionId=TXN-REC-INIT e2e=E2E-REC-INIT sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:33.550-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 1 in-flight saga(s) — completing or compensating each
-2026-09-28T23:20:33.551-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-cbb3408b-7654-4fb3-9d11-4dc60a068e96 fromState=INITIATED sourceRail=FEDNOW
-2026-09-28T23:20:33.564-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation starting sagaId=SAGA-cbb3408b-7654-4fb3-9d11-4dc60a068e96 fromState=INITIATED reason=NARR
-2026-09-28T23:20:33.565-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation complete sagaId=SAGA-cbb3408b-7654-4fb3-9d11-4dc60a068e96
-2026-09-28T23:20:33.566-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 1 of 1 saga(s) processed
-2026-09-28T23:20:33.571-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-5f1ff803-0299-44da-bc7f-57611b83ca1c transactionId=TXN-REC-COMP e2e=E2E-REC-COMP sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:33.571-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 1 in-flight saga(s) — completing or compensating each
-2026-09-28T23:20:33.572-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-5f1ff803-0299-44da-bc7f-57611b83ca1c fromState=COMPENSATING sourceRail=FEDNOW
-2026-09-28T23:20:33.573-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-5f1ff803-0299-44da-bc7f-57611b83ca1c state=FAILED
-2026-09-28T23:20:33.573-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 1 of 1 saga(s) processed
-2026-09-28T23:20:33.577-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-cdd0bb50-7cea-445c-97f6-04e5b49295f6 transactionId=TXN-REC-CORE e2e=E2E-REC-CORE sourceRail=RTP requestId=null
-2026-09-28T23:20:33.596-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger debit applied account=ACC-REC-CORE amount=75.00 balanceAfter=125.00
-2026-09-28T23:20:33.597-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-cdd0bb50-7cea-445c-97f6-04e5b49295f6 state=FUNDS_RESERVED
-2026-09-28T23:20:33.598-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-cdd0bb50-7cea-445c-97f6-04e5b49295f6 state=CORE_SUBMITTED
-2026-09-28T23:20:33.598-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 1 in-flight saga(s) — completing or compensating each
-2026-09-28T23:20:33.599-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-cdd0bb50-7cea-445c-97f6-04e5b49295f6 fromState=CORE_SUBMITTED sourceRail=RTP
-2026-09-28T23:20:33.599-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation starting sagaId=SAGA-cdd0bb50-7cea-445c-97f6-04e5b49295f6 fromState=CORE_SUBMITTED reason=NARR
-2026-09-28T23:20:33.601-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger reversal applied account=ACC-REC-CORE amount=75.00 balanceAfter=200.00
-2026-09-28T23:20:33.601-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger debit reversed sagaId=SAGA-cdd0bb50-7cea-445c-97f6-04e5b49295f6 transactionId=TXN-REC-CORE
-2026-09-28T23:20:33.602-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation complete sagaId=SAGA-cdd0bb50-7cea-445c-97f6-04e5b49295f6
-2026-09-28T23:20:33.602-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 1 of 1 saga(s) processed
-2026-09-28T23:20:33.607-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: no in-flight sagas found at startup
-2026-09-28T23:20:33.610-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-947f8a8a-328e-4843-a933-b219c8f7e455 transactionId=TXN-IDEMP e2e=E2E-IDEMP sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:33.611-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 1 in-flight saga(s) — completing or compensating each
-2026-09-28T23:20:33.611-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-947f8a8a-328e-4843-a933-b219c8f7e455 fromState=INITIATED sourceRail=FEDNOW
-2026-09-28T23:20:33.612-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation starting sagaId=SAGA-947f8a8a-328e-4843-a933-b219c8f7e455 fromState=INITIATED reason=NARR
-2026-09-28T23:20:33.613-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation complete sagaId=SAGA-947f8a8a-328e-4843-a933-b219c8f7e455
-2026-09-28T23:20:33.613-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 1 of 1 saga(s) processed
-2026-09-28T23:20:33.613-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: no in-flight sagas found at startup
-2026-09-28T23:20:33.617-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-ec321070-2f27-4166-8ce5-13ef20a2a480 transactionId=TXN-REC-CONF e2e=E2E-REC-CONF sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:33.621-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger debit applied account=ACC-REC-CONF amount=50.00 balanceAfter=250.00
-2026-09-28T23:20:33.622-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-ec321070-2f27-4166-8ce5-13ef20a2a480 state=FUNDS_RESERVED
-2026-09-28T23:20:33.622-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-ec321070-2f27-4166-8ce5-13ef20a2a480 state=CORE_SUBMITTED
-2026-09-28T23:20:33.623-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-ec321070-2f27-4166-8ce5-13ef20a2a480 state=FEDNOW_CONFIRMED
-2026-09-28T23:20:33.623-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 1 in-flight saga(s) — completing or compensating each
-2026-09-28T23:20:33.623-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-ec321070-2f27-4166-8ce5-13ef20a2a480 fromState=FEDNOW_CONFIRMED sourceRail=FEDNOW
-2026-09-28T23:20:33.624-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-ec321070-2f27-4166-8ce5-13ef20a2a480 state=COMPLETED
-2026-09-28T23:20:33.624-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 1 of 1 saga(s) processed
-2026-09-28T23:20:33.628-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-27abe72f-7840-4f43-9bbc-b03851b52699 transactionId=TXN-REC-UNKNOWN e2e=E2E-REC-UNKNOWN sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:33.632-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger debit applied account=ACC-REC-UNKNOWN amount=75.00 balanceAfter=125.00
-2026-09-28T23:20:33.633-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-27abe72f-7840-4f43-9bbc-b03851b52699 state=FUNDS_RESERVED
-2026-09-28T23:20:33.633-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-27abe72f-7840-4f43-9bbc-b03851b52699 state=SUBMITTING
-2026-09-28T23:20:33.633-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 1 in-flight saga(s) — completing or compensating each
-2026-09-28T23:20:33.634-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-27abe72f-7840-4f43-9bbc-b03851b52699 fromState=SUBMITTING sourceRail=FEDNOW
-2026-09-28T23:20:33.634-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Submission may have reached rail sagaId=SAGA-27abe72f-7840-4f43-9bbc-b03851b52699 action=QUARANTINE
-2026-09-28T23:20:33.634-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-27abe72f-7840-4f43-9bbc-b03851b52699 state=OUTCOME_UNKNOWN
-2026-09-28T23:20:33.634-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 1 of 1 saga(s) processed
-2026-09-28T23:20:33.638-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: no in-flight sagas found at startup
-2026-09-28T23:20:33.643-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-1746ef9d-7e19-4733-a063-45a20eddba3b transactionId=TXN-REC-FUNDS e2e=E2E-REC-FUNDS sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:33.646-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger debit applied account=ACC-REC-FUNDS amount=100.00 balanceAfter=0.00
-2026-09-28T23:20:33.647-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-1746ef9d-7e19-4733-a063-45a20eddba3b state=FUNDS_RESERVED
-2026-09-28T23:20:33.647-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 1 in-flight saga(s) — completing or compensating each
-2026-09-28T23:20:33.647-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-1746ef9d-7e19-4733-a063-45a20eddba3b fromState=FUNDS_RESERVED sourceRail=FEDNOW
-2026-09-28T23:20:33.647-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation starting sagaId=SAGA-1746ef9d-7e19-4733-a063-45a20eddba3b fromState=FUNDS_RESERVED reason=NARR
-2026-09-28T23:20:33.649-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger reversal applied account=ACC-REC-FUNDS amount=100.00 balanceAfter=100.00
-2026-09-28T23:20:33.649-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger debit reversed sagaId=SAGA-1746ef9d-7e19-4733-a063-45a20eddba3b transactionId=TXN-REC-FUNDS
-2026-09-28T23:20:33.649-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation complete sagaId=SAGA-1746ef9d-7e19-4733-a063-45a20eddba3b
-2026-09-28T23:20:33.649-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 1 of 1 saga(s) processed
-2026-09-28T23:20:33.653-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-11b0aa91-602a-437f-9b12-2d0e8126fcf4 transactionId=TXN-MIX-INIT e2e=E2E-MIX-INIT sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:33.654-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-b32c72b5-9a14-406b-a59e-d42485632eb7 transactionId=TXN-MIX-CONF e2e=E2E-MIX-CONF sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:33.654-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-b32c72b5-9a14-406b-a59e-d42485632eb7 state=FUNDS_RESERVED
-2026-09-28T23:20:33.654-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-b32c72b5-9a14-406b-a59e-d42485632eb7 state=CORE_SUBMITTED
-2026-09-28T23:20:33.654-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-b32c72b5-9a14-406b-a59e-d42485632eb7 state=FEDNOW_CONFIRMED
-2026-09-28T23:20:33.655-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 2 in-flight saga(s) — completing or compensating each
-2026-09-28T23:20:33.655-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-11b0aa91-602a-437f-9b12-2d0e8126fcf4 fromState=INITIATED sourceRail=FEDNOW
-2026-09-28T23:20:33.655-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation starting sagaId=SAGA-11b0aa91-602a-437f-9b12-2d0e8126fcf4 fromState=INITIATED reason=NARR
-2026-09-28T23:20:33.656-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation complete sagaId=SAGA-11b0aa91-602a-437f-9b12-2d0e8126fcf4
-2026-09-28T23:20:33.656-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-b32c72b5-9a14-406b-a59e-d42485632eb7 fromState=FEDNOW_CONFIRMED sourceRail=FEDNOW
-2026-09-28T23:20:33.656-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-b32c72b5-9a14-406b-a59e-d42485632eb7 state=COMPLETED
-2026-09-28T23:20:33.656-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 2 of 2 saga(s) processed
-2026-09-28T23:20:33.661-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Closing JPA EntityManagerFactory for persistence unit 'default'
-[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.637 s -- in io.openfednow.processing.saga.SagaRecoveryServiceIntegrationTest
+2026-09-28T23:31:38.879-04:00 INFO  [main] i.o.p.s.SagaRecoveryServiceIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Starting SagaRecoveryServiceIntegrationTest using Java 17.0.20.1 with PID 75540 (started by danielmori in /Users/danielmori/Developer/open-fednow-reliability)
+2026-09-28T23:31:38.880-04:00 DEBUG [main] i.o.p.s.SagaRecoveryServiceIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Running with Spring Boot v3.5.16, Spring v6.2.19
+2026-09-28T23:31:38.880-04:00 INFO  [main] i.o.p.s.SagaRecoveryServiceIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] No active profile set, falling back to 1 default profile: "default"
+2026-09-28T23:31:38.952-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-28T23:31:38.952-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-09-28T23:31:38.956-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 4 ms. Found 0 JPA repository interfaces.
+2026-09-28T23:31:38.957-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-28T23:31:38.957-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-09-28T23:31:38.960-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 2 ms. Found 0 Redis repository interfaces.
+2026-09-28T23:31:39.010-04:00 INFO  [main] org.flywaydb.core.FlywayExecutor [req=?,e2e=E2E-THROW,txn=TXN-THROW] Database: jdbc:postgresql://localhost:50243/openfednow?loggerLevel=OFF (PostgreSQL 16.15)
+2026-09-28T23:31:39.019-04:00 INFO  [main] o.f.core.internal.command.DbValidate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Successfully validated 10 migrations (execution time 00:00.004s)
+2026-09-28T23:31:39.031-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Current version of schema "public": 10
+2026-09-28T23:31:39.032-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Schema "public" is up to date. No migration necessary.
+2026-09-28T23:31:39.047-04:00 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo [req=?,e2e=E2E-THROW,txn=TXN-THROW] No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-09-28T23:31:39.057-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-09-28T23:31:39.137-04:00 INFO  [main] i.o.reliability.ReliabilityRailConfig [req=?,e2e=E2E-THROW,txn=TXN-THROW] Synthetic reliability rail configured=false
+2026-09-28T23:31:39.155-04:00 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [req=?,e2e=E2E-THROW,txn=TXN-THROW] Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2026-09-28T23:31:39.316-04:00 INFO  [main] i.o.p.s.SagaRecoveryServiceIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Started SagaRecoveryServiceIntegrationTest in 0.447 seconds (process running for 8.299)
+2026-09-28T23:31:39.316-04:00 DEBUG [scheduling-1] i.o.shadowledger.AvailabilityBridge [req=?,e2e=?,txn=?] Core availability poll: mode=ONLINE
+2026-09-28T23:31:39.318-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: no in-flight sagas found at startup
+2026-09-28T23:31:39.318-04:00 INFO  [main] i.o.shadowledger.BalanceSeedService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger startup seed: no accounts configured (openfednow.shadow-ledger.seed-accounts is empty)
+2026-09-28T23:31:39.324-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-0889eefc-7cbb-4260-9b3d-1f5b32b9abd4 transactionId=TXN-DONE e2e=E2E-DONE sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:39.325-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-0889eefc-7cbb-4260-9b3d-1f5b32b9abd4 state=FUNDS_RESERVED
+2026-09-28T23:31:39.325-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-0889eefc-7cbb-4260-9b3d-1f5b32b9abd4 state=CORE_SUBMITTED
+2026-09-28T23:31:39.326-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-0889eefc-7cbb-4260-9b3d-1f5b32b9abd4 state=FEDNOW_CONFIRMED
+2026-09-28T23:31:39.326-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-0889eefc-7cbb-4260-9b3d-1f5b32b9abd4 state=COMPLETED
+2026-09-28T23:31:39.327-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: no in-flight sagas found at startup
+2026-09-28T23:31:39.330-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-5ff9c329-2bc5-4d88-95aa-88c574b3de08 transactionId=TXN-REC-INIT e2e=E2E-REC-INIT sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:39.330-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 1 in-flight saga(s) — completing or compensating each
+2026-09-28T23:31:39.331-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-5ff9c329-2bc5-4d88-95aa-88c574b3de08 fromState=INITIATED sourceRail=FEDNOW
+2026-09-28T23:31:39.344-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation starting sagaId=SAGA-5ff9c329-2bc5-4d88-95aa-88c574b3de08 fromState=INITIATED reason=NARR
+2026-09-28T23:31:39.345-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation complete sagaId=SAGA-5ff9c329-2bc5-4d88-95aa-88c574b3de08
+2026-09-28T23:31:39.346-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 1 of 1 saga(s) processed
+2026-09-28T23:31:39.351-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-b1f05195-2f8e-4d4d-b35f-33ba718d1921 transactionId=TXN-REC-COMP e2e=E2E-REC-COMP sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:39.351-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 1 in-flight saga(s) — completing or compensating each
+2026-09-28T23:31:39.352-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-b1f05195-2f8e-4d4d-b35f-33ba718d1921 fromState=COMPENSATING sourceRail=FEDNOW
+2026-09-28T23:31:39.352-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-b1f05195-2f8e-4d4d-b35f-33ba718d1921 state=FAILED
+2026-09-28T23:31:39.352-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 1 of 1 saga(s) processed
+2026-09-28T23:31:39.356-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-7810b789-89ff-4ea7-9bf5-a7d9422844a3 transactionId=TXN-REC-CORE e2e=E2E-REC-CORE sourceRail=RTP requestId=null
+2026-09-28T23:31:39.374-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger debit applied account=ACC-REC-CORE amount=75.00 balanceAfter=125.00
+2026-09-28T23:31:39.375-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-7810b789-89ff-4ea7-9bf5-a7d9422844a3 state=FUNDS_RESERVED
+2026-09-28T23:31:39.375-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-7810b789-89ff-4ea7-9bf5-a7d9422844a3 state=CORE_SUBMITTED
+2026-09-28T23:31:39.375-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 1 in-flight saga(s) — completing or compensating each
+2026-09-28T23:31:39.376-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-7810b789-89ff-4ea7-9bf5-a7d9422844a3 fromState=CORE_SUBMITTED sourceRail=RTP
+2026-09-28T23:31:39.376-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation starting sagaId=SAGA-7810b789-89ff-4ea7-9bf5-a7d9422844a3 fromState=CORE_SUBMITTED reason=NARR
+2026-09-28T23:31:39.378-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger reversal applied account=ACC-REC-CORE amount=75.00 balanceAfter=200.00
+2026-09-28T23:31:39.378-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger debit reversed sagaId=SAGA-7810b789-89ff-4ea7-9bf5-a7d9422844a3 transactionId=TXN-REC-CORE
+2026-09-28T23:31:39.379-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation complete sagaId=SAGA-7810b789-89ff-4ea7-9bf5-a7d9422844a3
+2026-09-28T23:31:39.379-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 1 of 1 saga(s) processed
+2026-09-28T23:31:39.383-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: no in-flight sagas found at startup
+2026-09-28T23:31:39.387-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-d3dc24fa-1a6e-40dd-8a68-37eec5baa45b transactionId=TXN-IDEMP e2e=E2E-IDEMP sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:39.387-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 1 in-flight saga(s) — completing or compensating each
+2026-09-28T23:31:39.387-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-d3dc24fa-1a6e-40dd-8a68-37eec5baa45b fromState=INITIATED sourceRail=FEDNOW
+2026-09-28T23:31:39.388-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation starting sagaId=SAGA-d3dc24fa-1a6e-40dd-8a68-37eec5baa45b fromState=INITIATED reason=NARR
+2026-09-28T23:31:39.389-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation complete sagaId=SAGA-d3dc24fa-1a6e-40dd-8a68-37eec5baa45b
+2026-09-28T23:31:39.389-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 1 of 1 saga(s) processed
+2026-09-28T23:31:39.389-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: no in-flight sagas found at startup
+2026-09-28T23:31:39.393-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-29a67845-c972-4e50-b9c5-ddd011133837 transactionId=TXN-REC-CONF e2e=E2E-REC-CONF sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:39.397-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger debit applied account=ACC-REC-CONF amount=50.00 balanceAfter=250.00
+2026-09-28T23:31:39.397-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-29a67845-c972-4e50-b9c5-ddd011133837 state=FUNDS_RESERVED
+2026-09-28T23:31:39.398-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-29a67845-c972-4e50-b9c5-ddd011133837 state=CORE_SUBMITTED
+2026-09-28T23:31:39.398-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-29a67845-c972-4e50-b9c5-ddd011133837 state=FEDNOW_CONFIRMED
+2026-09-28T23:31:39.398-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 1 in-flight saga(s) — completing or compensating each
+2026-09-28T23:31:39.399-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-29a67845-c972-4e50-b9c5-ddd011133837 fromState=FEDNOW_CONFIRMED sourceRail=FEDNOW
+2026-09-28T23:31:39.399-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-29a67845-c972-4e50-b9c5-ddd011133837 state=COMPLETED
+2026-09-28T23:31:39.399-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 1 of 1 saga(s) processed
+2026-09-28T23:31:39.403-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-e299324f-e85a-4f62-8ce3-4545e633778a transactionId=TXN-REC-UNKNOWN e2e=E2E-REC-UNKNOWN sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:39.406-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger debit applied account=ACC-REC-UNKNOWN amount=75.00 balanceAfter=125.00
+2026-09-28T23:31:39.407-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-e299324f-e85a-4f62-8ce3-4545e633778a state=FUNDS_RESERVED
+2026-09-28T23:31:39.407-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-e299324f-e85a-4f62-8ce3-4545e633778a state=SUBMITTING
+2026-09-28T23:31:39.407-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 1 in-flight saga(s) — completing or compensating each
+2026-09-28T23:31:39.408-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-e299324f-e85a-4f62-8ce3-4545e633778a fromState=SUBMITTING sourceRail=FEDNOW
+2026-09-28T23:31:39.408-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Submission may have reached rail sagaId=SAGA-e299324f-e85a-4f62-8ce3-4545e633778a action=QUARANTINE
+2026-09-28T23:31:39.408-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-e299324f-e85a-4f62-8ce3-4545e633778a state=OUTCOME_UNKNOWN
+2026-09-28T23:31:39.408-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 1 of 1 saga(s) processed
+2026-09-28T23:31:39.412-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: no in-flight sagas found at startup
+2026-09-28T23:31:39.416-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-47e59882-0201-43b7-bb9e-b8e8fce3fcbb transactionId=TXN-REC-FUNDS e2e=E2E-REC-FUNDS sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:39.419-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger debit applied account=ACC-REC-FUNDS amount=100.00 balanceAfter=0.00
+2026-09-28T23:31:39.419-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-47e59882-0201-43b7-bb9e-b8e8fce3fcbb state=FUNDS_RESERVED
+2026-09-28T23:31:39.420-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 1 in-flight saga(s) — completing or compensating each
+2026-09-28T23:31:39.420-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-47e59882-0201-43b7-bb9e-b8e8fce3fcbb fromState=FUNDS_RESERVED sourceRail=FEDNOW
+2026-09-28T23:31:39.420-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation starting sagaId=SAGA-47e59882-0201-43b7-bb9e-b8e8fce3fcbb fromState=FUNDS_RESERVED reason=NARR
+2026-09-28T23:31:39.421-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger reversal applied account=ACC-REC-FUNDS amount=100.00 balanceAfter=100.00
+2026-09-28T23:31:39.421-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger debit reversed sagaId=SAGA-47e59882-0201-43b7-bb9e-b8e8fce3fcbb transactionId=TXN-REC-FUNDS
+2026-09-28T23:31:39.422-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation complete sagaId=SAGA-47e59882-0201-43b7-bb9e-b8e8fce3fcbb
+2026-09-28T23:31:39.422-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 1 of 1 saga(s) processed
+2026-09-28T23:31:39.426-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-f2658e2a-8989-4786-ab67-b9ba2824f512 transactionId=TXN-MIX-INIT e2e=E2E-MIX-INIT sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:39.426-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-382a6799-0807-40f5-abae-2901de25c4c3 transactionId=TXN-MIX-CONF e2e=E2E-MIX-CONF sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:39.426-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-382a6799-0807-40f5-abae-2901de25c4c3 state=FUNDS_RESERVED
+2026-09-28T23:31:39.426-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-382a6799-0807-40f5-abae-2901de25c4c3 state=CORE_SUBMITTED
+2026-09-28T23:31:39.427-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-382a6799-0807-40f5-abae-2901de25c4c3 state=FEDNOW_CONFIRMED
+2026-09-28T23:31:39.427-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 2 in-flight saga(s) — completing or compensating each
+2026-09-28T23:31:39.427-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-f2658e2a-8989-4786-ab67-b9ba2824f512 fromState=INITIATED sourceRail=FEDNOW
+2026-09-28T23:31:39.427-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation starting sagaId=SAGA-f2658e2a-8989-4786-ab67-b9ba2824f512 fromState=INITIATED reason=NARR
+2026-09-28T23:31:39.428-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation complete sagaId=SAGA-f2658e2a-8989-4786-ab67-b9ba2824f512
+2026-09-28T23:31:39.428-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-382a6799-0807-40f5-abae-2901de25c4c3 fromState=FEDNOW_CONFIRMED sourceRail=FEDNOW
+2026-09-28T23:31:39.429-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-382a6799-0807-40f5-abae-2901de25c4c3 state=COMPLETED
+2026-09-28T23:31:39.429-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 2 of 2 saga(s) processed
+2026-09-28T23:31:39.433-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Closing JPA EntityManagerFactory for persistence unit 'default'
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.613 s -- in io.openfednow.processing.saga.SagaRecoveryServiceIntegrationTest
 [INFO] Running io.openfednow.processing.saga.SagaTimeoutIntegrationTest
-2026-09-28T23:20:33.682-04:00 INFO  [main] o.s.t.c.s.AnnotationConfigContextLoaderUtils [req=?,e2e=E2E-THROW,txn=TXN-THROW] Could not detect default configuration classes for test class [io.openfednow.processing.saga.SagaTimeoutIntegrationTest]: SagaTimeoutIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
-2026-09-28T23:20:33.683-04:00 INFO  [main] o.s.b.t.c.SpringBootTestContextBootstrapper [req=?,e2e=E2E-THROW,txn=TXN-THROW] Found @SpringBootConfiguration io.openfednow.OpenFedNowApplication for test class io.openfednow.processing.saga.SagaTimeoutIntegrationTest
+2026-09-28T23:31:39.475-04:00 INFO  [main] o.s.t.c.s.AnnotationConfigContextLoaderUtils [req=?,e2e=E2E-THROW,txn=TXN-THROW] Could not detect default configuration classes for test class [io.openfednow.processing.saga.SagaTimeoutIntegrationTest]: SagaTimeoutIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-09-28T23:31:39.476-04:00 INFO  [main] o.s.b.t.c.SpringBootTestContextBootstrapper [req=?,e2e=E2E-THROW,txn=TXN-THROW] Found @SpringBootConfiguration io.openfednow.OpenFedNowApplication for test class io.openfednow.processing.saga.SagaTimeoutIntegrationTest
 
   .   ____          _            __ _ _
  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
@@ -299,58 +299,58 @@
 
  :: Spring Boot ::               (v3.5.16)
 
-2026-09-28T23:20:33.693-04:00 INFO  [main] i.o.p.saga.SagaTimeoutIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Starting SagaTimeoutIntegrationTest using Java 17.0.20.1 with PID 74054 (started by danielmori in /Users/danielmori/Developer/open-fednow-reliability)
-2026-09-28T23:20:33.693-04:00 DEBUG [main] i.o.p.saga.SagaTimeoutIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Running with Spring Boot v3.5.16, Spring v6.2.19
-2026-09-28T23:20:33.693-04:00 INFO  [main] i.o.p.saga.SagaTimeoutIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] No active profile set, falling back to 1 default profile: "default"
-2026-09-28T23:20:33.767-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-28T23:20:33.767-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2026-09-28T23:20:33.771-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 3 ms. Found 0 JPA repository interfaces.
-2026-09-28T23:20:33.772-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-28T23:20:33.772-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data Redis repositories in DEFAULT mode.
-2026-09-28T23:20:33.775-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 2 ms. Found 0 Redis repository interfaces.
-2026-09-28T23:20:33.825-04:00 INFO  [main] org.flywaydb.core.FlywayExecutor [req=?,e2e=E2E-THROW,txn=TXN-THROW] Database: jdbc:postgresql://localhost:65441/openfednow?loggerLevel=OFF (PostgreSQL 16.15)
-2026-09-28T23:20:33.833-04:00 INFO  [main] o.f.core.internal.command.DbValidate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Successfully validated 10 migrations (execution time 00:00.003s)
-2026-09-28T23:20:33.846-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Current version of schema "public": 10
-2026-09-28T23:20:33.846-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Schema "public" is up to date. No migration necessary.
-2026-09-28T23:20:33.866-04:00 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo [req=?,e2e=E2E-THROW,txn=TXN-THROW] No LoadTimeWeaver setup: ignoring JPA class transformer
-2026-09-28T23:20:33.876-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Initialized JPA EntityManagerFactory for persistence unit 'default'
-2026-09-28T23:20:33.948-04:00 INFO  [main] i.o.reliability.ReliabilityRailConfig [req=?,e2e=E2E-THROW,txn=TXN-THROW] Synthetic reliability rail configured=false
-2026-09-28T23:20:33.964-04:00 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [req=?,e2e=E2E-THROW,txn=TXN-THROW] Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
-2026-09-28T23:20:34.123-04:00 INFO  [main] i.o.p.saga.SagaTimeoutIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Started SagaTimeoutIntegrationTest in 0.439 seconds (process running for 9.042)
-2026-09-28T23:20:34.124-04:00 DEBUG [scheduling-1] i.o.shadowledger.AvailabilityBridge [req=?,e2e=?,txn=?] Core availability poll: mode=ONLINE
-2026-09-28T23:20:34.126-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: no in-flight sagas found at startup
-2026-09-28T23:20:34.126-04:00 INFO  [main] i.o.shadowledger.BalanceSeedService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger startup seed: no accounts configured (openfednow.shadow-ledger.seed-accounts is empty)
-2026-09-28T23:20:34.133-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-47163037-21c9-44a8-8610-c52696a25328 transactionId=TXN-FRESH-S e2e=E2E-FRESH-S sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:34.134-04:00 DEBUG [main] i.o.processing.saga.SagaTimeoutMonitor [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga timeout monitor: no sagas exceeded 30s threshold
-2026-09-28T23:20:34.138-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-74c7ab6f-80c6-481f-9973-fa3e89d148c9 transactionId=TXN-TIMEOUT e2e=E2E-TIMEOUT sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:34.142-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger debit applied account=ACC-TIMEOUT amount=100.00 balanceAfter=0.00
-2026-09-28T23:20:34.143-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-74c7ab6f-80c6-481f-9973-fa3e89d148c9 state=FUNDS_RESERVED
-2026-09-28T23:20:34.143-04:00 WARN  [main] i.o.processing.saga.SagaTimeoutMonitor [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga timeout monitor: 1 saga(s) exceeded 30s threshold — compensating
-2026-09-28T23:20:34.144-04:00 WARN  [main] i.o.processing.saga.SagaTimeoutMonitor [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga timed out sagaId=SAGA-74c7ab6f-80c6-481f-9973-fa3e89d148c9 thresholdSeconds=30 action=COMPENSATE reason=XPIR
-2026-09-28T23:20:34.144-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation starting sagaId=SAGA-74c7ab6f-80c6-481f-9973-fa3e89d148c9 fromState=FUNDS_RESERVED reason=XPIR
-2026-09-28T23:20:34.146-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger reversal applied account=ACC-TIMEOUT amount=100.00 balanceAfter=100.00
-2026-09-28T23:20:34.146-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger debit reversed sagaId=SAGA-74c7ab6f-80c6-481f-9973-fa3e89d148c9 transactionId=TXN-TIMEOUT
-2026-09-28T23:20:34.147-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation complete sagaId=SAGA-74c7ab6f-80c6-481f-9973-fa3e89d148c9
-2026-09-28T23:20:34.152-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-0efb23e2-ff26-4dea-b9de-88049a6d37fc transactionId=TXN-DONE e2e=E2E-DONE sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:34.152-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-0efb23e2-ff26-4dea-b9de-88049a6d37fc state=FUNDS_RESERVED
-2026-09-28T23:20:34.153-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-0efb23e2-ff26-4dea-b9de-88049a6d37fc state=CORE_SUBMITTED
-2026-09-28T23:20:34.153-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-0efb23e2-ff26-4dea-b9de-88049a6d37fc state=FEDNOW_CONFIRMED
-2026-09-28T23:20:34.153-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-0efb23e2-ff26-4dea-b9de-88049a6d37fc state=COMPLETED
-2026-09-28T23:20:34.154-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-1f11cb3d-e9b2-4690-8c62-ecc493b4bcbc transactionId=TXN-FAILED e2e=E2E-FAILED sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:34.154-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation starting sagaId=SAGA-1f11cb3d-e9b2-4690-8c62-ecc493b4bcbc fromState=INITIATED reason=AM04
-2026-09-28T23:20:34.155-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation complete sagaId=SAGA-1f11cb3d-e9b2-4690-8c62-ecc493b4bcbc
-2026-09-28T23:20:34.156-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-6f325059-6681-45ec-9b95-4bc916089c46 transactionId=TXN-INCOMP e2e=E2E-INCOMP sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:34.157-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-2ba78eea-612c-438c-81b3-10614dd23417 transactionId=TXN-CONFIRMED e2e=E2E-CONFIRMED sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:34.157-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-2ba78eea-612c-438c-81b3-10614dd23417 state=FUNDS_RESERVED
-2026-09-28T23:20:34.157-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-2ba78eea-612c-438c-81b3-10614dd23417 state=CORE_SUBMITTED
-2026-09-28T23:20:34.157-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-2ba78eea-612c-438c-81b3-10614dd23417 state=FEDNOW_CONFIRMED
-2026-09-28T23:20:34.164-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-369cdb6e-5b88-4c1d-9349-006c3200ae73 transactionId=TXN-AGED e2e=E2E-AGED sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:34.167-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-1b2983a4-d1d2-4c9b-af23-dd1432e90749 transactionId=TXN-FRESH e2e=E2E-FRESH sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:34.171-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Closing JPA EntityManagerFactory for persistence unit 'default'
-[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.492 s -- in io.openfednow.processing.saga.SagaTimeoutIntegrationTest
+2026-09-28T23:31:39.486-04:00 INFO  [main] i.o.p.saga.SagaTimeoutIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Starting SagaTimeoutIntegrationTest using Java 17.0.20.1 with PID 75540 (started by danielmori in /Users/danielmori/Developer/open-fednow-reliability)
+2026-09-28T23:31:39.486-04:00 DEBUG [main] i.o.p.saga.SagaTimeoutIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Running with Spring Boot v3.5.16, Spring v6.2.19
+2026-09-28T23:31:39.486-04:00 INFO  [main] i.o.p.saga.SagaTimeoutIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] No active profile set, falling back to 1 default profile: "default"
+2026-09-28T23:31:39.557-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-28T23:31:39.557-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-09-28T23:31:39.561-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 3 ms. Found 0 JPA repository interfaces.
+2026-09-28T23:31:39.561-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-28T23:31:39.561-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-09-28T23:31:39.564-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 2 ms. Found 0 Redis repository interfaces.
+2026-09-28T23:31:39.608-04:00 INFO  [main] org.flywaydb.core.FlywayExecutor [req=?,e2e=E2E-THROW,txn=TXN-THROW] Database: jdbc:postgresql://localhost:50243/openfednow?loggerLevel=OFF (PostgreSQL 16.15)
+2026-09-28T23:31:39.615-04:00 INFO  [main] o.f.core.internal.command.DbValidate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Successfully validated 10 migrations (execution time 00:00.003s)
+2026-09-28T23:31:39.624-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Current version of schema "public": 10
+2026-09-28T23:31:39.624-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Schema "public" is up to date. No migration necessary.
+2026-09-28T23:31:39.638-04:00 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo [req=?,e2e=E2E-THROW,txn=TXN-THROW] No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-09-28T23:31:39.646-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-09-28T23:31:39.717-04:00 INFO  [main] i.o.reliability.ReliabilityRailConfig [req=?,e2e=E2E-THROW,txn=TXN-THROW] Synthetic reliability rail configured=false
+2026-09-28T23:31:39.733-04:00 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [req=?,e2e=E2E-THROW,txn=TXN-THROW] Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2026-09-28T23:31:39.889-04:00 INFO  [main] i.o.p.saga.SagaTimeoutIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Started SagaTimeoutIntegrationTest in 0.412 seconds (process running for 8.873)
+2026-09-28T23:31:39.889-04:00 DEBUG [scheduling-1] i.o.shadowledger.AvailabilityBridge [req=?,e2e=?,txn=?] Core availability poll: mode=ONLINE
+2026-09-28T23:31:39.892-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: no in-flight sagas found at startup
+2026-09-28T23:31:39.892-04:00 INFO  [main] i.o.shadowledger.BalanceSeedService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger startup seed: no accounts configured (openfednow.shadow-ledger.seed-accounts is empty)
+2026-09-28T23:31:39.900-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-5b464070-f6a3-49bb-8b4a-55fcde40f95b transactionId=TXN-FRESH-S e2e=E2E-FRESH-S sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:39.901-04:00 DEBUG [main] i.o.processing.saga.SagaTimeoutMonitor [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga timeout monitor: no sagas exceeded 30s threshold
+2026-09-28T23:31:39.905-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-6288334f-36ea-449f-8855-584e103349f6 transactionId=TXN-TIMEOUT e2e=E2E-TIMEOUT sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:39.911-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger debit applied account=ACC-TIMEOUT amount=100.00 balanceAfter=0.00
+2026-09-28T23:31:39.912-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-6288334f-36ea-449f-8855-584e103349f6 state=FUNDS_RESERVED
+2026-09-28T23:31:39.913-04:00 WARN  [main] i.o.processing.saga.SagaTimeoutMonitor [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga timeout monitor: 1 saga(s) exceeded 30s threshold — compensating
+2026-09-28T23:31:39.913-04:00 WARN  [main] i.o.processing.saga.SagaTimeoutMonitor [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga timed out sagaId=SAGA-6288334f-36ea-449f-8855-584e103349f6 thresholdSeconds=30 action=COMPENSATE reason=XPIR
+2026-09-28T23:31:39.914-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation starting sagaId=SAGA-6288334f-36ea-449f-8855-584e103349f6 fromState=FUNDS_RESERVED reason=XPIR
+2026-09-28T23:31:39.916-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger reversal applied account=ACC-TIMEOUT amount=100.00 balanceAfter=100.00
+2026-09-28T23:31:39.916-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger debit reversed sagaId=SAGA-6288334f-36ea-449f-8855-584e103349f6 transactionId=TXN-TIMEOUT
+2026-09-28T23:31:39.917-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation complete sagaId=SAGA-6288334f-36ea-449f-8855-584e103349f6
+2026-09-28T23:31:39.923-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-8b689fe1-e936-4ebf-8a26-99cf796a71e6 transactionId=TXN-DONE e2e=E2E-DONE sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:39.923-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-8b689fe1-e936-4ebf-8a26-99cf796a71e6 state=FUNDS_RESERVED
+2026-09-28T23:31:39.923-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-8b689fe1-e936-4ebf-8a26-99cf796a71e6 state=CORE_SUBMITTED
+2026-09-28T23:31:39.924-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-8b689fe1-e936-4ebf-8a26-99cf796a71e6 state=FEDNOW_CONFIRMED
+2026-09-28T23:31:39.924-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-8b689fe1-e936-4ebf-8a26-99cf796a71e6 state=COMPLETED
+2026-09-28T23:31:39.925-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-a8a28682-4d6e-4288-abb9-fbfa54ce4871 transactionId=TXN-FAILED e2e=E2E-FAILED sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:39.925-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation starting sagaId=SAGA-a8a28682-4d6e-4288-abb9-fbfa54ce4871 fromState=INITIATED reason=AM04
+2026-09-28T23:31:39.926-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation complete sagaId=SAGA-a8a28682-4d6e-4288-abb9-fbfa54ce4871
+2026-09-28T23:31:39.927-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-aca621c0-df25-4a70-b04b-718e4a815254 transactionId=TXN-INCOMP e2e=E2E-INCOMP sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:39.928-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-0da6bff6-f727-4835-b169-13a15292c1e2 transactionId=TXN-CONFIRMED e2e=E2E-CONFIRMED sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:39.928-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-0da6bff6-f727-4835-b169-13a15292c1e2 state=FUNDS_RESERVED
+2026-09-28T23:31:39.928-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-0da6bff6-f727-4835-b169-13a15292c1e2 state=CORE_SUBMITTED
+2026-09-28T23:31:39.929-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga advanced sagaId=SAGA-0da6bff6-f727-4835-b169-13a15292c1e2 state=FEDNOW_CONFIRMED
+2026-09-28T23:31:39.935-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-6614ffd9-547a-4932-970f-4407ef453cc2 transactionId=TXN-AGED e2e=E2E-AGED sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:39.939-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga initiated sagaId=SAGA-3b5e127f-f760-4c21-8099-b948120a076f transactionId=TXN-FRESH e2e=E2E-FRESH sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:39.944-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Closing JPA EntityManagerFactory for persistence unit 'default'
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.485 s -- in io.openfednow.processing.saga.SagaTimeoutIntegrationTest
 [INFO] Running io.openfednow.reliability.ReliablePaymentIntegrationTest
-2026-09-28T23:20:34.175-04:00 INFO  [main] o.s.t.c.s.AnnotationConfigContextLoaderUtils [req=?,e2e=E2E-THROW,txn=TXN-THROW] Could not detect default configuration classes for test class [io.openfednow.reliability.ReliablePaymentIntegrationTest]: ReliablePaymentIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
-2026-09-28T23:20:34.179-04:00 INFO  [main] o.s.b.t.c.SpringBootTestContextBootstrapper [req=?,e2e=E2E-THROW,txn=TXN-THROW] Found @SpringBootConfiguration io.openfednow.OpenFedNowApplication for test class io.openfednow.reliability.ReliablePaymentIntegrationTest
+2026-09-28T23:31:39.961-04:00 INFO  [main] o.s.t.c.s.AnnotationConfigContextLoaderUtils [req=?,e2e=E2E-THROW,txn=TXN-THROW] Could not detect default configuration classes for test class [io.openfednow.reliability.ReliablePaymentIntegrationTest]: ReliablePaymentIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-09-28T23:31:39.966-04:00 INFO  [main] o.s.b.t.c.SpringBootTestContextBootstrapper [req=?,e2e=E2E-THROW,txn=TXN-THROW] Found @SpringBootConfiguration io.openfednow.OpenFedNowApplication for test class io.openfednow.reliability.ReliablePaymentIntegrationTest
 
   .   ____          _            __ _ _
  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
@@ -361,35 +361,35 @@
 
  :: Spring Boot ::               (v3.5.16)
 
-2026-09-28T23:20:34.188-04:00 INFO  [main] i.o.r.ReliablePaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Starting ReliablePaymentIntegrationTest using Java 17.0.20.1 with PID 74054 (started by danielmori in /Users/danielmori/Developer/open-fednow-reliability)
-2026-09-28T23:20:34.188-04:00 DEBUG [main] i.o.r.ReliablePaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Running with Spring Boot v3.5.16, Spring v6.2.19
-2026-09-28T23:20:34.188-04:00 INFO  [main] i.o.r.ReliablePaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] No active profile set, falling back to 1 default profile: "default"
-2026-09-28T23:20:34.255-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-28T23:20:34.255-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2026-09-28T23:20:34.259-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 3 ms. Found 0 JPA repository interfaces.
-2026-09-28T23:20:34.260-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-28T23:20:34.260-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data Redis repositories in DEFAULT mode.
-2026-09-28T23:20:34.262-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 2 ms. Found 0 Redis repository interfaces.
-2026-09-28T23:20:34.335-04:00 INFO  [main] org.flywaydb.core.FlywayExecutor [req=?,e2e=E2E-THROW,txn=TXN-THROW] Database: jdbc:postgresql://localhost:65441/openfednow?loggerLevel=OFF (PostgreSQL 16.15)
-2026-09-28T23:20:34.342-04:00 INFO  [main] o.f.core.internal.command.DbValidate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Successfully validated 10 migrations (execution time 00:00.003s)
-2026-09-28T23:20:34.352-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Current version of schema "public": 10
-2026-09-28T23:20:34.352-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Schema "public" is up to date. No migration necessary.
-2026-09-28T23:20:34.365-04:00 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo [req=?,e2e=E2E-THROW,txn=TXN-THROW] No LoadTimeWeaver setup: ignoring JPA class transformer
-2026-09-28T23:20:34.373-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Initialized JPA EntityManagerFactory for persistence unit 'default'
-2026-09-28T23:20:34.463-04:00 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [req=?,e2e=E2E-THROW,txn=TXN-THROW] Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
-2026-09-28T23:20:34.623-04:00 INFO  [main] i.o.r.ReliablePaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Started ReliablePaymentIntegrationTest in 0.443 seconds (process running for 9.542)
-2026-09-28T23:20:34.623-04:00 DEBUG [scheduling-1] i.o.shadowledger.AvailabilityBridge [req=?,e2e=?,txn=?] Core availability poll: mode=ONLINE
-2026-09-28T23:20:34.626-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 1 in-flight saga(s) — completing or compensating each
-2026-09-28T23:20:34.627-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-1b2983a4-d1d2-4c9b-af23-dd1432e90749 fromState=INITIATED sourceRail=FEDNOW
-2026-09-28T23:20:34.627-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation starting sagaId=SAGA-1b2983a4-d1d2-4c9b-af23-dd1432e90749 fromState=INITIATED reason=NARR
-2026-09-28T23:20:34.628-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation complete sagaId=SAGA-1b2983a4-d1d2-4c9b-af23-dd1432e90749
-2026-09-28T23:20:34.628-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 1 of 1 saga(s) processed
-2026-09-28T23:20:34.628-04:00 INFO  [main] i.o.shadowledger.BalanceSeedService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger startup seed: no accounts configured (openfednow.shadow-ledger.seed-accounts is empty)
-2026-09-28T23:20:34.806-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Closing JPA EntityManagerFactory for persistence unit 'default'
-[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.633 s -- in io.openfednow.reliability.ReliablePaymentIntegrationTest
+2026-09-28T23:31:39.975-04:00 INFO  [main] i.o.r.ReliablePaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Starting ReliablePaymentIntegrationTest using Java 17.0.20.1 with PID 75540 (started by danielmori in /Users/danielmori/Developer/open-fednow-reliability)
+2026-09-28T23:31:39.975-04:00 DEBUG [main] i.o.r.ReliablePaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Running with Spring Boot v3.5.16, Spring v6.2.19
+2026-09-28T23:31:39.975-04:00 INFO  [main] i.o.r.ReliablePaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] No active profile set, falling back to 1 default profile: "default"
+2026-09-28T23:31:40.045-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-28T23:31:40.046-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-09-28T23:31:40.050-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 3 ms. Found 0 JPA repository interfaces.
+2026-09-28T23:31:40.050-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-28T23:31:40.050-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-09-28T23:31:40.053-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 2 ms. Found 0 Redis repository interfaces.
+2026-09-28T23:31:40.130-04:00 INFO  [main] org.flywaydb.core.FlywayExecutor [req=?,e2e=E2E-THROW,txn=TXN-THROW] Database: jdbc:postgresql://localhost:50243/openfednow?loggerLevel=OFF (PostgreSQL 16.15)
+2026-09-28T23:31:40.136-04:00 INFO  [main] o.f.core.internal.command.DbValidate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Successfully validated 10 migrations (execution time 00:00.002s)
+2026-09-28T23:31:40.145-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Current version of schema "public": 10
+2026-09-28T23:31:40.146-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Schema "public" is up to date. No migration necessary.
+2026-09-28T23:31:40.158-04:00 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo [req=?,e2e=E2E-THROW,txn=TXN-THROW] No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-09-28T23:31:40.165-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-09-28T23:31:40.252-04:00 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [req=?,e2e=E2E-THROW,txn=TXN-THROW] Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2026-09-28T23:31:40.404-04:00 INFO  [main] i.o.r.ReliablePaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Started ReliablePaymentIntegrationTest in 0.437 seconds (process running for 9.387)
+2026-09-28T23:31:40.404-04:00 DEBUG [scheduling-1] i.o.shadowledger.AvailabilityBridge [req=?,e2e=?,txn=?] Core availability poll: mode=ONLINE
+2026-09-28T23:31:40.408-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 1 in-flight saga(s) — completing or compensating each
+2026-09-28T23:31:40.408-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-3b5e127f-f760-4c21-8099-b948120a076f fromState=INITIATED sourceRail=FEDNOW
+2026-09-28T23:31:40.409-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation starting sagaId=SAGA-3b5e127f-f760-4c21-8099-b948120a076f fromState=INITIATED reason=NARR
+2026-09-28T23:31:40.410-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation complete sagaId=SAGA-3b5e127f-f760-4c21-8099-b948120a076f
+2026-09-28T23:31:40.410-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 1 of 1 saga(s) processed
+2026-09-28T23:31:40.410-04:00 INFO  [main] i.o.shadowledger.BalanceSeedService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger startup seed: no accounts configured (openfednow.shadow-ledger.seed-accounts is empty)
+2026-09-28T23:31:40.599-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Closing JPA EntityManagerFactory for persistence unit 'default'
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.639 s -- in io.openfednow.reliability.ReliablePaymentIntegrationTest
 [INFO] Running io.openfednow.infrastructure.PostgresIntegrationTest
-2026-09-28T23:20:34.808-04:00 INFO  [main] o.s.t.c.s.AnnotationConfigContextLoaderUtils [req=?,e2e=E2E-THROW,txn=TXN-THROW] Could not detect default configuration classes for test class [io.openfednow.infrastructure.PostgresIntegrationTest]: PostgresIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
-2026-09-28T23:20:34.812-04:00 INFO  [main] o.s.b.t.c.SpringBootTestContextBootstrapper [req=?,e2e=E2E-THROW,txn=TXN-THROW] Found @SpringBootConfiguration io.openfednow.OpenFedNowApplication for test class io.openfednow.infrastructure.PostgresIntegrationTest
+2026-09-28T23:31:40.600-04:00 INFO  [main] o.s.t.c.s.AnnotationConfigContextLoaderUtils [req=?,e2e=E2E-THROW,txn=TXN-THROW] Could not detect default configuration classes for test class [io.openfednow.infrastructure.PostgresIntegrationTest]: PostgresIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-09-28T23:31:40.604-04:00 INFO  [main] o.s.b.t.c.SpringBootTestContextBootstrapper [req=?,e2e=E2E-THROW,txn=TXN-THROW] Found @SpringBootConfiguration io.openfednow.OpenFedNowApplication for test class io.openfednow.infrastructure.PostgresIntegrationTest
 
   .   ____          _            __ _ _
  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
@@ -400,32 +400,32 @@
 
  :: Spring Boot ::               (v3.5.16)
 
-2026-09-28T23:20:34.821-04:00 INFO  [main] i.o.i.PostgresIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Starting PostgresIntegrationTest using Java 17.0.20.1 with PID 74054 (started by danielmori in /Users/danielmori/Developer/open-fednow-reliability)
-2026-09-28T23:20:34.822-04:00 DEBUG [main] i.o.i.PostgresIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Running with Spring Boot v3.5.16, Spring v6.2.19
-2026-09-28T23:20:34.822-04:00 INFO  [main] i.o.i.PostgresIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] No active profile set, falling back to 1 default profile: "default"
-2026-09-28T23:20:34.884-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-28T23:20:34.884-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2026-09-28T23:20:34.888-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 3 ms. Found 0 JPA repository interfaces.
-2026-09-28T23:20:34.888-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-28T23:20:34.888-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data Redis repositories in DEFAULT mode.
-2026-09-28T23:20:34.891-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 2 ms. Found 0 Redis repository interfaces.
-2026-09-28T23:20:34.932-04:00 INFO  [main] org.flywaydb.core.FlywayExecutor [req=?,e2e=E2E-THROW,txn=TXN-THROW] Database: jdbc:postgresql://localhost:65441/openfednow?loggerLevel=OFF (PostgreSQL 16.15)
-2026-09-28T23:20:34.938-04:00 INFO  [main] o.f.core.internal.command.DbValidate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Successfully validated 10 migrations (execution time 00:00.003s)
-2026-09-28T23:20:34.948-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Current version of schema "public": 10
-2026-09-28T23:20:34.948-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Schema "public" is up to date. No migration necessary.
-2026-09-28T23:20:34.961-04:00 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo [req=?,e2e=E2E-THROW,txn=TXN-THROW] No LoadTimeWeaver setup: ignoring JPA class transformer
-2026-09-28T23:20:34.968-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Initialized JPA EntityManagerFactory for persistence unit 'default'
-2026-09-28T23:20:35.040-04:00 INFO  [main] i.o.reliability.ReliabilityRailConfig [req=?,e2e=E2E-THROW,txn=TXN-THROW] Synthetic reliability rail configured=false
-2026-09-28T23:20:35.056-04:00 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [req=?,e2e=E2E-THROW,txn=TXN-THROW] Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
-2026-09-28T23:20:35.208-04:00 INFO  [main] i.o.i.PostgresIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Started PostgresIntegrationTest in 0.395 seconds (process running for 10.127)
-2026-09-28T23:20:35.208-04:00 DEBUG [scheduling-1] i.o.shadowledger.AvailabilityBridge [req=?,e2e=?,txn=?] Core availability poll: mode=ONLINE
-2026-09-28T23:20:35.210-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: no in-flight sagas found at startup
-2026-09-28T23:20:35.210-04:00 INFO  [main] i.o.shadowledger.BalanceSeedService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger startup seed: no accounts configured (openfednow.shadow-ledger.seed-accounts is empty)
-2026-09-28T23:20:35.242-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Closing JPA EntityManagerFactory for persistence unit 'default'
-[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.438 s -- in io.openfednow.infrastructure.PostgresIntegrationTest
+2026-09-28T23:31:40.612-04:00 INFO  [main] i.o.i.PostgresIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Starting PostgresIntegrationTest using Java 17.0.20.1 with PID 75540 (started by danielmori in /Users/danielmori/Developer/open-fednow-reliability)
+2026-09-28T23:31:40.612-04:00 DEBUG [main] i.o.i.PostgresIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Running with Spring Boot v3.5.16, Spring v6.2.19
+2026-09-28T23:31:40.612-04:00 INFO  [main] i.o.i.PostgresIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] No active profile set, falling back to 1 default profile: "default"
+2026-09-28T23:31:40.675-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-28T23:31:40.675-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-09-28T23:31:40.679-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 3 ms. Found 0 JPA repository interfaces.
+2026-09-28T23:31:40.679-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-28T23:31:40.679-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-09-28T23:31:40.682-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 1 ms. Found 0 Redis repository interfaces.
+2026-09-28T23:31:40.725-04:00 INFO  [main] org.flywaydb.core.FlywayExecutor [req=?,e2e=E2E-THROW,txn=TXN-THROW] Database: jdbc:postgresql://localhost:50243/openfednow?loggerLevel=OFF (PostgreSQL 16.15)
+2026-09-28T23:31:40.731-04:00 INFO  [main] o.f.core.internal.command.DbValidate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Successfully validated 10 migrations (execution time 00:00.002s)
+2026-09-28T23:31:40.740-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Current version of schema "public": 10
+2026-09-28T23:31:40.740-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Schema "public" is up to date. No migration necessary.
+2026-09-28T23:31:40.754-04:00 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo [req=?,e2e=E2E-THROW,txn=TXN-THROW] No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-09-28T23:31:40.760-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-09-28T23:31:40.828-04:00 INFO  [main] i.o.reliability.ReliabilityRailConfig [req=?,e2e=E2E-THROW,txn=TXN-THROW] Synthetic reliability rail configured=false
+2026-09-28T23:31:40.844-04:00 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [req=?,e2e=E2E-THROW,txn=TXN-THROW] Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2026-09-28T23:31:41.003-04:00 INFO  [main] i.o.i.PostgresIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Started PostgresIntegrationTest in 0.398 seconds (process running for 9.986)
+2026-09-28T23:31:41.003-04:00 DEBUG [scheduling-1] i.o.shadowledger.AvailabilityBridge [req=?,e2e=?,txn=?] Core availability poll: mode=ONLINE
+2026-09-28T23:31:41.005-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: no in-flight sagas found at startup
+2026-09-28T23:31:41.005-04:00 INFO  [main] i.o.shadowledger.BalanceSeedService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger startup seed: no accounts configured (openfednow.shadow-ledger.seed-accounts is empty)
+2026-09-28T23:31:41.031-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Closing JPA EntityManagerFactory for persistence unit 'default'
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.457 s -- in io.openfednow.infrastructure.PostgresIntegrationTest
 [INFO] Running io.openfednow.gateway.OutboundPaymentIntegrationTest
-2026-09-28T23:20:35.246-04:00 INFO  [main] o.s.t.c.s.AnnotationConfigContextLoaderUtils [req=?,e2e=E2E-THROW,txn=TXN-THROW] Could not detect default configuration classes for test class [io.openfednow.gateway.OutboundPaymentIntegrationTest]: OutboundPaymentIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
-2026-09-28T23:20:35.251-04:00 INFO  [main] o.s.b.t.c.SpringBootTestContextBootstrapper [req=?,e2e=E2E-THROW,txn=TXN-THROW] Found @SpringBootConfiguration io.openfednow.OpenFedNowApplication for test class io.openfednow.gateway.OutboundPaymentIntegrationTest
+2026-09-28T23:31:41.058-04:00 INFO  [main] o.s.t.c.s.AnnotationConfigContextLoaderUtils [req=?,e2e=E2E-THROW,txn=TXN-THROW] Could not detect default configuration classes for test class [io.openfednow.gateway.OutboundPaymentIntegrationTest]: OutboundPaymentIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-09-28T23:31:41.064-04:00 INFO  [main] o.s.b.t.c.SpringBootTestContextBootstrapper [req=?,e2e=E2E-THROW,txn=TXN-THROW] Found @SpringBootConfiguration io.openfednow.OpenFedNowApplication for test class io.openfednow.gateway.OutboundPaymentIntegrationTest
 
   .   ____          _            __ _ _
  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
@@ -436,137 +436,137 @@
 
  :: Spring Boot ::               (v3.5.16)
 
-2026-09-28T23:20:35.259-04:00 INFO  [main] i.o.g.OutboundPaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Starting OutboundPaymentIntegrationTest using Java 17.0.20.1 with PID 74054 (started by danielmori in /Users/danielmori/Developer/open-fednow-reliability)
-2026-09-28T23:20:35.259-04:00 DEBUG [main] i.o.g.OutboundPaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Running with Spring Boot v3.5.16, Spring v6.2.19
-2026-09-28T23:20:35.259-04:00 INFO  [main] i.o.g.OutboundPaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] No active profile set, falling back to 1 default profile: "default"
-2026-09-28T23:20:35.317-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-28T23:20:35.317-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2026-09-28T23:20:35.322-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 4 ms. Found 0 JPA repository interfaces.
-2026-09-28T23:20:35.323-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-28T23:20:35.323-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data Redis repositories in DEFAULT mode.
-2026-09-28T23:20:35.325-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 2 ms. Found 0 Redis repository interfaces.
-2026-09-28T23:20:35.373-04:00 INFO  [main] org.flywaydb.core.FlywayExecutor [req=?,e2e=E2E-THROW,txn=TXN-THROW] Database: jdbc:postgresql://localhost:65441/openfednow?loggerLevel=OFF (PostgreSQL 16.15)
-2026-09-28T23:20:35.379-04:00 INFO  [main] o.f.core.internal.command.DbValidate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Successfully validated 10 migrations (execution time 00:00.002s)
-2026-09-28T23:20:35.388-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Current version of schema "public": 10
-2026-09-28T23:20:35.389-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Schema "public" is up to date. No migration necessary.
-2026-09-28T23:20:35.401-04:00 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo [req=?,e2e=E2E-THROW,txn=TXN-THROW] No LoadTimeWeaver setup: ignoring JPA class transformer
-2026-09-28T23:20:35.408-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Initialized JPA EntityManagerFactory for persistence unit 'default'
-2026-09-28T23:20:35.479-04:00 INFO  [main] i.o.reliability.ReliabilityRailConfig [req=?,e2e=E2E-THROW,txn=TXN-THROW] Synthetic reliability rail configured=false
-2026-09-28T23:20:35.495-04:00 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [req=?,e2e=E2E-THROW,txn=TXN-THROW] Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
-2026-09-28T23:20:35.647-04:00 INFO  [main] i.o.g.OutboundPaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Started OutboundPaymentIntegrationTest in 0.395 seconds (process running for 10.565)
-2026-09-28T23:20:35.647-04:00 DEBUG [scheduling-1] i.o.shadowledger.AvailabilityBridge [req=?,e2e=?,txn=?] Core availability poll: mode=ONLINE
-2026-09-28T23:20:35.650-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 1 in-flight saga(s) — completing or compensating each
-2026-09-28T23:20:35.651-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-PG-001 fromState=INITIATED sourceRail=FEDNOW
-2026-09-28T23:20:35.652-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation starting sagaId=SAGA-PG-001 fromState=INITIATED reason=NARR
-2026-09-28T23:20:35.653-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation complete sagaId=SAGA-PG-001
-2026-09-28T23:20:35.654-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 1 of 1 saga(s) processed
-2026-09-28T23:20:35.654-04:00 INFO  [main] i.o.shadowledger.BalanceSeedService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger startup seed: no accounts configured (openfednow.shadow-ledger.seed-accounts is empty)
-2026-09-28T23:20:35.661-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-ACSP-001,txn=TXN-OUT-ACSP-001] Outbound credit transfer received amount=150.00 currency=USD
-2026-09-28T23:20:35.662-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-ACSP-001,txn=TXN-OUT-ACSP-001] Saga initiated sagaId=SAGA-d89de4bb-b6e8-4754-a21e-6c88d7a1640a transactionId=TXN-OUT-ACSP-001 e2e=E2E-OUT-ACSP-001 sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:35.666-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-ACSP-001,txn=TXN-OUT-ACSP-001] Shadow Ledger debit applied account=ACC-DEBTOR-OUT-001 amount=150.00 balanceAfter=850.00
-2026-09-28T23:20:35.667-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-ACSP-001,txn=TXN-OUT-ACSP-001] Saga advanced sagaId=SAGA-d89de4bb-b6e8-4754-a21e-6c88d7a1640a state=FUNDS_RESERVED
-2026-09-28T23:20:35.667-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-ACSP-001,txn=TXN-OUT-ACSP-001] Saga advanced sagaId=SAGA-d89de4bb-b6e8-4754-a21e-6c88d7a1640a state=SUBMITTING
-2026-09-28T23:20:35.668-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-ACSP-001,txn=TXN-OUT-ACSP-001] Saga advanced sagaId=SAGA-d89de4bb-b6e8-4754-a21e-6c88d7a1640a state=OUTCOME_UNKNOWN
-2026-09-28T23:20:35.668-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-ACSP-001,txn=TXN-OUT-ACSP-001] Outbound credit transfer status=ACSP rejectCode=null
-2026-09-28T23:20:35.669-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-ACSP-001,txn=TXN-OUT-ACSP-001] Idempotency outcome recorded e2e=E2E-OUT-ACSP-001 status=ACSP
-2026-09-28T23:20:35.675-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Outbound credit transfer received amount=300.00 currency=USD
-2026-09-28T23:20:35.677-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Saga initiated sagaId=SAGA-95a2879b-4046-4be2-a6f5-fdccd8b1c13b transactionId=TXN-OUT-RJT-001 e2e=E2E-OUT-RJT-001 sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:35.680-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Shadow Ledger debit applied account=ACC-DEBTOR-OUT-001 amount=300.00 balanceAfter=700.00
-2026-09-28T23:20:35.681-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Saga advanced sagaId=SAGA-95a2879b-4046-4be2-a6f5-fdccd8b1c13b state=FUNDS_RESERVED
-2026-09-28T23:20:35.681-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Saga advanced sagaId=SAGA-95a2879b-4046-4be2-a6f5-fdccd8b1c13b state=SUBMITTING
-2026-09-28T23:20:35.681-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] FedNow rejected outbound payment, compensating sagaId=SAGA-95a2879b-4046-4be2-a6f5-fdccd8b1c13b reason=AC01
-2026-09-28T23:20:35.681-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Saga compensation starting sagaId=SAGA-95a2879b-4046-4be2-a6f5-fdccd8b1c13b fromState=SUBMITTING reason=AC01
-2026-09-28T23:20:35.683-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Shadow Ledger reversal applied account=ACC-DEBTOR-OUT-001 amount=300.00 balanceAfter=1000.00
-2026-09-28T23:20:35.683-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Shadow Ledger debit reversed sagaId=SAGA-95a2879b-4046-4be2-a6f5-fdccd8b1c13b transactionId=TXN-OUT-RJT-001
-2026-09-28T23:20:35.683-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Saga compensation complete sagaId=SAGA-95a2879b-4046-4be2-a6f5-fdccd8b1c13b
-2026-09-28T23:20:35.683-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Outbound credit transfer status=RJCT rejectCode=AC01
-2026-09-28T23:20:35.684-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Idempotency outcome recorded e2e=E2E-OUT-RJT-001 status=RJCT
-2026-09-28T23:20:35.689-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-NSF-002,txn=TXN-OUT-NSF-002] Outbound credit transfer received amount=9999.00 currency=USD
-2026-09-28T23:20:35.690-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-NSF-002,txn=TXN-OUT-NSF-002] Outbound payment rejected: insufficient funds account=**************-001 available=1000.00 requested=9999.00
-2026-09-28T23:20:35.691-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-NSF-002,txn=TXN-OUT-NSF-002] Idempotency outcome recorded e2e=E2E-OUT-NSF-002 status=RJCT
-2026-09-28T23:20:35.694-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-002,txn=TXN-OUT-002] Outbound credit transfer received amount=100.00 currency=USD
-2026-09-28T23:20:35.695-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-002,txn=TXN-OUT-002] Saga initiated sagaId=SAGA-6da4a48d-4b2f-4ac3-8247-a59c7c81e2e3 transactionId=TXN-OUT-002 e2e=E2E-OUT-002 sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:35.698-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-002,txn=TXN-OUT-002] Shadow Ledger debit applied account=ACC-DEBTOR-OUT-001 amount=100.00 balanceAfter=900.00
-2026-09-28T23:20:35.699-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-002,txn=TXN-OUT-002] Saga advanced sagaId=SAGA-6da4a48d-4b2f-4ac3-8247-a59c7c81e2e3 state=FUNDS_RESERVED
-2026-09-28T23:20:35.699-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-002,txn=TXN-OUT-002] Saga advanced sagaId=SAGA-6da4a48d-4b2f-4ac3-8247-a59c7c81e2e3 state=SUBMITTING
-2026-09-28T23:20:35.699-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-002,txn=TXN-OUT-002] Saga advanced sagaId=SAGA-6da4a48d-4b2f-4ac3-8247-a59c7c81e2e3 state=FEDNOW_CONFIRMED
-2026-09-28T23:20:35.699-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-002,txn=TXN-OUT-002] Saga advanced sagaId=SAGA-6da4a48d-4b2f-4ac3-8247-a59c7c81e2e3 state=COMPLETED
-2026-09-28T23:20:35.699-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-002,txn=TXN-OUT-002] Outbound credit transfer status=ACSC rejectCode=null
-2026-09-28T23:20:35.700-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-002,txn=TXN-OUT-002] Idempotency outcome recorded e2e=E2E-OUT-002 status=ACSC
-2026-09-28T23:20:35.704-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-NSF-003,txn=TXN-OUT-NSF-003] Outbound credit transfer received amount=9999.00 currency=USD
-2026-09-28T23:20:35.705-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-NSF-003,txn=TXN-OUT-NSF-003] Outbound payment rejected: insufficient funds account=**************-001 available=1000.00 requested=9999.00
-2026-09-28T23:20:35.705-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-NSF-003,txn=TXN-OUT-NSF-003] Idempotency outcome recorded e2e=E2E-OUT-NSF-003 status=RJCT
-2026-09-28T23:20:35.709-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Outbound credit transfer received amount=100.00 currency=USD
-2026-09-28T23:20:35.711-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Saga initiated sagaId=SAGA-ecb5899a-2ecd-4e4b-ae72-50e5977253c9 transactionId=TXN-OUT-RJT-002 e2e=E2E-OUT-RJT-002 sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:35.714-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Shadow Ledger debit applied account=ACC-DEBTOR-OUT-001 amount=100.00 balanceAfter=900.00
-2026-09-28T23:20:35.715-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Saga advanced sagaId=SAGA-ecb5899a-2ecd-4e4b-ae72-50e5977253c9 state=FUNDS_RESERVED
-2026-09-28T23:20:35.715-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Saga advanced sagaId=SAGA-ecb5899a-2ecd-4e4b-ae72-50e5977253c9 state=SUBMITTING
-2026-09-28T23:20:35.715-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] FedNow rejected outbound payment, compensating sagaId=SAGA-ecb5899a-2ecd-4e4b-ae72-50e5977253c9 reason=AM04
-2026-09-28T23:20:35.715-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Saga compensation starting sagaId=SAGA-ecb5899a-2ecd-4e4b-ae72-50e5977253c9 fromState=SUBMITTING reason=AM04
-2026-09-28T23:20:35.716-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Shadow Ledger reversal applied account=ACC-DEBTOR-OUT-001 amount=100.00 balanceAfter=1000.00
-2026-09-28T23:20:35.716-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Shadow Ledger debit reversed sagaId=SAGA-ecb5899a-2ecd-4e4b-ae72-50e5977253c9 transactionId=TXN-OUT-RJT-002
-2026-09-28T23:20:35.717-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Saga compensation complete sagaId=SAGA-ecb5899a-2ecd-4e4b-ae72-50e5977253c9
-2026-09-28T23:20:35.717-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Outbound credit transfer status=RJCT rejectCode=AM04
-2026-09-28T23:20:35.718-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Idempotency outcome recorded e2e=E2E-OUT-RJT-002 status=RJCT
-2026-09-28T23:20:35.721-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-NSF-001,txn=TXN-OUT-NSF-001] Outbound credit transfer received amount=5000.00 currency=USD
-2026-09-28T23:20:35.722-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-NSF-001,txn=TXN-OUT-NSF-001] Outbound payment rejected: insufficient funds account=**************-001 available=1000.00 requested=5000.00
-2026-09-28T23:20:35.723-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-NSF-001,txn=TXN-OUT-NSF-001] Idempotency outcome recorded e2e=E2E-OUT-NSF-001 status=RJCT
-2026-09-28T23:20:35.726-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-ACSP-002,txn=TXN-OUT-ACSP-002] Outbound credit transfer received amount=50.00 currency=USD
-2026-09-28T23:20:35.727-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-ACSP-002,txn=TXN-OUT-ACSP-002] Saga initiated sagaId=SAGA-eb9c8c0d-b346-4e65-bc97-3de51710100c transactionId=TXN-OUT-ACSP-002 e2e=E2E-OUT-ACSP-002 sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:35.731-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-ACSP-002,txn=TXN-OUT-ACSP-002] Shadow Ledger debit applied account=ACC-DEBTOR-OUT-001 amount=50.00 balanceAfter=950.00
-2026-09-28T23:20:35.731-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-ACSP-002,txn=TXN-OUT-ACSP-002] Saga advanced sagaId=SAGA-eb9c8c0d-b346-4e65-bc97-3de51710100c state=FUNDS_RESERVED
-2026-09-28T23:20:35.731-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-ACSP-002,txn=TXN-OUT-ACSP-002] Saga advanced sagaId=SAGA-eb9c8c0d-b346-4e65-bc97-3de51710100c state=SUBMITTING
-2026-09-28T23:20:35.731-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-ACSP-002,txn=TXN-OUT-ACSP-002] Saga advanced sagaId=SAGA-eb9c8c0d-b346-4e65-bc97-3de51710100c state=OUTCOME_UNKNOWN
-2026-09-28T23:20:35.731-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-ACSP-002,txn=TXN-OUT-ACSP-002] Outbound credit transfer status=ACSP rejectCode=null
-2026-09-28T23:20:35.732-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-ACSP-002,txn=TXN-OUT-ACSP-002] Idempotency outcome recorded e2e=E2E-OUT-ACSP-002 status=ACSP
-2026-09-28T23:20:35.736-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Outbound credit transfer received amount=200.00 currency=USD
-2026-09-28T23:20:35.737-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Saga initiated sagaId=SAGA-7b18e150-a336-4002-be32-5aded5a8ad2e transactionId=TXN-OUT-DUP-001 e2e=E2E-OUT-DUP-001 sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:35.741-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Shadow Ledger debit applied account=ACC-DEBTOR-OUT-001 amount=200.00 balanceAfter=800.00
-2026-09-28T23:20:35.741-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Saga advanced sagaId=SAGA-7b18e150-a336-4002-be32-5aded5a8ad2e state=FUNDS_RESERVED
-2026-09-28T23:20:35.741-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Saga advanced sagaId=SAGA-7b18e150-a336-4002-be32-5aded5a8ad2e state=SUBMITTING
-2026-09-28T23:20:35.741-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Saga advanced sagaId=SAGA-7b18e150-a336-4002-be32-5aded5a8ad2e state=FEDNOW_CONFIRMED
-2026-09-28T23:20:35.742-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Saga advanced sagaId=SAGA-7b18e150-a336-4002-be32-5aded5a8ad2e state=COMPLETED
-2026-09-28T23:20:35.742-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Outbound credit transfer status=ACSC rejectCode=null
-2026-09-28T23:20:35.743-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Idempotency outcome recorded e2e=E2E-OUT-DUP-001 status=ACSC
-2026-09-28T23:20:35.743-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Outbound credit transfer received amount=200.00 currency=USD
-2026-09-28T23:20:35.743-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Idempotency cache hit e2e=E2E-OUT-DUP-001
-2026-09-28T23:20:35.745-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Duplicate outbound payment suppressed e2e=E2E-OUT-DUP-001
-2026-09-28T23:20:35.749-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-003,txn=TXN-OUT-003] Outbound credit transfer received amount=50.00 currency=USD
-2026-09-28T23:20:35.750-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-003,txn=TXN-OUT-003] Saga initiated sagaId=SAGA-96ea8d77-6787-4dff-9a88-0d49c5c143a5 transactionId=TXN-OUT-003 e2e=E2E-OUT-003 sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:35.753-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-003,txn=TXN-OUT-003] Shadow Ledger debit applied account=ACC-DEBTOR-OUT-001 amount=50.00 balanceAfter=950.00
-2026-09-28T23:20:35.753-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-003,txn=TXN-OUT-003] Saga advanced sagaId=SAGA-96ea8d77-6787-4dff-9a88-0d49c5c143a5 state=FUNDS_RESERVED
-2026-09-28T23:20:35.754-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-003,txn=TXN-OUT-003] Saga advanced sagaId=SAGA-96ea8d77-6787-4dff-9a88-0d49c5c143a5 state=SUBMITTING
-2026-09-28T23:20:35.754-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-003,txn=TXN-OUT-003] Saga advanced sagaId=SAGA-96ea8d77-6787-4dff-9a88-0d49c5c143a5 state=FEDNOW_CONFIRMED
-2026-09-28T23:20:35.754-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-003,txn=TXN-OUT-003] Saga advanced sagaId=SAGA-96ea8d77-6787-4dff-9a88-0d49c5c143a5 state=COMPLETED
-2026-09-28T23:20:35.754-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-003,txn=TXN-OUT-003] Outbound credit transfer status=ACSC rejectCode=null
-2026-09-28T23:20:35.755-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-003,txn=TXN-OUT-003] Idempotency outcome recorded e2e=E2E-OUT-003 status=ACSC
-2026-09-28T23:20:35.758-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-001,txn=TXN-OUT-001] Outbound credit transfer received amount=250.00 currency=USD
-2026-09-28T23:20:35.759-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-001,txn=TXN-OUT-001] Saga initiated sagaId=SAGA-06383a38-7e10-445f-9efb-96217b982cd6 transactionId=TXN-OUT-001 e2e=E2E-OUT-001 sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:35.762-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-001,txn=TXN-OUT-001] Shadow Ledger debit applied account=ACC-DEBTOR-OUT-001 amount=250.00 balanceAfter=750.00
-2026-09-28T23:20:35.763-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-001,txn=TXN-OUT-001] Saga advanced sagaId=SAGA-06383a38-7e10-445f-9efb-96217b982cd6 state=FUNDS_RESERVED
-2026-09-28T23:20:35.763-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-001,txn=TXN-OUT-001] Saga advanced sagaId=SAGA-06383a38-7e10-445f-9efb-96217b982cd6 state=SUBMITTING
-2026-09-28T23:20:35.763-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-001,txn=TXN-OUT-001] Saga advanced sagaId=SAGA-06383a38-7e10-445f-9efb-96217b982cd6 state=FEDNOW_CONFIRMED
-2026-09-28T23:20:35.763-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-001,txn=TXN-OUT-001] Saga advanced sagaId=SAGA-06383a38-7e10-445f-9efb-96217b982cd6 state=COMPLETED
-2026-09-28T23:20:35.763-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-001,txn=TXN-OUT-001] Outbound credit transfer status=ACSC rejectCode=null
-2026-09-28T23:20:35.764-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-001,txn=TXN-OUT-001] Idempotency outcome recorded e2e=E2E-OUT-001 status=ACSC
-2026-09-28T23:20:35.767-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Outbound credit transfer received amount=75.00 currency=USD
-2026-09-28T23:20:35.768-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Saga initiated sagaId=SAGA-55ee6d09-1360-4f0d-a9ad-427ec5722b0c transactionId=TXN-OUT-RJT-003 e2e=E2E-OUT-RJT-003 sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:35.770-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Shadow Ledger debit applied account=ACC-DEBTOR-OUT-001 amount=75.00 balanceAfter=925.00
-2026-09-28T23:20:35.771-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Saga advanced sagaId=SAGA-55ee6d09-1360-4f0d-a9ad-427ec5722b0c state=FUNDS_RESERVED
-2026-09-28T23:20:35.771-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Saga advanced sagaId=SAGA-55ee6d09-1360-4f0d-a9ad-427ec5722b0c state=SUBMITTING
-2026-09-28T23:20:35.771-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] FedNow rejected outbound payment, compensating sagaId=SAGA-55ee6d09-1360-4f0d-a9ad-427ec5722b0c reason=AC04
-2026-09-28T23:20:35.771-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Saga compensation starting sagaId=SAGA-55ee6d09-1360-4f0d-a9ad-427ec5722b0c fromState=SUBMITTING reason=AC04
-2026-09-28T23:20:35.772-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Shadow Ledger reversal applied account=ACC-DEBTOR-OUT-001 amount=75.00 balanceAfter=1000.00
-2026-09-28T23:20:35.772-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Shadow Ledger debit reversed sagaId=SAGA-55ee6d09-1360-4f0d-a9ad-427ec5722b0c transactionId=TXN-OUT-RJT-003
-2026-09-28T23:20:35.773-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Saga compensation complete sagaId=SAGA-55ee6d09-1360-4f0d-a9ad-427ec5722b0c
-2026-09-28T23:20:35.773-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Outbound credit transfer status=RJCT rejectCode=AC04
-2026-09-28T23:20:35.773-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Idempotency outcome recorded e2e=E2E-OUT-RJT-003 status=RJCT
-2026-09-28T23:20:35.778-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-UNKNOWN,txn=TXN-OUT-UNKNOWN] Outbound credit transfer received amount=150.00 currency=USD
-2026-09-28T23:20:35.779-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-UNKNOWN,txn=TXN-OUT-UNKNOWN] Saga initiated sagaId=SAGA-335b1ee9-b123-4553-8483-c4cb97adb721 transactionId=TXN-OUT-UNKNOWN e2e=E2E-OUT-UNKNOWN sourceRail=FEDNOW requestId=null
-2026-09-28T23:20:35.781-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-UNKNOWN,txn=TXN-OUT-UNKNOWN] Shadow Ledger debit applied account=ACC-DEBTOR-OUT-001 amount=150.00 balanceAfter=850.00
-2026-09-28T23:20:35.781-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-UNKNOWN,txn=TXN-OUT-UNKNOWN] Saga advanced sagaId=SAGA-335b1ee9-b123-4553-8483-c4cb97adb721 state=FUNDS_RESERVED
-2026-09-28T23:20:35.782-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-UNKNOWN,txn=TXN-OUT-UNKNOWN] Saga advanced sagaId=SAGA-335b1ee9-b123-4553-8483-c4cb97adb721 state=SUBMITTING
-2026-09-28T23:20:35.782-04:00 ERROR [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-UNKNOWN,txn=TXN-OUT-UNKNOWN] FedNow outcome unknown; reservation retained sagaId=SAGA-335b1ee9-b123-4553-8483-c4cb97adb721
+2026-09-28T23:31:41.071-04:00 INFO  [main] i.o.g.OutboundPaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Starting OutboundPaymentIntegrationTest using Java 17.0.20.1 with PID 75540 (started by danielmori in /Users/danielmori/Developer/open-fednow-reliability)
+2026-09-28T23:31:41.071-04:00 DEBUG [main] i.o.g.OutboundPaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Running with Spring Boot v3.5.16, Spring v6.2.19
+2026-09-28T23:31:41.071-04:00 INFO  [main] i.o.g.OutboundPaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] No active profile set, falling back to 1 default profile: "default"
+2026-09-28T23:31:41.129-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-28T23:31:41.129-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-09-28T23:31:41.132-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 3 ms. Found 0 JPA repository interfaces.
+2026-09-28T23:31:41.133-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-28T23:31:41.133-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-09-28T23:31:41.136-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 2 ms. Found 0 Redis repository interfaces.
+2026-09-28T23:31:41.188-04:00 INFO  [main] org.flywaydb.core.FlywayExecutor [req=?,e2e=E2E-THROW,txn=TXN-THROW] Database: jdbc:postgresql://localhost:50243/openfednow?loggerLevel=OFF (PostgreSQL 16.15)
+2026-09-28T23:31:41.195-04:00 INFO  [main] o.f.core.internal.command.DbValidate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Successfully validated 10 migrations (execution time 00:00.002s)
+2026-09-28T23:31:41.204-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Current version of schema "public": 10
+2026-09-28T23:31:41.204-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Schema "public" is up to date. No migration necessary.
+2026-09-28T23:31:41.217-04:00 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo [req=?,e2e=E2E-THROW,txn=TXN-THROW] No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-09-28T23:31:41.223-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-09-28T23:31:41.288-04:00 INFO  [main] i.o.reliability.ReliabilityRailConfig [req=?,e2e=E2E-THROW,txn=TXN-THROW] Synthetic reliability rail configured=false
+2026-09-28T23:31:41.303-04:00 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [req=?,e2e=E2E-THROW,txn=TXN-THROW] Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2026-09-28T23:31:41.456-04:00 INFO  [main] i.o.g.OutboundPaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Started OutboundPaymentIntegrationTest in 0.392 seconds (process running for 10.439)
+2026-09-28T23:31:41.456-04:00 DEBUG [scheduling-1] i.o.shadowledger.AvailabilityBridge [req=?,e2e=?,txn=?] Core availability poll: mode=ONLINE
+2026-09-28T23:31:41.458-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 1 in-flight saga(s) — completing or compensating each
+2026-09-28T23:31:41.459-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-PG-001 fromState=INITIATED sourceRail=FEDNOW
+2026-09-28T23:31:41.460-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation starting sagaId=SAGA-PG-001 fromState=INITIATED reason=NARR
+2026-09-28T23:31:41.461-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation complete sagaId=SAGA-PG-001
+2026-09-28T23:31:41.461-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 1 of 1 saga(s) processed
+2026-09-28T23:31:41.461-04:00 INFO  [main] i.o.shadowledger.BalanceSeedService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger startup seed: no accounts configured (openfednow.shadow-ledger.seed-accounts is empty)
+2026-09-28T23:31:41.468-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-ACSP-001,txn=TXN-OUT-ACSP-001] Outbound credit transfer received amount=150.00 currency=USD
+2026-09-28T23:31:41.470-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-ACSP-001,txn=TXN-OUT-ACSP-001] Saga initiated sagaId=SAGA-3c7a7537-180c-4b11-8d68-4ca8fcd8f672 transactionId=TXN-OUT-ACSP-001 e2e=E2E-OUT-ACSP-001 sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:41.474-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-ACSP-001,txn=TXN-OUT-ACSP-001] Shadow Ledger debit applied account=ACC-DEBTOR-OUT-001 amount=150.00 balanceAfter=850.00
+2026-09-28T23:31:41.474-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-ACSP-001,txn=TXN-OUT-ACSP-001] Saga advanced sagaId=SAGA-3c7a7537-180c-4b11-8d68-4ca8fcd8f672 state=FUNDS_RESERVED
+2026-09-28T23:31:41.475-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-ACSP-001,txn=TXN-OUT-ACSP-001] Saga advanced sagaId=SAGA-3c7a7537-180c-4b11-8d68-4ca8fcd8f672 state=SUBMITTING
+2026-09-28T23:31:41.475-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-ACSP-001,txn=TXN-OUT-ACSP-001] Saga advanced sagaId=SAGA-3c7a7537-180c-4b11-8d68-4ca8fcd8f672 state=OUTCOME_UNKNOWN
+2026-09-28T23:31:41.475-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-ACSP-001,txn=TXN-OUT-ACSP-001] Outbound credit transfer status=ACSP rejectCode=null
+2026-09-28T23:31:41.477-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-ACSP-001,txn=TXN-OUT-ACSP-001] Idempotency outcome recorded e2e=E2E-OUT-ACSP-001 status=ACSP
+2026-09-28T23:31:41.482-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Outbound credit transfer received amount=300.00 currency=USD
+2026-09-28T23:31:41.484-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Saga initiated sagaId=SAGA-1e34c298-d560-4e09-aa7c-d50f817c2702 transactionId=TXN-OUT-RJT-001 e2e=E2E-OUT-RJT-001 sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:41.488-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Shadow Ledger debit applied account=ACC-DEBTOR-OUT-001 amount=300.00 balanceAfter=700.00
+2026-09-28T23:31:41.488-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Saga advanced sagaId=SAGA-1e34c298-d560-4e09-aa7c-d50f817c2702 state=FUNDS_RESERVED
+2026-09-28T23:31:41.489-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Saga advanced sagaId=SAGA-1e34c298-d560-4e09-aa7c-d50f817c2702 state=SUBMITTING
+2026-09-28T23:31:41.489-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] FedNow rejected outbound payment, compensating sagaId=SAGA-1e34c298-d560-4e09-aa7c-d50f817c2702 reason=AC01
+2026-09-28T23:31:41.489-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Saga compensation starting sagaId=SAGA-1e34c298-d560-4e09-aa7c-d50f817c2702 fromState=SUBMITTING reason=AC01
+2026-09-28T23:31:41.490-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Shadow Ledger reversal applied account=ACC-DEBTOR-OUT-001 amount=300.00 balanceAfter=1000.00
+2026-09-28T23:31:41.491-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Shadow Ledger debit reversed sagaId=SAGA-1e34c298-d560-4e09-aa7c-d50f817c2702 transactionId=TXN-OUT-RJT-001
+2026-09-28T23:31:41.491-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Saga compensation complete sagaId=SAGA-1e34c298-d560-4e09-aa7c-d50f817c2702
+2026-09-28T23:31:41.491-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Outbound credit transfer status=RJCT rejectCode=AC01
+2026-09-28T23:31:41.492-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-RJT-001,txn=TXN-OUT-RJT-001] Idempotency outcome recorded e2e=E2E-OUT-RJT-001 status=RJCT
+2026-09-28T23:31:41.497-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-NSF-002,txn=TXN-OUT-NSF-002] Outbound credit transfer received amount=9999.00 currency=USD
+2026-09-28T23:31:41.499-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-NSF-002,txn=TXN-OUT-NSF-002] Outbound payment rejected: insufficient funds account=**************-001 available=1000.00 requested=9999.00
+2026-09-28T23:31:41.500-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-NSF-002,txn=TXN-OUT-NSF-002] Idempotency outcome recorded e2e=E2E-OUT-NSF-002 status=RJCT
+2026-09-28T23:31:41.504-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-002,txn=TXN-OUT-002] Outbound credit transfer received amount=100.00 currency=USD
+2026-09-28T23:31:41.506-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-002,txn=TXN-OUT-002] Saga initiated sagaId=SAGA-0a0d82b1-e97e-4cbb-aa44-3ed9b9ae9f13 transactionId=TXN-OUT-002 e2e=E2E-OUT-002 sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:41.509-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-002,txn=TXN-OUT-002] Shadow Ledger debit applied account=ACC-DEBTOR-OUT-001 amount=100.00 balanceAfter=900.00
+2026-09-28T23:31:41.510-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-002,txn=TXN-OUT-002] Saga advanced sagaId=SAGA-0a0d82b1-e97e-4cbb-aa44-3ed9b9ae9f13 state=FUNDS_RESERVED
+2026-09-28T23:31:41.510-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-002,txn=TXN-OUT-002] Saga advanced sagaId=SAGA-0a0d82b1-e97e-4cbb-aa44-3ed9b9ae9f13 state=SUBMITTING
+2026-09-28T23:31:41.510-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-002,txn=TXN-OUT-002] Saga advanced sagaId=SAGA-0a0d82b1-e97e-4cbb-aa44-3ed9b9ae9f13 state=FEDNOW_CONFIRMED
+2026-09-28T23:31:41.510-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-002,txn=TXN-OUT-002] Saga advanced sagaId=SAGA-0a0d82b1-e97e-4cbb-aa44-3ed9b9ae9f13 state=COMPLETED
+2026-09-28T23:31:41.510-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-002,txn=TXN-OUT-002] Outbound credit transfer status=ACSC rejectCode=null
+2026-09-28T23:31:41.511-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-002,txn=TXN-OUT-002] Idempotency outcome recorded e2e=E2E-OUT-002 status=ACSC
+2026-09-28T23:31:41.515-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-NSF-003,txn=TXN-OUT-NSF-003] Outbound credit transfer received amount=9999.00 currency=USD
+2026-09-28T23:31:41.516-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-NSF-003,txn=TXN-OUT-NSF-003] Outbound payment rejected: insufficient funds account=**************-001 available=1000.00 requested=9999.00
+2026-09-28T23:31:41.516-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-NSF-003,txn=TXN-OUT-NSF-003] Idempotency outcome recorded e2e=E2E-OUT-NSF-003 status=RJCT
+2026-09-28T23:31:41.520-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Outbound credit transfer received amount=100.00 currency=USD
+2026-09-28T23:31:41.521-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Saga initiated sagaId=SAGA-d278c71b-397e-4739-86eb-3bfd910e28ff transactionId=TXN-OUT-RJT-002 e2e=E2E-OUT-RJT-002 sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:41.525-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Shadow Ledger debit applied account=ACC-DEBTOR-OUT-001 amount=100.00 balanceAfter=900.00
+2026-09-28T23:31:41.525-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Saga advanced sagaId=SAGA-d278c71b-397e-4739-86eb-3bfd910e28ff state=FUNDS_RESERVED
+2026-09-28T23:31:41.525-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Saga advanced sagaId=SAGA-d278c71b-397e-4739-86eb-3bfd910e28ff state=SUBMITTING
+2026-09-28T23:31:41.525-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] FedNow rejected outbound payment, compensating sagaId=SAGA-d278c71b-397e-4739-86eb-3bfd910e28ff reason=AM04
+2026-09-28T23:31:41.526-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Saga compensation starting sagaId=SAGA-d278c71b-397e-4739-86eb-3bfd910e28ff fromState=SUBMITTING reason=AM04
+2026-09-28T23:31:41.527-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Shadow Ledger reversal applied account=ACC-DEBTOR-OUT-001 amount=100.00 balanceAfter=1000.00
+2026-09-28T23:31:41.527-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Shadow Ledger debit reversed sagaId=SAGA-d278c71b-397e-4739-86eb-3bfd910e28ff transactionId=TXN-OUT-RJT-002
+2026-09-28T23:31:41.527-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Saga compensation complete sagaId=SAGA-d278c71b-397e-4739-86eb-3bfd910e28ff
+2026-09-28T23:31:41.527-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Outbound credit transfer status=RJCT rejectCode=AM04
+2026-09-28T23:31:41.528-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-RJT-002,txn=TXN-OUT-RJT-002] Idempotency outcome recorded e2e=E2E-OUT-RJT-002 status=RJCT
+2026-09-28T23:31:41.531-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-NSF-001,txn=TXN-OUT-NSF-001] Outbound credit transfer received amount=5000.00 currency=USD
+2026-09-28T23:31:41.532-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-NSF-001,txn=TXN-OUT-NSF-001] Outbound payment rejected: insufficient funds account=**************-001 available=1000.00 requested=5000.00
+2026-09-28T23:31:41.532-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-NSF-001,txn=TXN-OUT-NSF-001] Idempotency outcome recorded e2e=E2E-OUT-NSF-001 status=RJCT
+2026-09-28T23:31:41.536-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-ACSP-002,txn=TXN-OUT-ACSP-002] Outbound credit transfer received amount=50.00 currency=USD
+2026-09-28T23:31:41.537-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-ACSP-002,txn=TXN-OUT-ACSP-002] Saga initiated sagaId=SAGA-6eed495a-5e43-4644-a14c-b5ff2e53ef48 transactionId=TXN-OUT-ACSP-002 e2e=E2E-OUT-ACSP-002 sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:41.541-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-ACSP-002,txn=TXN-OUT-ACSP-002] Shadow Ledger debit applied account=ACC-DEBTOR-OUT-001 amount=50.00 balanceAfter=950.00
+2026-09-28T23:31:41.541-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-ACSP-002,txn=TXN-OUT-ACSP-002] Saga advanced sagaId=SAGA-6eed495a-5e43-4644-a14c-b5ff2e53ef48 state=FUNDS_RESERVED
+2026-09-28T23:31:41.541-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-ACSP-002,txn=TXN-OUT-ACSP-002] Saga advanced sagaId=SAGA-6eed495a-5e43-4644-a14c-b5ff2e53ef48 state=SUBMITTING
+2026-09-28T23:31:41.541-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-ACSP-002,txn=TXN-OUT-ACSP-002] Saga advanced sagaId=SAGA-6eed495a-5e43-4644-a14c-b5ff2e53ef48 state=OUTCOME_UNKNOWN
+2026-09-28T23:31:41.541-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-ACSP-002,txn=TXN-OUT-ACSP-002] Outbound credit transfer status=ACSP rejectCode=null
+2026-09-28T23:31:41.542-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-ACSP-002,txn=TXN-OUT-ACSP-002] Idempotency outcome recorded e2e=E2E-OUT-ACSP-002 status=ACSP
+2026-09-28T23:31:41.546-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Outbound credit transfer received amount=200.00 currency=USD
+2026-09-28T23:31:41.547-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Saga initiated sagaId=SAGA-4149df9e-7b0b-48d3-bc65-5e3571dd0336 transactionId=TXN-OUT-DUP-001 e2e=E2E-OUT-DUP-001 sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:41.550-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Shadow Ledger debit applied account=ACC-DEBTOR-OUT-001 amount=200.00 balanceAfter=800.00
+2026-09-28T23:31:41.550-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Saga advanced sagaId=SAGA-4149df9e-7b0b-48d3-bc65-5e3571dd0336 state=FUNDS_RESERVED
+2026-09-28T23:31:41.550-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Saga advanced sagaId=SAGA-4149df9e-7b0b-48d3-bc65-5e3571dd0336 state=SUBMITTING
+2026-09-28T23:31:41.551-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Saga advanced sagaId=SAGA-4149df9e-7b0b-48d3-bc65-5e3571dd0336 state=FEDNOW_CONFIRMED
+2026-09-28T23:31:41.551-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Saga advanced sagaId=SAGA-4149df9e-7b0b-48d3-bc65-5e3571dd0336 state=COMPLETED
+2026-09-28T23:31:41.551-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Outbound credit transfer status=ACSC rejectCode=null
+2026-09-28T23:31:41.552-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Idempotency outcome recorded e2e=E2E-OUT-DUP-001 status=ACSC
+2026-09-28T23:31:41.552-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Outbound credit transfer received amount=200.00 currency=USD
+2026-09-28T23:31:41.552-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Idempotency cache hit e2e=E2E-OUT-DUP-001
+2026-09-28T23:31:41.554-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-DUP-001,txn=TXN-OUT-DUP-001] Duplicate outbound payment suppressed e2e=E2E-OUT-DUP-001
+2026-09-28T23:31:41.557-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-003,txn=TXN-OUT-003] Outbound credit transfer received amount=50.00 currency=USD
+2026-09-28T23:31:41.559-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-003,txn=TXN-OUT-003] Saga initiated sagaId=SAGA-4661af45-38ab-47ef-b0fa-091ac7ef1f5d transactionId=TXN-OUT-003 e2e=E2E-OUT-003 sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:41.562-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-003,txn=TXN-OUT-003] Shadow Ledger debit applied account=ACC-DEBTOR-OUT-001 amount=50.00 balanceAfter=950.00
+2026-09-28T23:31:41.562-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-003,txn=TXN-OUT-003] Saga advanced sagaId=SAGA-4661af45-38ab-47ef-b0fa-091ac7ef1f5d state=FUNDS_RESERVED
+2026-09-28T23:31:41.562-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-003,txn=TXN-OUT-003] Saga advanced sagaId=SAGA-4661af45-38ab-47ef-b0fa-091ac7ef1f5d state=SUBMITTING
+2026-09-28T23:31:41.562-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-003,txn=TXN-OUT-003] Saga advanced sagaId=SAGA-4661af45-38ab-47ef-b0fa-091ac7ef1f5d state=FEDNOW_CONFIRMED
+2026-09-28T23:31:41.563-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-003,txn=TXN-OUT-003] Saga advanced sagaId=SAGA-4661af45-38ab-47ef-b0fa-091ac7ef1f5d state=COMPLETED
+2026-09-28T23:31:41.563-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-003,txn=TXN-OUT-003] Outbound credit transfer status=ACSC rejectCode=null
+2026-09-28T23:31:41.563-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-003,txn=TXN-OUT-003] Idempotency outcome recorded e2e=E2E-OUT-003 status=ACSC
+2026-09-28T23:31:41.567-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-001,txn=TXN-OUT-001] Outbound credit transfer received amount=250.00 currency=USD
+2026-09-28T23:31:41.568-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-001,txn=TXN-OUT-001] Saga initiated sagaId=SAGA-1f3baa3f-ee44-4f92-9990-86683015cc98 transactionId=TXN-OUT-001 e2e=E2E-OUT-001 sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:41.571-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-001,txn=TXN-OUT-001] Shadow Ledger debit applied account=ACC-DEBTOR-OUT-001 amount=250.00 balanceAfter=750.00
+2026-09-28T23:31:41.572-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-001,txn=TXN-OUT-001] Saga advanced sagaId=SAGA-1f3baa3f-ee44-4f92-9990-86683015cc98 state=FUNDS_RESERVED
+2026-09-28T23:31:41.572-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-001,txn=TXN-OUT-001] Saga advanced sagaId=SAGA-1f3baa3f-ee44-4f92-9990-86683015cc98 state=SUBMITTING
+2026-09-28T23:31:41.572-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-001,txn=TXN-OUT-001] Saga advanced sagaId=SAGA-1f3baa3f-ee44-4f92-9990-86683015cc98 state=FEDNOW_CONFIRMED
+2026-09-28T23:31:41.572-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-001,txn=TXN-OUT-001] Saga advanced sagaId=SAGA-1f3baa3f-ee44-4f92-9990-86683015cc98 state=COMPLETED
+2026-09-28T23:31:41.572-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-001,txn=TXN-OUT-001] Outbound credit transfer status=ACSC rejectCode=null
+2026-09-28T23:31:41.573-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-001,txn=TXN-OUT-001] Idempotency outcome recorded e2e=E2E-OUT-001 status=ACSC
+2026-09-28T23:31:41.577-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Outbound credit transfer received amount=75.00 currency=USD
+2026-09-28T23:31:41.578-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Saga initiated sagaId=SAGA-7765a797-d51c-40c5-944b-0f625c9d9221 transactionId=TXN-OUT-RJT-003 e2e=E2E-OUT-RJT-003 sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:41.581-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Shadow Ledger debit applied account=ACC-DEBTOR-OUT-001 amount=75.00 balanceAfter=925.00
+2026-09-28T23:31:41.581-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Saga advanced sagaId=SAGA-7765a797-d51c-40c5-944b-0f625c9d9221 state=FUNDS_RESERVED
+2026-09-28T23:31:41.581-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Saga advanced sagaId=SAGA-7765a797-d51c-40c5-944b-0f625c9d9221 state=SUBMITTING
+2026-09-28T23:31:41.581-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] FedNow rejected outbound payment, compensating sagaId=SAGA-7765a797-d51c-40c5-944b-0f625c9d9221 reason=AC04
+2026-09-28T23:31:41.581-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Saga compensation starting sagaId=SAGA-7765a797-d51c-40c5-944b-0f625c9d9221 fromState=SUBMITTING reason=AC04
+2026-09-28T23:31:41.582-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Shadow Ledger reversal applied account=ACC-DEBTOR-OUT-001 amount=75.00 balanceAfter=1000.00
+2026-09-28T23:31:41.582-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Shadow Ledger debit reversed sagaId=SAGA-7765a797-d51c-40c5-944b-0f625c9d9221 transactionId=TXN-OUT-RJT-003
+2026-09-28T23:31:41.583-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Saga compensation complete sagaId=SAGA-7765a797-d51c-40c5-944b-0f625c9d9221
+2026-09-28T23:31:41.583-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Outbound credit transfer status=RJCT rejectCode=AC04
+2026-09-28T23:31:41.583-04:00 DEBUG [main] i.o.p.idempotency.IdempotencyService [req=?,e2e=E2E-OUT-RJT-003,txn=TXN-OUT-RJT-003] Idempotency outcome recorded e2e=E2E-OUT-RJT-003 status=RJCT
+2026-09-28T23:31:41.589-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-UNKNOWN,txn=TXN-OUT-UNKNOWN] Outbound credit transfer received amount=150.00 currency=USD
+2026-09-28T23:31:41.590-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-UNKNOWN,txn=TXN-OUT-UNKNOWN] Saga initiated sagaId=SAGA-d40895fc-57a6-43d4-9e7f-344a58afdd84 transactionId=TXN-OUT-UNKNOWN e2e=E2E-OUT-UNKNOWN sourceRail=FEDNOW requestId=null
+2026-09-28T23:31:41.593-04:00 INFO  [main] io.openfednow.shadowledger.ShadowLedger [req=?,e2e=E2E-OUT-UNKNOWN,txn=TXN-OUT-UNKNOWN] Shadow Ledger debit applied account=ACC-DEBTOR-OUT-001 amount=150.00 balanceAfter=850.00
+2026-09-28T23:31:41.593-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-UNKNOWN,txn=TXN-OUT-UNKNOWN] Saga advanced sagaId=SAGA-d40895fc-57a6-43d4-9e7f-344a58afdd84 state=FUNDS_RESERVED
+2026-09-28T23:31:41.593-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-UNKNOWN,txn=TXN-OUT-UNKNOWN] Saga advanced sagaId=SAGA-d40895fc-57a6-43d4-9e7f-344a58afdd84 state=SUBMITTING
+2026-09-28T23:31:41.593-04:00 ERROR [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-UNKNOWN,txn=TXN-OUT-UNKNOWN] FedNow outcome unknown; reservation retained sagaId=SAGA-d40895fc-57a6-43d4-9e7f-344a58afdd84
 io.openfednow.gateway.SubmissionOutcomeUnknownException: simulated lost response
 	at io.openfednow.gateway.MessageRouter.routeOutbound(MessageRouter.java:433)
 	at io.openfednow.gateway.OutboundPaymentIntegrationTest.lostResponseRetainsFundsAndDuplicateCannotResubmit(OutboundPaymentIntegrationTest.java:224)
@@ -647,19 +647,19 @@ io.openfednow.gateway.SubmissionOutcomeUnknownException: simulated lost response
 	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
 	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
 	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
-2026-09-28T23:20:35.783-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-UNKNOWN,txn=TXN-OUT-UNKNOWN] Saga advanced sagaId=SAGA-335b1ee9-b123-4553-8483-c4cb97adb721 state=OUTCOME_UNKNOWN
-2026-09-28T23:20:35.784-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-UNKNOWN,txn=TXN-OUT-UNKNOWN] Outbound credit transfer received amount=150.00 currency=USD
-2026-09-28T23:20:35.784-04:00 WARN  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-UNKNOWN,txn=TXN-OUT-UNKNOWN] Outbound payment already has a durable saga e2e=E2E-OUT-UNKNOWN
-2026-09-28T23:20:35.788-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-OUT-UNKNOWN,txn=TXN-OUT-UNKNOWN] Closing JPA EntityManagerFactory for persistence unit 'default'
-[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.583 s -- in io.openfednow.gateway.OutboundPaymentIntegrationTest
+2026-09-28T23:31:41.595-04:00 DEBUG [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-OUT-UNKNOWN,txn=TXN-OUT-UNKNOWN] Saga advanced sagaId=SAGA-d40895fc-57a6-43d4-9e7f-344a58afdd84 state=OUTCOME_UNKNOWN
+2026-09-28T23:31:41.595-04:00 INFO  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-UNKNOWN,txn=TXN-OUT-UNKNOWN] Outbound credit transfer received amount=150.00 currency=USD
+2026-09-28T23:31:41.596-04:00 WARN  [main] io.openfednow.gateway.MessageRouter [req=?,e2e=E2E-OUT-UNKNOWN,txn=TXN-OUT-UNKNOWN] Outbound payment already has a durable saga e2e=E2E-OUT-UNKNOWN
+2026-09-28T23:31:41.599-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-OUT-UNKNOWN,txn=TXN-OUT-UNKNOWN] Closing JPA EntityManagerFactory for persistence unit 'default'
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.554 s -- in io.openfednow.gateway.OutboundPaymentIntegrationTest
 [INFO] 
 [INFO] Results:
 [INFO] 
-[INFO] Tests run: 62, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 63, Failures: 0, Errors: 0, Skipped: 0
 [INFO] 
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  11.309 s
-[INFO] Finished at: 2026-09-28T23:20:35-04:00
+[INFO] Total time:  11.186 s
+[INFO] Finished at: 2026-09-28T23:31:41-04:00
 [INFO] ------------------------------------------------------------------------

@@ -25,37 +25,37 @@
 [INFO]  T E S T S
 [INFO] -------------------------------------------------------
 [INFO] Running io.openfednow.acl.adapters.JackHenryAdapterTest
-23:20:21.546 [main] WARN io.openfednow.acl.adapters.jackhenry.JackHenrySoapClient -- jXchange Ping health check failed: 503 Service Unavailable: [no body]
-23:20:21.572 [main] WARN io.openfednow.acl.adapters.jackhenry.JackHenrySoapClient -- jXchange TrnAdd SOAP error for transaction TXN-JH-001: Error while extracting response for type [java.lang.String] and content type [application/octet-stream]
-[INFO] Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.490 s -- in io.openfednow.acl.adapters.JackHenryAdapterTest
+23:31:27.433 [main] WARN io.openfednow.acl.adapters.jackhenry.JackHenrySoapClient -- jXchange Ping health check failed: 503 Service Unavailable: [no body]
+23:31:27.459 [main] WARN io.openfednow.acl.adapters.jackhenry.JackHenrySoapClient -- jXchange TrnAdd SOAP error for transaction TXN-JH-001: Error while extracting response for type [java.lang.String] and content type [application/octet-stream]
+[INFO] Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.494 s -- in io.openfednow.acl.adapters.JackHenryAdapterTest
 [INFO] Running io.openfednow.gateway.MessageRouterScreeningPolicyTest
-23:20:21.917 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=10.00 currency=USD sourceRail=FEDNOW
-23:20:21.919 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=invalid result failOpen=false
-23:20:21.923 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
-23:20:21.923 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=invalid result failOpen=false
-23:20:21.925 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
-23:20:22.028 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=timeout failOpen=true
-23:20:22.029 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound payment rejected: insufficient funds account=************BTOR available=0 requested=10.00
-23:20:22.031 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
-23:20:22.031 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=service error failOpen=true
-23:20:22.031 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound payment rejected: insufficient funds account=************BTOR available=0 requested=10.00
-23:20:22.033 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=10.00 currency=USD sourceRail=FEDNOW
-23:20:22.035 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
-23:20:22.036 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
-23:20:22.037 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=service error failOpen=false
-23:20:22.039 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=10.00 currency=USD sourceRail=FEDNOW
-23:20:22.149 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=timeout failOpen=false
-23:20:22.151 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
-23:20:22.252 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=timeout failOpen=false
-23:20:22.259 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=10.00 currency=USD sourceRail=FEDNOW
-23:20:22.260 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=service error failOpen=false
-23:20:22.263 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
-23:20:22.263 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=service error failOpen=false
-[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.677 s -- in io.openfednow.gateway.MessageRouterScreeningPolicyTest
+23:31:27.821 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=10.00 currency=USD sourceRail=FEDNOW
+23:31:27.822 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=invalid result failOpen=false
+23:31:27.827 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
+23:31:27.827 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=invalid result failOpen=false
+23:31:27.830 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
+23:31:27.931 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=timeout failOpen=true
+23:31:27.932 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound payment rejected: insufficient funds account=************BTOR available=0 requested=10.00
+23:31:27.934 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
+23:31:27.934 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=service error failOpen=true
+23:31:27.934 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound payment rejected: insufficient funds account=************BTOR available=0 requested=10.00
+23:31:27.936 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=10.00 currency=USD sourceRail=FEDNOW
+23:31:27.938 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
+23:31:27.939 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
+23:31:27.940 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=service error failOpen=false
+23:31:27.942 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=10.00 currency=USD sourceRail=FEDNOW
+23:31:28.048 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=timeout failOpen=false
+23:31:28.050 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
+23:31:28.161 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=timeout failOpen=false
+23:31:28.166 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=10.00 currency=USD sourceRail=FEDNOW
+23:31:28.167 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=service error failOpen=false
+23:31:28.169 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
+23:31:28.170 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=service error failOpen=false
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.694 s -- in io.openfednow.gateway.MessageRouterScreeningPolicyTest
 [INFO] Running io.openfednow.gateway.UncertainSubmissionReproducerTest
-23:20:22.276 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
-23:20:22.277 [main] INFO io.openfednow.gateway.HttpFedNowClient -- Submitting pacs.008 to FedNow endpoint=http://localhost:65433/transfers
-23:20:23.300 [main] ERROR io.openfednow.gateway.MessageRouter -- FedNow outcome unknown; reservation retained sagaId=SAGA-UNCERTAIN
+23:31:28.181 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
+23:31:28.182 [main] INFO io.openfednow.gateway.HttpFedNowClient -- Submitting pacs.008 to FedNow endpoint=http://localhost:50233/transfers
+23:31:29.204 [main] ERROR io.openfednow.gateway.MessageRouter -- FedNow outcome unknown; reservation retained sagaId=SAGA-UNCERTAIN
 io.openfednow.gateway.SubmissionOutcomeUnknownException: Payment submission outcome unknown
 	at io.openfednow.gateway.HttpFedNowClient.submitCreditTransfer(HttpFedNowClient.java:116)
 	at io.openfednow.gateway.MessageRouter.routeOutbound(MessageRouter.java:433)
@@ -137,7 +137,7 @@ io.openfednow.gateway.SubmissionOutcomeUnknownException: Payment submission outc
 	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
 	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
 	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
-Caused by: org.springframework.web.client.ResourceAccessException: I/O error on POST request for "http://localhost:65433/transfers": Read timed out
+Caused by: org.springframework.web.client.ResourceAccessException: I/O error on POST request for "http://localhost:50233/transfers": Read timed out
 	at org.springframework.web.client.RestTemplate.createResourceAccessException(RestTemplate.java:926)
 	at org.springframework.web.client.RestTemplate.doExecute(RestTemplate.java:906)
 	at org.springframework.web.client.RestTemplate.execute(RestTemplate.java:801)
@@ -163,43 +163,43 @@ Caused by: java.net.SocketTimeoutException: Read timed out
 	at org.springframework.web.client.RestTemplate.handleResponse(RestTemplate.java:942)
 	at org.springframework.web.client.RestTemplate.doExecute(RestTemplate.java:902)
 	... 82 common frames omitted
-[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.540 s -- in io.openfednow.gateway.UncertainSubmissionReproducerTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.534 s -- in io.openfednow.gateway.UncertainSubmissionReproducerTest
 [INFO] Running io.openfednow.gateway.MessageRouterCurrencyGuardTest
-23:20:23.812 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=100.00 currency=EUR sourceRail=FEDNOW
-23:20:23.812 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound rejected: currency EUR not supported by rail FEDNOW
-23:20:23.814 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=100.00 currency=GBP
-23:20:23.814 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound rejected: currency GBP not supported by rail FEDNOW
-23:20:23.816 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=100.00 currency=GBP
-23:20:23.816 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound rejected: currency GBP not supported by rail FEDNOW
-23:20:23.818 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=100.00 currency=USD sourceRail=RTP
-23:20:23.818 [main] INFO io.openfednow.gateway.MessageRouter -- Duplicate inbound payment suppressed e2e=E2E-CURR-TEST
-23:20:23.819 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=100.00 currency=USD sourceRail=FEDNOW
-23:20:23.819 [main] INFO io.openfednow.gateway.MessageRouter -- Duplicate inbound payment suppressed e2e=E2E-CURR-TEST
-23:20:23.820 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=100.00 currency=EUR sourceRail=FEDNOW
-23:20:23.820 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound rejected: currency EUR not supported by rail FEDNOW
-[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.012 s -- in io.openfednow.gateway.MessageRouterCurrencyGuardTest
+23:31:29.712 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=100.00 currency=EUR sourceRail=FEDNOW
+23:31:29.712 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound rejected: currency EUR not supported by rail FEDNOW
+23:31:29.714 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=100.00 currency=GBP
+23:31:29.714 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound rejected: currency GBP not supported by rail FEDNOW
+23:31:29.717 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=100.00 currency=GBP
+23:31:29.717 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound rejected: currency GBP not supported by rail FEDNOW
+23:31:29.718 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=100.00 currency=USD sourceRail=RTP
+23:31:29.719 [main] INFO io.openfednow.gateway.MessageRouter -- Duplicate inbound payment suppressed e2e=E2E-CURR-TEST
+23:31:29.720 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=100.00 currency=USD sourceRail=FEDNOW
+23:31:29.720 [main] INFO io.openfednow.gateway.MessageRouter -- Duplicate inbound payment suppressed e2e=E2E-CURR-TEST
+23:31:29.721 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=100.00 currency=EUR sourceRail=FEDNOW
+23:31:29.721 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound rejected: currency EUR not supported by rail FEDNOW
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.014 s -- in io.openfednow.gateway.MessageRouterCurrencyGuardTest
 [INFO] Running io.openfednow.gateway.MessageRouterBridgeSendsGuardTest
-23:20:23.822 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=100.00 currency=USD
-23:20:23.823 [main] INFO io.openfednow.gateway.MessageRouter -- Duplicate outbound payment suppressed e2e=E2E-COMPLETED
-23:20:23.824 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=100.00 currency=USD
-23:20:23.825 [main] WARN io.openfednow.gateway.MessageRouter -- Bridge-mode sends disabled by configuration — rejecting outbound during maintenance window e2e=E2E-SHORT
-23:20:23.826 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=100.00 currency=USD
-23:20:23.827 [main] INFO io.openfednow.gateway.MessageRouter -- Duplicate outbound payment suppressed e2e=E2E-GUARD-2
-23:20:23.828 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=100.00 currency=USD
-23:20:23.828 [main] INFO io.openfednow.gateway.MessageRouter -- Duplicate outbound payment suppressed e2e=E2E-GUARD-1
-23:20:23.829 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=100.00 currency=USD
-23:20:23.829 [main] WARN io.openfednow.gateway.MessageRouter -- Bridge-mode sends disabled by configuration — rejecting outbound during maintenance window e2e=E2E-GUARD-3
-23:20:23.830 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=100.00 currency=USD
-23:20:23.830 [main] WARN io.openfednow.gateway.MessageRouter -- Bridge-mode sends disabled by configuration — rejecting outbound during maintenance window e2e=E2E-METRIC-A
-23:20:23.830 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=100.00 currency=USD
-23:20:23.830 [main] WARN io.openfednow.gateway.MessageRouter -- Bridge-mode sends disabled by configuration — rejecting outbound during maintenance window e2e=E2E-METRIC-B
-[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in io.openfednow.gateway.MessageRouterBridgeSendsGuardTest
+23:31:29.723 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=100.00 currency=USD
+23:31:29.723 [main] INFO io.openfednow.gateway.MessageRouter -- Duplicate outbound payment suppressed e2e=E2E-COMPLETED
+23:31:29.725 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=100.00 currency=USD
+23:31:29.725 [main] WARN io.openfednow.gateway.MessageRouter -- Bridge-mode sends disabled by configuration — rejecting outbound during maintenance window e2e=E2E-SHORT
+23:31:29.726 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=100.00 currency=USD
+23:31:29.726 [main] INFO io.openfednow.gateway.MessageRouter -- Duplicate outbound payment suppressed e2e=E2E-GUARD-2
+23:31:29.727 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=100.00 currency=USD
+23:31:29.727 [main] INFO io.openfednow.gateway.MessageRouter -- Duplicate outbound payment suppressed e2e=E2E-GUARD-1
+23:31:29.728 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=100.00 currency=USD
+23:31:29.728 [main] WARN io.openfednow.gateway.MessageRouter -- Bridge-mode sends disabled by configuration — rejecting outbound during maintenance window e2e=E2E-GUARD-3
+23:31:29.730 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=100.00 currency=USD
+23:31:29.730 [main] WARN io.openfednow.gateway.MessageRouter -- Bridge-mode sends disabled by configuration — rejecting outbound during maintenance window e2e=E2E-METRIC-A
+23:31:29.730 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=100.00 currency=USD
+23:31:29.730 [main] WARN io.openfednow.gateway.MessageRouter -- Bridge-mode sends disabled by configuration — rejecting outbound during maintenance window e2e=E2E-METRIC-B
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in io.openfednow.gateway.MessageRouterBridgeSendsGuardTest
 [INFO] Running io.openfednow.gateway.RtpGatewayTest
-23:20:23.895 [main] INFO org.hibernate.validator.internal.util.Version -- HV000001: Hibernate Validator 8.0.3.Final
-23:20:23.994 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
-23:20:23.994 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
-23:20:23.994 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
-[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.204 s -- in io.openfednow.gateway.RtpGatewayTest
+23:31:29.796 [main] INFO org.hibernate.validator.internal.util.Version -- HV000001: Hibernate Validator 8.0.3.Final
+23:31:29.898 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+23:31:29.898 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+23:31:29.899 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 1 ms
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.211 s -- in io.openfednow.gateway.RtpGatewayTest
 [INFO] 
 [INFO] Results:
 [INFO] 
@@ -208,6 +208,6 @@ Caused by: java.net.SocketTimeoutException: Read timed out
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  3.744 s
-[INFO] Finished at: 2026-09-28T23:20:24-04:00
+[INFO] Total time:  3.765 s
+[INFO] Finished at: 2026-09-28T23:31:29-04:00
 [INFO] ------------------------------------------------------------------------

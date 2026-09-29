@@ -19,28 +19,28 @@
 [INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ openfednow ---
 [INFO] Recompiling the module because of changed dependency.
 [INFO] Compiling 92 source files with javac [debug parameters release 17] to target/test-classes
-[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java:[82,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
-[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java:[82,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
-[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java:[82,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
-[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java:[82,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
-[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java:[82,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
-[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/gateway/OutboundPaymentIntegrationTest.java:[49,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
-[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/gateway/OutboundPaymentIntegrationTest.java:[49,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
-[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/gateway/OutboundPaymentIntegrationTest.java:[49,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
-[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/gateway/OutboundPaymentIntegrationTest.java:[49,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
-[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/gateway/OutboundPaymentIntegrationTest.java:[49,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
-[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/reliability/ReliablePaymentIntegrationTest.java:[31,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
-[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/reliability/ReliablePaymentIntegrationTest.java:[31,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
-[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/reliability/ReliablePaymentIntegrationTest.java:[31,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
-[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/reliability/ReliablePaymentIntegrationTest.java:[31,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
-[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/reliability/ReliablePaymentIntegrationTest.java:[31,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
-[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/shadowledger/BalanceSeedIntegrationTest.java:[30,48] org.springframework.boot.test.mock.mockito.SpyBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
-[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/shadowledger/BalanceSeedIntegrationTest.java:[30,48] org.springframework.boot.test.mock.mockito.SpyBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
-[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/shadowledger/BalanceSeedIntegrationTest.java:[30,48] org.springframework.boot.test.mock.mockito.SpyBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
-[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/shadowledger/BalanceSeedIntegrationTest.java:[30,48] org.springframework.boot.test.mock.mockito.SpyBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
-[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/shadowledger/BalanceSeedIntegrationTest.java:[30,48] org.springframework.boot.test.mock.mockito.SpyBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
-[INFO] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java: Some input files use or override a deprecated API.
-[INFO] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java: Recompile with -Xlint:deprecation for details.
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java:[82,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java:[82,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java:[82,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java:[82,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java:[82,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/gateway/OutboundPaymentIntegrationTest.java:[49,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/gateway/OutboundPaymentIntegrationTest.java:[49,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/gateway/OutboundPaymentIntegrationTest.java:[49,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/gateway/OutboundPaymentIntegrationTest.java:[49,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/gateway/OutboundPaymentIntegrationTest.java:[49,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/reliability/ReliablePaymentIntegrationTest.java:[31,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/reliability/ReliablePaymentIntegrationTest.java:[31,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/reliability/ReliablePaymentIntegrationTest.java:[31,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/reliability/ReliablePaymentIntegrationTest.java:[31,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/reliability/ReliablePaymentIntegrationTest.java:[31,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/shadowledger/BalanceSeedIntegrationTest.java:[30,48] org.springframework.boot.test.mock.mockito.SpyBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/shadowledger/BalanceSeedIntegrationTest.java:[30,48] org.springframework.boot.test.mock.mockito.SpyBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/shadowledger/BalanceSeedIntegrationTest.java:[30,48] org.springframework.boot.test.mock.mockito.SpyBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/shadowledger/BalanceSeedIntegrationTest.java:[30,48] org.springframework.boot.test.mock.mockito.SpyBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/shadowledger/BalanceSeedIntegrationTest.java:[30,48] org.springframework.boot.test.mock.mockito.SpyBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[INFO] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java: Some input files use or override a deprecated API.
+[INFO] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java: Recompile with -Xlint:deprecation for details.
 [INFO] 
 [INFO] --- surefire:3.5.6:test (default-test) @ openfednow ---
 [INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
@@ -49,11 +49,11 @@
 [INFO]  T E S T S
 [INFO] -------------------------------------------------------
 [INFO] Running io.openfednow.gateway.MessageRouterScreeningPolicyTest
-23:20:39.938 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
-23:20:39.941 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=service error failOpen=false
-23:20:39.941 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound payment rejected: insufficient funds account=************BTOR available=0 requested=10.00
-[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.410 s <<< FAILURE! -- in io.openfednow.gateway.MessageRouterScreeningPolicyTest
-[ERROR] io.openfednow.gateway.MessageRouterScreeningPolicyTest.outageMustNotReachFundsCheck -- Time elapsed: 0.084 s <<< FAILURE!
+23:31:45.734 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
+23:31:45.736 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=service error failOpen=false
+23:31:45.736 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound payment rejected: insufficient funds account=************BTOR available=0 requested=10.00
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.396 s <<< FAILURE! -- in io.openfednow.gateway.MessageRouterScreeningPolicyTest
+[ERROR] io.openfednow.gateway.MessageRouterScreeningPolicyTest.outageMustNotReachFundsCheck -- Time elapsed: 0.082 s <<< FAILURE!
 org.opentest4j.AssertionFailedError: 
 
 expected: "TS01"
@@ -76,12 +76,12 @@ expected: "TS01"
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD FAILURE
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  3.625 s
-[INFO] Finished at: 2026-09-28T23:20:40-04:00
+[INFO] Total time:  3.612 s
+[INFO] Finished at: 2026-09-28T23:31:45-04:00
 [INFO] ------------------------------------------------------------------------
 [ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.6:test (default-test) on project openfednow: There are test failures.
 [ERROR] 
-[ERROR] See /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-048e1url/target/surefire-reports for the individual test results.
+[ERROR] See /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-negative-92fwsb2l/target/surefire-reports for the individual test results.
 [ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
 [ERROR] -> [Help 1]
 [ERROR] 

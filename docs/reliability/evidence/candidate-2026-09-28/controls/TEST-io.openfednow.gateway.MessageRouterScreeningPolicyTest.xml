@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="io.openfednow.gateway.MessageRouterScreeningPolicyTest" time="0.677" tests="11" errors="0" skipped="0" failures="0" flakes="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="io.openfednow.gateway.MessageRouterScreeningPolicyTest" time="0.694" tests="11" errors="0" skipped="0" failures="0" flakes="0">
   <properties>
     <property name="java.specification.version" value="17"/>
     <property name="sun.jnu.encoding" value="UTF-8"/>
@@ -13,7 +13,7 @@
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
     <property name="user.country" value="US"/>
     <property name="sun.boot.library.path" value="/opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home/lib"/>
-    <property name="sun.java.command" value="/Users/danielmori/Developer/open-fednow-reliability/target/surefire/surefirebooter-20260928232020843_3.jar /Users/danielmori/Developer/open-fednow-reliability/target/surefire 2026-09-28T23-20-20_819-jvmRun1 surefire-20260928232020843_1tmp surefire_0-20260928232020843_2tmp"/>
+    <property name="sun.java.command" value="/Users/danielmori/Developer/open-fednow-reliability/target/surefire/surefirebooter-20260928233126730_3.jar /Users/danielmori/Developer/open-fednow-reliability/target/surefire 2026-09-28T23-31-26_704-jvmRun1 surefire-20260928233126730_1tmp surefire_0-20260928233126730_2tmp"/>
     <property name="http.nonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
     <property name="jdk.debug" value="release"/>
     <property name="test" value="MessageRouterScreeningPolicyTest,MessageRouterBridgeSendsGuardTest,MessageRouterCurrencyGuardTest,RtpGatewayTest,JackHenryAdapterTest,UncertainSubmissionReproducerTest"/>
@@ -30,7 +30,7 @@
     <property name="line.separator" value="&#10;"/>
     <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
     <property name="java.specification.name" value="Java Platform API Specification"/>
-    <property name="surefire.real.class.path" value="/Users/danielmori/Developer/open-fednow-reliability/target/surefire/surefirebooter-20260928232020843_3.jar"/>
+    <property name="surefire.real.class.path" value="/Users/danielmori/Developer/open-fednow-reliability/target/surefire/surefirebooter-20260928233126730_3.jar"/>
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
     <property name="ftp.nonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
     <property name="java.runtime.version" value="17.0.20.1+0"/>
@@ -62,59 +62,59 @@
     <property name="socksNonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
     <property name="java.class.version" value="61.0"/>
   </properties>
-  <testcase name="nullResultFailsClosed(boolean)[1]" classname="io.openfednow.gateway.MessageRouterScreeningPolicyTest" time="0.019">
-    <system-out><![CDATA[23:20:21.917 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=10.00 currency=USD sourceRail=FEDNOW
-23:20:21.919 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=invalid result failOpen=false
+  <testcase name="nullResultFailsClosed(boolean)[1]" classname="io.openfednow.gateway.MessageRouterScreeningPolicyTest" time="0.022">
+    <system-out><![CDATA[23:31:27.821 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=10.00 currency=USD sourceRail=FEDNOW
+23:31:27.822 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=invalid result failOpen=false
 ]]></system-out>
   </testcase>
   <testcase name="nullResultFailsClosed(boolean)[2]" classname="io.openfednow.gateway.MessageRouterScreeningPolicyTest" time="0.001">
-    <system-out><![CDATA[23:20:21.923 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
-23:20:21.923 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=invalid result failOpen=false
+    <system-out><![CDATA[23:31:27.827 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
+23:31:27.827 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=invalid result failOpen=false
 ]]></system-out>
   </testcase>
-  <testcase name="explicitFailOpenContinuesToFundsCheckOnTimeoutOrError(boolean)[1]" classname="io.openfednow.gateway.MessageRouterScreeningPolicyTest" time="0.105">
-    <system-out><![CDATA[23:20:21.925 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
-23:20:22.028 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=timeout failOpen=true
-23:20:22.029 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound payment rejected: insufficient funds account=************BTOR available=0 requested=10.00
+  <testcase name="explicitFailOpenContinuesToFundsCheckOnTimeoutOrError(boolean)[1]" classname="io.openfednow.gateway.MessageRouterScreeningPolicyTest" time="0.103">
+    <system-out><![CDATA[23:31:27.830 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
+23:31:27.931 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=timeout failOpen=true
+23:31:27.932 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound payment rejected: insufficient funds account=************BTOR available=0 requested=10.00
 ]]></system-out>
   </testcase>
-  <testcase name="explicitFailOpenContinuesToFundsCheckOnTimeoutOrError(boolean)[2]" classname="io.openfednow.gateway.MessageRouterScreeningPolicyTest" time="0.002">
-    <system-out><![CDATA[23:20:22.031 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
-23:20:22.031 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=service error failOpen=true
-23:20:22.031 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound payment rejected: insufficient funds account=************BTOR available=0 requested=10.00
+  <testcase name="explicitFailOpenContinuesToFundsCheckOnTimeoutOrError(boolean)[2]" classname="io.openfednow.gateway.MessageRouterScreeningPolicyTest" time="0.001">
+    <system-out><![CDATA[23:31:27.934 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
+23:31:27.934 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=service error failOpen=true
+23:31:27.934 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound payment rejected: insufficient funds account=************BTOR available=0 requested=10.00
 ]]></system-out>
   </testcase>
-  <testcase name="explicitBlockPreventsFinancialEffects(boolean)[1]" classname="io.openfednow.gateway.MessageRouterScreeningPolicyTest" time="0.001">
-    <system-out><![CDATA[23:20:22.033 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=10.00 currency=USD sourceRail=FEDNOW
+  <testcase name="explicitBlockPreventsFinancialEffects(boolean)[1]" classname="io.openfednow.gateway.MessageRouterScreeningPolicyTest" time="0.002">
+    <system-out><![CDATA[23:31:27.936 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=10.00 currency=USD sourceRail=FEDNOW
 ]]></system-out>
   </testcase>
   <testcase name="explicitBlockPreventsFinancialEffects(boolean)[2]" classname="io.openfednow.gateway.MessageRouterScreeningPolicyTest" time="0.001">
-    <system-out><![CDATA[23:20:22.035 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
+    <system-out><![CDATA[23:31:27.938 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
 ]]></system-out>
   </testcase>
   <testcase name="outageMustNotReachFundsCheck" classname="io.openfednow.gateway.MessageRouterScreeningPolicyTest" time="0.001">
-    <system-out><![CDATA[23:20:22.036 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
-23:20:22.037 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=service error failOpen=false
+    <system-out><![CDATA[23:31:27.939 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
+23:31:27.940 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=service error failOpen=false
 ]]></system-out>
   </testcase>
-  <testcase name="timeoutFailsClosed(boolean)[1]" classname="io.openfednow.gateway.MessageRouterScreeningPolicyTest" time="0.112">
-    <system-out><![CDATA[23:20:22.039 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=10.00 currency=USD sourceRail=FEDNOW
-23:20:22.149 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=timeout failOpen=false
+  <testcase name="timeoutFailsClosed(boolean)[1]" classname="io.openfednow.gateway.MessageRouterScreeningPolicyTest" time="0.107">
+    <system-out><![CDATA[23:31:27.942 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=10.00 currency=USD sourceRail=FEDNOW
+23:31:28.048 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=timeout failOpen=false
 ]]></system-out>
   </testcase>
-  <testcase name="timeoutFailsClosed(boolean)[2]" classname="io.openfednow.gateway.MessageRouterScreeningPolicyTest" time="0.104">
-    <system-out><![CDATA[23:20:22.151 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
-23:20:22.252 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=timeout failOpen=false
+  <testcase name="timeoutFailsClosed(boolean)[2]" classname="io.openfednow.gateway.MessageRouterScreeningPolicyTest" time="0.112">
+    <system-out><![CDATA[23:31:28.050 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
+23:31:28.161 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=timeout failOpen=false
 ]]></system-out>
   </testcase>
   <testcase name="serviceErrorFailsClosed(boolean)[1]" classname="io.openfednow.gateway.MessageRouterScreeningPolicyTest" time="0.003">
-    <system-out><![CDATA[23:20:22.259 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=10.00 currency=USD sourceRail=FEDNOW
-23:20:22.260 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=service error failOpen=false
+    <system-out><![CDATA[23:31:28.166 [main] INFO io.openfednow.gateway.MessageRouter -- Inbound credit transfer received amount=10.00 currency=USD sourceRail=FEDNOW
+23:31:28.167 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=service error failOpen=false
 ]]></system-out>
   </testcase>
-  <testcase name="serviceErrorFailsClosed(boolean)[2]" classname="io.openfednow.gateway.MessageRouterScreeningPolicyTest" time="0.002">
-    <system-out><![CDATA[23:20:22.263 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
-23:20:22.263 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=service error failOpen=false
+  <testcase name="serviceErrorFailsClosed(boolean)[2]" classname="io.openfednow.gateway.MessageRouterScreeningPolicyTest" time="0.001">
+    <system-out><![CDATA[23:31:28.169 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
+23:31:28.170 [main] WARN io.openfednow.gateway.MessageRouter -- Screening unavailable e2e=E2E-SCREEN cause=service error failOpen=false
 ]]></system-out>
   </testcase>
 </testsuite>

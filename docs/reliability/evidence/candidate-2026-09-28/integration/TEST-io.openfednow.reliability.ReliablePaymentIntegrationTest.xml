@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.633" tests="15" errors="0" skipped="0" failures="0" flakes="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.639" tests="16" errors="0" skipped="0" failures="0" flakes="0">
   <properties>
     <property name="java.specification.version" value="17"/>
     <property name="sun.jnu.encoding" value="UTF-8"/>
@@ -15,7 +15,7 @@
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
     <property name="user.country" value="US"/>
     <property name="sun.boot.library.path" value="/opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home/lib"/>
-    <property name="sun.java.command" value="/Users/danielmori/Developer/open-fednow-reliability/target/surefire/surefirebooter-20260928232025048_3.jar /Users/danielmori/Developer/open-fednow-reliability/target/surefire 2026-09-28T23-20-25_023-jvmRun1 surefire-20260928232025048_1tmp surefire_0-20260928232025048_2tmp"/>
+    <property name="sun.java.command" value="/Users/danielmori/Developer/open-fednow-reliability/target/surefire/surefirebooter-20260928233130982_3.jar /Users/danielmori/Developer/open-fednow-reliability/target/surefire 2026-09-28T23-31-30_957-jvmRun1 surefire-20260928233130982_1tmp surefire_0-20260928233130982_2tmp"/>
     <property name="http.nonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
     <property name="jdk.debug" value="release"/>
     <property name="test" value="OutboundPaymentIntegrationTest,SagaRecoveryServiceIntegrationTest,SagaTimeoutIntegrationTest,PostgresIntegrationTest,FraudTimeoutIntegrationTest,FraudRoutingIntegrationTest,ReliablePaymentIntegrationTest"/>
@@ -28,13 +28,13 @@
     <property name="java.home" value="/opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home"/>
     <property name="file.separator" value="/"/>
     <property name="basedir" value="/Users/danielmori/Developer/open-fednow-reliability"/>
-    <property name="java.vm.compressedOopsMode" value="Non-zero disjoint base"/>
+    <property name="java.vm.compressedOopsMode" value="Non-zero based"/>
     <property name="line.separator" value="&#10;"/>
     <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
     <property name="java.specification.name" value="Java Platform API Specification"/>
     <property name="FILE_LOG_CHARSET" value="UTF-8"/>
     <property name="java.awt.headless" value="true"/>
-    <property name="surefire.real.class.path" value="/Users/danielmori/Developer/open-fednow-reliability/target/surefire/surefirebooter-20260928232025048_3.jar"/>
+    <property name="surefire.real.class.path" value="/Users/danielmori/Developer/open-fednow-reliability/target/surefire/surefirebooter-20260928233130982_3.jar"/>
     <property name="polyglot.engine.WarnInterpreterOnly" value="false"/>
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
     <property name="ftp.nonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
@@ -55,7 +55,7 @@
     <property name="os.arch" value="aarch64"/>
     <property name="groups" value="integration"/>
     <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
-    <property name="PID" value="74054"/>
+    <property name="PID" value="75540"/>
     <property name="CONSOLE_LOG_CHARSET" value="UTF-8"/>
     <property name="excludedGroups" value=""/>
     <property name="native.encoding" value="UTF-8"/>
@@ -69,9 +69,9 @@
     <property name="java.class.version" value="61.0"/>
     <property name="LOGGED_APPLICATION_NAME" value="[openfednow] "/>
   </properties>
-  <testcase name="changedPayloadConflictsWithoutSecondHold" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.026">
-    <system-out><![CDATA[2026-09-28T23:20:34.175-04:00 INFO  [main] o.s.t.c.s.AnnotationConfigContextLoaderUtils [req=?,e2e=E2E-THROW,txn=TXN-THROW] Could not detect default configuration classes for test class [io.openfednow.reliability.ReliablePaymentIntegrationTest]: ReliablePaymentIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
-2026-09-28T23:20:34.179-04:00 INFO  [main] o.s.b.t.c.SpringBootTestContextBootstrapper [req=?,e2e=E2E-THROW,txn=TXN-THROW] Found @SpringBootConfiguration io.openfednow.OpenFedNowApplication for test class io.openfednow.reliability.ReliablePaymentIntegrationTest
+  <testcase name="changedPayloadConflictsWithoutSecondHold" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.023">
+    <system-out><![CDATA[2026-09-28T23:31:39.961-04:00 INFO  [main] o.s.t.c.s.AnnotationConfigContextLoaderUtils [req=?,e2e=E2E-THROW,txn=TXN-THROW] Could not detect default configuration classes for test class [io.openfednow.reliability.ReliablePaymentIntegrationTest]: ReliablePaymentIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-09-28T23:31:39.966-04:00 INFO  [main] o.s.b.t.c.SpringBootTestContextBootstrapper [req=?,e2e=E2E-THROW,txn=TXN-THROW] Found @SpringBootConfiguration io.openfednow.OpenFedNowApplication for test class io.openfednow.reliability.ReliablePaymentIntegrationTest
 
   .   ____          _            __ _ _
  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
@@ -82,44 +82,45 @@
 
  :: Spring Boot ::               (v3.5.16)
 
-2026-09-28T23:20:34.188-04:00 INFO  [main] i.o.r.ReliablePaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Starting ReliablePaymentIntegrationTest using Java 17.0.20.1 with PID 74054 (started by danielmori in /Users/danielmori/Developer/open-fednow-reliability)
-2026-09-28T23:20:34.188-04:00 DEBUG [main] i.o.r.ReliablePaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Running with Spring Boot v3.5.16, Spring v6.2.19
-2026-09-28T23:20:34.188-04:00 INFO  [main] i.o.r.ReliablePaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] No active profile set, falling back to 1 default profile: "default"
-2026-09-28T23:20:34.255-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-28T23:20:34.255-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2026-09-28T23:20:34.259-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 3 ms. Found 0 JPA repository interfaces.
-2026-09-28T23:20:34.260-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-28T23:20:34.260-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data Redis repositories in DEFAULT mode.
-2026-09-28T23:20:34.262-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 2 ms. Found 0 Redis repository interfaces.
-2026-09-28T23:20:34.335-04:00 INFO  [main] org.flywaydb.core.FlywayExecutor [req=?,e2e=E2E-THROW,txn=TXN-THROW] Database: jdbc:postgresql://localhost:65441/openfednow?loggerLevel=OFF (PostgreSQL 16.15)
-2026-09-28T23:20:34.342-04:00 INFO  [main] o.f.core.internal.command.DbValidate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Successfully validated 10 migrations (execution time 00:00.003s)
-2026-09-28T23:20:34.352-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Current version of schema "public": 10
-2026-09-28T23:20:34.352-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Schema "public" is up to date. No migration necessary.
-2026-09-28T23:20:34.365-04:00 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo [req=?,e2e=E2E-THROW,txn=TXN-THROW] No LoadTimeWeaver setup: ignoring JPA class transformer
-2026-09-28T23:20:34.373-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Initialized JPA EntityManagerFactory for persistence unit 'default'
-2026-09-28T23:20:34.463-04:00 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [req=?,e2e=E2E-THROW,txn=TXN-THROW] Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
-2026-09-28T23:20:34.623-04:00 INFO  [main] i.o.r.ReliablePaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Started ReliablePaymentIntegrationTest in 0.443 seconds (process running for 9.542)
-2026-09-28T23:20:34.623-04:00 DEBUG [scheduling-1] i.o.shadowledger.AvailabilityBridge [req=?,e2e=?,txn=?] Core availability poll: mode=ONLINE
-2026-09-28T23:20:34.626-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 1 in-flight saga(s) — completing or compensating each
-2026-09-28T23:20:34.627-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-1b2983a4-d1d2-4c9b-af23-dd1432e90749 fromState=INITIATED sourceRail=FEDNOW
-2026-09-28T23:20:34.627-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation starting sagaId=SAGA-1b2983a4-d1d2-4c9b-af23-dd1432e90749 fromState=INITIATED reason=NARR
-2026-09-28T23:20:34.628-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation complete sagaId=SAGA-1b2983a4-d1d2-4c9b-af23-dd1432e90749
-2026-09-28T23:20:34.628-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 1 of 1 saga(s) processed
-2026-09-28T23:20:34.628-04:00 INFO  [main] i.o.shadowledger.BalanceSeedService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger startup seed: no accounts configured (openfednow.shadow-ledger.seed-accounts is empty)
+2026-09-28T23:31:39.975-04:00 INFO  [main] i.o.r.ReliablePaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Starting ReliablePaymentIntegrationTest using Java 17.0.20.1 with PID 75540 (started by danielmori in /Users/danielmori/Developer/open-fednow-reliability)
+2026-09-28T23:31:39.975-04:00 DEBUG [main] i.o.r.ReliablePaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Running with Spring Boot v3.5.16, Spring v6.2.19
+2026-09-28T23:31:39.975-04:00 INFO  [main] i.o.r.ReliablePaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] No active profile set, falling back to 1 default profile: "default"
+2026-09-28T23:31:40.045-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-28T23:31:40.046-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-09-28T23:31:40.050-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 3 ms. Found 0 JPA repository interfaces.
+2026-09-28T23:31:40.050-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-28T23:31:40.050-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-09-28T23:31:40.053-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Finished Spring Data repository scanning in 2 ms. Found 0 Redis repository interfaces.
+2026-09-28T23:31:40.130-04:00 INFO  [main] org.flywaydb.core.FlywayExecutor [req=?,e2e=E2E-THROW,txn=TXN-THROW] Database: jdbc:postgresql://localhost:50243/openfednow?loggerLevel=OFF (PostgreSQL 16.15)
+2026-09-28T23:31:40.136-04:00 INFO  [main] o.f.core.internal.command.DbValidate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Successfully validated 10 migrations (execution time 00:00.002s)
+2026-09-28T23:31:40.145-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Current version of schema "public": 10
+2026-09-28T23:31:40.146-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=E2E-THROW,txn=TXN-THROW] Schema "public" is up to date. No migration necessary.
+2026-09-28T23:31:40.158-04:00 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo [req=?,e2e=E2E-THROW,txn=TXN-THROW] No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-09-28T23:31:40.165-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=E2E-THROW,txn=TXN-THROW] Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-09-28T23:31:40.252-04:00 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [req=?,e2e=E2E-THROW,txn=TXN-THROW] Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2026-09-28T23:31:40.404-04:00 INFO  [main] i.o.r.ReliablePaymentIntegrationTest [req=?,e2e=E2E-THROW,txn=TXN-THROW] Started ReliablePaymentIntegrationTest in 0.437 seconds (process running for 9.387)
+2026-09-28T23:31:40.404-04:00 DEBUG [scheduling-1] i.o.shadowledger.AvailabilityBridge [req=?,e2e=?,txn=?] Core availability poll: mode=ONLINE
+2026-09-28T23:31:40.408-04:00 WARN  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery: found 1 in-flight saga(s) — completing or compensating each
+2026-09-28T23:31:40.408-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Recovering sagaId=SAGA-3b5e127f-f760-4c21-8099-b948120a076f fromState=INITIATED sourceRail=FEDNOW
+2026-09-28T23:31:40.409-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation starting sagaId=SAGA-3b5e127f-f760-4c21-8099-b948120a076f fromState=INITIATED reason=NARR
+2026-09-28T23:31:40.410-04:00 INFO  [main] i.o.processing.saga.SagaOrchestrator [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga compensation complete sagaId=SAGA-3b5e127f-f760-4c21-8099-b948120a076f
+2026-09-28T23:31:40.410-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Saga recovery complete: 1 of 1 saga(s) processed
+2026-09-28T23:31:40.410-04:00 INFO  [main] i.o.shadowledger.BalanceSeedService [req=?,e2e=E2E-THROW,txn=TXN-THROW] Shadow Ledger startup seed: no accounts configured (openfednow.shadow-ledger.seed-accounts is empty)
 ]]></system-out>
   </testcase>
-  <testcase name="failedReleaseRollsBackFinancialEffectAndCanRetry" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.012"/>
+  <testcase name="failedReleaseRollsBackFinancialEffectAndCanRetry" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.013"/>
   <testcase name="noExclusiveCoreReservationRefusesSend" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.005"/>
-  <testcase name="concurrentSameBusinessKeyCreatesOneHoldAndOneSend" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.011"/>
+  <testcase name="concurrentSameBusinessKeyCreatesOneHoldAndOneSend" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.01"/>
   <testcase name="lostRejectionReleasesExactlyOnceAfterInquiry" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.009"/>
-  <testcase name="conflictingLateEventDoesNotUndoSettlementAndPostingIsSeparate" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.013"/>
-  <testcase name="preSendAckCrashWindowCanDispatchOnceFromDurableReservation" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.013"/>
-  <testcase name="uncorrelatedReplyEntersInvestigationWithoutFabricatedRejection" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.007"/>
-  <testcase name="untraceableInquiryEscalatesWithoutReleasingFundsAndAuditRecordsReview" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.016"/>
+  <testcase name="conflictingLateEventDoesNotUndoSettlementAndPostingIsSeparate" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.009"/>
+  <testcase name="preSendAckCrashWindowCanDispatchOnceFromDurableReservation" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.01"/>
+  <testcase name="uncorrelatedReplyEntersInvestigationWithoutFabricatedRejection" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.006"/>
+  <testcase name="untraceableInquiryEscalatesWithoutReleasingFundsAndAuditRecordsReview" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.017"/>
   <testcase name="possibleSendIntentSurvivesWorkerCrashWithoutReplay" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.006"/>
-  <testcase name="acceptancePostsOnceAndDuplicateRetrievesSameOperation" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.007"/>
-  <testcase name="asynchronousCoreAckPrecedesRailSendAndIsRecoveredByLookup" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.008"/>
-  <testcase name="lostAcceptanceStaysUnknownUntilInquiryAndNeverSubmitsAgain" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.012"/>
-  <testcase name="inquiryLeaseFencesStaleWorkerAndIsNotEligibleEarly" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.009"/>
+  <testcase name="acceptancePostsOnceAndDuplicateRetrievesSameOperation" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.008"/>
+  <testcase name="asynchronousCoreAckPrecedesRailSendAndIsRecoveredByLookup" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.009"/>
+  <testcase name="lostAcceptanceStaysUnknownUntilInquiryAndNeverSubmitsAgain" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.013"/>
+  <testcase name="reviewResolutionAndAuditCommitTogetherOrRollBackTogether" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.019"/>
+  <testcase name="inquiryLeaseFencesStaleWorkerAndIsNotEligibleEarly" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.008"/>
   <testcase name="redisLossCannotEraseSqlOwnershipOrCauseSecondSend" classname="io.openfednow.reliability.ReliablePaymentIntegrationTest" time="0.014"/>
 </testsuite>

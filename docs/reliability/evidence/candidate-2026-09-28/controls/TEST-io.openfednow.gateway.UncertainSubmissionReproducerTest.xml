@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="io.openfednow.gateway.UncertainSubmissionReproducerTest" time="1.54" tests="1" errors="0" skipped="0" failures="0" flakes="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="io.openfednow.gateway.UncertainSubmissionReproducerTest" time="1.534" tests="1" errors="0" skipped="0" failures="0" flakes="0">
   <properties>
     <property name="java.specification.version" value="17"/>
     <property name="sun.jnu.encoding" value="UTF-8"/>
@@ -13,7 +13,7 @@
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
     <property name="user.country" value="US"/>
     <property name="sun.boot.library.path" value="/opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home/lib"/>
-    <property name="sun.java.command" value="/Users/danielmori/Developer/open-fednow-reliability/target/surefire/surefirebooter-20260928232020843_3.jar /Users/danielmori/Developer/open-fednow-reliability/target/surefire 2026-09-28T23-20-20_819-jvmRun1 surefire-20260928232020843_1tmp surefire_0-20260928232020843_2tmp"/>
+    <property name="sun.java.command" value="/Users/danielmori/Developer/open-fednow-reliability/target/surefire/surefirebooter-20260928233126730_3.jar /Users/danielmori/Developer/open-fednow-reliability/target/surefire 2026-09-28T23-31-26_704-jvmRun1 surefire-20260928233126730_1tmp surefire_0-20260928233126730_2tmp"/>
     <property name="http.nonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
     <property name="jdk.debug" value="release"/>
     <property name="test" value="MessageRouterScreeningPolicyTest,MessageRouterBridgeSendsGuardTest,MessageRouterCurrencyGuardTest,RtpGatewayTest,JackHenryAdapterTest,UncertainSubmissionReproducerTest"/>
@@ -30,7 +30,7 @@
     <property name="line.separator" value="&#10;"/>
     <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
     <property name="java.specification.name" value="Java Platform API Specification"/>
-    <property name="surefire.real.class.path" value="/Users/danielmori/Developer/open-fednow-reliability/target/surefire/surefirebooter-20260928232020843_3.jar"/>
+    <property name="surefire.real.class.path" value="/Users/danielmori/Developer/open-fednow-reliability/target/surefire/surefirebooter-20260928233126730_3.jar"/>
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
     <property name="ftp.nonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
     <property name="java.runtime.version" value="17.0.20.1+0"/>
@@ -62,10 +62,10 @@
     <property name="socksNonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
     <property name="java.class.version" value="61.0"/>
   </properties>
-  <testcase name="delayedAcceptanceRetainsReservationAndNeedsReview(WireMockRuntimeInfo)" classname="io.openfednow.gateway.UncertainSubmissionReproducerTest" time="1.034">
-    <system-out><![CDATA[23:20:22.276 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
-23:20:22.277 [main] INFO io.openfednow.gateway.HttpFedNowClient -- Submitting pacs.008 to FedNow endpoint=http://localhost:65433/transfers
-23:20:23.300 [main] ERROR io.openfednow.gateway.MessageRouter -- FedNow outcome unknown; reservation retained sagaId=SAGA-UNCERTAIN
+  <testcase name="delayedAcceptanceRetainsReservationAndNeedsReview(WireMockRuntimeInfo)" classname="io.openfednow.gateway.UncertainSubmissionReproducerTest" time="1.033">
+    <system-out><![CDATA[23:31:28.181 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
+23:31:28.182 [main] INFO io.openfednow.gateway.HttpFedNowClient -- Submitting pacs.008 to FedNow endpoint=http://localhost:50233/transfers
+23:31:29.204 [main] ERROR io.openfednow.gateway.MessageRouter -- FedNow outcome unknown; reservation retained sagaId=SAGA-UNCERTAIN
 io.openfednow.gateway.SubmissionOutcomeUnknownException: Payment submission outcome unknown
 	at io.openfednow.gateway.HttpFedNowClient.submitCreditTransfer(HttpFedNowClient.java:116)
 	at io.openfednow.gateway.MessageRouter.routeOutbound(MessageRouter.java:433)
@@ -147,7 +147,7 @@ io.openfednow.gateway.SubmissionOutcomeUnknownException: Payment submission outc
 	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
 	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
 	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
-Caused by: org.springframework.web.client.ResourceAccessException: I/O error on POST request for "http://localhost:65433/transfers": Read timed out
+Caused by: org.springframework.web.client.ResourceAccessException: I/O error on POST request for "http://localhost:50233/transfers": Read timed out
 	at org.springframework.web.client.RestTemplate.createResourceAccessException(RestTemplate.java:926)
 	at org.springframework.web.client.RestTemplate.doExecute(RestTemplate.java:906)
 	at org.springframework.web.client.RestTemplate.execute(RestTemplate.java:801)

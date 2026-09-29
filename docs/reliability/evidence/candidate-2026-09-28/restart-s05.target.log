@@ -8,46 +8,46 @@
 
  :: Spring Boot ::               (v3.5.16)
 
-2026-09-28T23:21:58.384-04:00 INFO  [main] io.openfednow.OpenFedNowApplication [req=?,e2e=?,txn=?] Starting OpenFedNowApplication v0.1.0-SNAPSHOT using Java 17.0.20.1 with PID 74426 (/Users/danielmori/Developer/open-fednow-reliability/target/openfednow-0.1.0-SNAPSHOT.jar started by danielmori in /Users/danielmori/Developer/open-fednow-reliability)
-2026-09-28T23:21:58.385-04:00 DEBUG [main] io.openfednow.OpenFedNowApplication [req=?,e2e=?,txn=?] Running with Spring Boot v3.5.16, Spring v6.2.19
-2026-09-28T23:21:58.386-04:00 INFO  [main] io.openfednow.OpenFedNowApplication [req=?,e2e=?,txn=?] No active profile set, falling back to 1 default profile: "default"
-2026-09-28T23:21:58.964-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-28T23:21:58.965-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2026-09-28T23:21:58.976-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Finished Spring Data repository scanning in 7 ms. Found 0 JPA repository interfaces.
-2026-09-28T23:21:58.982-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-28T23:21:58.982-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Bootstrapping Spring Data Redis repositories in DEFAULT mode.
-2026-09-28T23:21:58.987-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Finished Spring Data repository scanning in 1 ms. Found 0 Redis repository interfaces.
-2026-09-28T23:21:59.442-04:00 INFO  [main] o.s.b.w.embedded.tomcat.TomcatWebServer [req=?,e2e=?,txn=?] Tomcat initialized with port 8081 (http)
-2026-09-28T23:21:59.448-04:00 INFO  [main] o.apache.coyote.http11.Http11NioProtocol [req=?,e2e=?,txn=?] Initializing ProtocolHandler ["http-nio-8081"]
-2026-09-28T23:21:59.449-04:00 INFO  [main] o.apache.catalina.core.StandardService [req=?,e2e=?,txn=?] Starting service [Tomcat]
-2026-09-28T23:21:59.449-04:00 INFO  [main] org.apache.catalina.core.StandardEngine [req=?,e2e=?,txn=?] Starting Servlet engine: [Apache Tomcat/10.1.59]
-2026-09-28T23:21:59.463-04:00 INFO  [main] o.a.c.c.C.[Tomcat].[localhost].[/] [req=?,e2e=?,txn=?] Initializing Spring embedded WebApplicationContext
-2026-09-28T23:21:59.463-04:00 INFO  [main] o.s.b.w.s.c.ServletWebServerApplicationContext [req=?,e2e=?,txn=?] Root WebApplicationContext: initialization completed in 1058 ms
-2026-09-28T23:21:59.771-04:00 INFO  [main] org.flywaydb.core.FlywayExecutor [req=?,e2e=?,txn=?] Database: jdbc:postgresql://localhost:5432/openfednow (PostgreSQL 16.15)
-2026-09-28T23:21:59.798-04:00 INFO  [main] o.f.core.internal.command.DbValidate [req=?,e2e=?,txn=?] Successfully validated 10 migrations (execution time 00:00.014s)
-2026-09-28T23:21:59.818-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Current version of schema "public": 10
-2026-09-28T23:21:59.820-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Schema "public" is up to date. No migration necessary.
-2026-09-28T23:21:59.860-04:00 DEBUG [main] io.openfednow.gateway.CorrelationFilter [req=?,e2e=?,txn=?] Filter 'correlationFilter' configured for use
-2026-09-28T23:21:59.862-04:00 DEBUG [main] i.o.gateway.ratelimit.RateLimitFilter [req=?,e2e=?,txn=?] Filter 'rateLimitFilter' configured for use
-2026-09-28T23:21:59.862-04:00 DEBUG [main] i.o.g.s.JwsInboundVerificationFilter [req=?,e2e=?,txn=?] Filter 'jwsInboundVerificationFilter' configured for use
-2026-09-28T23:21:59.862-04:00 DEBUG [main] i.o.s.audit.AdminAccessAuditFilter [req=?,e2e=?,txn=?] Filter 'adminAccessAuditFilter' configured for use
-2026-09-28T23:22:00.050-04:00 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo [req=?,e2e=?,txn=?] No LoadTimeWeaver setup: ignoring JPA class transformer
-2026-09-28T23:22:00.185-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=?,txn=?] Initialized JPA EntityManagerFactory for persistence unit 'default'
-2026-09-28T23:22:00.567-04:00 INFO  [main] i.o.reliability.ReliabilityRailConfig [req=?,e2e=?,txn=?] Synthetic reliability rail configured=true
-2026-09-28T23:22:00.668-04:00 WARN  [main] o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration [req=?,e2e=?,txn=?] spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
-2026-09-28T23:22:00.824-04:00 INFO  [main] o.s.b.a.e.web.EndpointLinksResolver [req=?,e2e=?,txn=?] Exposing 3 endpoints beneath base path '/actuator'
-2026-09-28T23:22:00.849-04:00 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [req=?,e2e=?,txn=?] Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
-2026-09-28T23:22:01.367-04:00 INFO  [main] o.apache.coyote.http11.Http11NioProtocol [req=?,e2e=?,txn=?] Starting ProtocolHandler ["http-nio-8081"]
-2026-09-28T23:22:01.372-04:00 INFO  [main] o.s.b.w.embedded.tomcat.TomcatWebServer [req=?,e2e=?,txn=?] Tomcat started on port 8081 (http) with context path '/'
-2026-09-28T23:22:01.383-04:00 INFO  [main] io.openfednow.OpenFedNowApplication [req=?,e2e=?,txn=?] Started OpenFedNowApplication in 3.312 seconds (process running for 3.499)
-2026-09-28T23:22:01.386-04:00 DEBUG [scheduling-1] i.o.shadowledger.AvailabilityBridge [req=?,e2e=?,txn=?] Core availability poll: mode=ONLINE
-2026-09-28T23:22:01.401-04:00 WARN  [main] o.s.core.events.SpringDocAppInitializer [req=?,e2e=?,txn=?] SpringDoc /v3/api-docs endpoint is enabled by default. To disable it in production, set the property 'springdoc.api-docs.enabled=false'
-2026-09-28T23:22:01.402-04:00 WARN  [main] o.s.core.events.SpringDocAppInitializer [req=?,e2e=?,txn=?] SpringDoc /swagger-ui.html endpoint is enabled by default. To disable it in production, set the property 'springdoc.swagger-ui.enabled=false'
-2026-09-28T23:22:01.403-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=?,txn=?] Saga recovery: no in-flight sagas found at startup
-2026-09-28T23:22:01.403-04:00 INFO  [main] i.o.shadowledger.BalanceSeedService [req=?,e2e=?,txn=?] Shadow Ledger startup seed: no accounts configured (openfednow.shadow-ledger.seed-accounts is empty)
-2026-09-28T23:22:01.452-04:00 INFO  [http-nio-8081-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/] [req=?,e2e=?,txn=?] Initializing Spring DispatcherServlet 'dispatcherServlet'
-2026-09-28T23:22:01.452-04:00 INFO  [http-nio-8081-exec-1] o.s.web.servlet.DispatcherServlet [req=?,e2e=?,txn=?] Initializing Servlet 'dispatcherServlet'
-2026-09-28T23:22:01.453-04:00 INFO  [http-nio-8081-exec-1] o.s.web.servlet.DispatcherServlet [req=?,e2e=?,txn=?] Completed initialization in 1 ms
+2026-09-28T23:33:04.025-04:00 INFO  [main] io.openfednow.OpenFedNowApplication [req=?,e2e=?,txn=?] Starting OpenFedNowApplication v0.1.0-SNAPSHOT using Java 17.0.20.1 with PID 75769 (/Users/danielmori/Developer/open-fednow-reliability/target/openfednow-0.1.0-SNAPSHOT.jar started by danielmori in /Users/danielmori/Developer/open-fednow-reliability)
+2026-09-28T23:33:04.027-04:00 DEBUG [main] io.openfednow.OpenFedNowApplication [req=?,e2e=?,txn=?] Running with Spring Boot v3.5.16, Spring v6.2.19
+2026-09-28T23:33:04.027-04:00 INFO  [main] io.openfednow.OpenFedNowApplication [req=?,e2e=?,txn=?] No active profile set, falling back to 1 default profile: "default"
+2026-09-28T23:33:04.608-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-28T23:33:04.609-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-09-28T23:33:04.621-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Finished Spring Data repository scanning in 7 ms. Found 0 JPA repository interfaces.
+2026-09-28T23:33:04.627-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-28T23:33:04.627-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-09-28T23:33:04.632-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Finished Spring Data repository scanning in 1 ms. Found 0 Redis repository interfaces.
+2026-09-28T23:33:05.100-04:00 INFO  [main] o.s.b.w.embedded.tomcat.TomcatWebServer [req=?,e2e=?,txn=?] Tomcat initialized with port 8081 (http)
+2026-09-28T23:33:05.106-04:00 INFO  [main] o.apache.coyote.http11.Http11NioProtocol [req=?,e2e=?,txn=?] Initializing ProtocolHandler ["http-nio-8081"]
+2026-09-28T23:33:05.107-04:00 INFO  [main] o.apache.catalina.core.StandardService [req=?,e2e=?,txn=?] Starting service [Tomcat]
+2026-09-28T23:33:05.107-04:00 INFO  [main] org.apache.catalina.core.StandardEngine [req=?,e2e=?,txn=?] Starting Servlet engine: [Apache Tomcat/10.1.59]
+2026-09-28T23:33:05.122-04:00 INFO  [main] o.a.c.c.C.[Tomcat].[localhost].[/] [req=?,e2e=?,txn=?] Initializing Spring embedded WebApplicationContext
+2026-09-28T23:33:05.123-04:00 INFO  [main] o.s.b.w.s.c.ServletWebServerApplicationContext [req=?,e2e=?,txn=?] Root WebApplicationContext: initialization completed in 1074 ms
+2026-09-28T23:33:05.437-04:00 INFO  [main] org.flywaydb.core.FlywayExecutor [req=?,e2e=?,txn=?] Database: jdbc:postgresql://localhost:5432/openfednow (PostgreSQL 16.15)
+2026-09-28T23:33:05.465-04:00 INFO  [main] o.f.core.internal.command.DbValidate [req=?,e2e=?,txn=?] Successfully validated 10 migrations (execution time 00:00.014s)
+2026-09-28T23:33:05.483-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Current version of schema "public": 10
+2026-09-28T23:33:05.484-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Schema "public" is up to date. No migration necessary.
+2026-09-28T23:33:05.524-04:00 DEBUG [main] io.openfednow.gateway.CorrelationFilter [req=?,e2e=?,txn=?] Filter 'correlationFilter' configured for use
+2026-09-28T23:33:05.526-04:00 DEBUG [main] i.o.gateway.ratelimit.RateLimitFilter [req=?,e2e=?,txn=?] Filter 'rateLimitFilter' configured for use
+2026-09-28T23:33:05.526-04:00 DEBUG [main] i.o.g.s.JwsInboundVerificationFilter [req=?,e2e=?,txn=?] Filter 'jwsInboundVerificationFilter' configured for use
+2026-09-28T23:33:05.526-04:00 DEBUG [main] i.o.s.audit.AdminAccessAuditFilter [req=?,e2e=?,txn=?] Filter 'adminAccessAuditFilter' configured for use
+2026-09-28T23:33:05.738-04:00 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo [req=?,e2e=?,txn=?] No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-09-28T23:33:05.895-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=?,txn=?] Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-09-28T23:33:06.262-04:00 INFO  [main] i.o.reliability.ReliabilityRailConfig [req=?,e2e=?,txn=?] Synthetic reliability rail configured=true
+2026-09-28T23:33:06.370-04:00 WARN  [main] o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration [req=?,e2e=?,txn=?] spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-09-28T23:33:06.536-04:00 INFO  [main] o.s.b.a.e.web.EndpointLinksResolver [req=?,e2e=?,txn=?] Exposing 3 endpoints beneath base path '/actuator'
+2026-09-28T23:33:06.561-04:00 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [req=?,e2e=?,txn=?] Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2026-09-28T23:33:07.125-04:00 INFO  [main] o.apache.coyote.http11.Http11NioProtocol [req=?,e2e=?,txn=?] Starting ProtocolHandler ["http-nio-8081"]
+2026-09-28T23:33:07.133-04:00 INFO  [main] o.s.b.w.embedded.tomcat.TomcatWebServer [req=?,e2e=?,txn=?] Tomcat started on port 8081 (http) with context path '/'
+2026-09-28T23:33:07.144-04:00 INFO  [main] io.openfednow.OpenFedNowApplication [req=?,e2e=?,txn=?] Started OpenFedNowApplication in 3.438 seconds (process running for 3.626)
+2026-09-28T23:33:07.146-04:00 DEBUG [scheduling-1] i.o.shadowledger.AvailabilityBridge [req=?,e2e=?,txn=?] Core availability poll: mode=ONLINE
+2026-09-28T23:33:07.160-04:00 WARN  [main] o.s.core.events.SpringDocAppInitializer [req=?,e2e=?,txn=?] SpringDoc /v3/api-docs endpoint is enabled by default. To disable it in production, set the property 'springdoc.api-docs.enabled=false'
+2026-09-28T23:33:07.160-04:00 WARN  [main] o.s.core.events.SpringDocAppInitializer [req=?,e2e=?,txn=?] SpringDoc /swagger-ui.html endpoint is enabled by default. To disable it in production, set the property 'springdoc.swagger-ui.enabled=false'
+2026-09-28T23:33:07.161-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=?,txn=?] Saga recovery: no in-flight sagas found at startup
+2026-09-28T23:33:07.162-04:00 INFO  [main] i.o.shadowledger.BalanceSeedService [req=?,e2e=?,txn=?] Shadow Ledger startup seed: no accounts configured (openfednow.shadow-ledger.seed-accounts is empty)
+2026-09-28T23:33:07.291-04:00 INFO  [http-nio-8081-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/] [req=?,e2e=?,txn=?] Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-09-28T23:33:07.291-04:00 INFO  [http-nio-8081-exec-1] o.s.web.servlet.DispatcherServlet [req=?,e2e=?,txn=?] Initializing Servlet 'dispatcherServlet'
+2026-09-28T23:33:07.292-04:00 INFO  [http-nio-8081-exec-1] o.s.web.servlet.DispatcherServlet [req=?,e2e=?,txn=?] Completed initialization in 1 ms
 
   .   ____          _            __ _ _
  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
@@ -58,46 +58,46 @@
 
  :: Spring Boot ::               (v3.5.16)
 
-2026-09-28T23:22:02.478-04:00 INFO  [main] io.openfednow.OpenFedNowApplication [req=?,e2e=?,txn=?] Starting OpenFedNowApplication v0.1.0-SNAPSHOT using Java 17.0.20.1 with PID 74427 (/Users/danielmori/Developer/open-fednow-reliability/target/openfednow-0.1.0-SNAPSHOT.jar started by danielmori in /Users/danielmori/Developer/open-fednow-reliability)
-2026-09-28T23:22:02.479-04:00 DEBUG [main] io.openfednow.OpenFedNowApplication [req=?,e2e=?,txn=?] Running with Spring Boot v3.5.16, Spring v6.2.19
-2026-09-28T23:22:02.480-04:00 INFO  [main] io.openfednow.OpenFedNowApplication [req=?,e2e=?,txn=?] No active profile set, falling back to 1 default profile: "default"
-2026-09-28T23:22:03.033-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-28T23:22:03.034-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2026-09-28T23:22:03.044-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Finished Spring Data repository scanning in 6 ms. Found 0 JPA repository interfaces.
-2026-09-28T23:22:03.050-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-28T23:22:03.051-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Bootstrapping Spring Data Redis repositories in DEFAULT mode.
-2026-09-28T23:22:03.055-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Finished Spring Data repository scanning in 1 ms. Found 0 Redis repository interfaces.
-2026-09-28T23:22:03.490-04:00 INFO  [main] o.s.b.w.embedded.tomcat.TomcatWebServer [req=?,e2e=?,txn=?] Tomcat initialized with port 8081 (http)
-2026-09-28T23:22:03.495-04:00 INFO  [main] o.apache.coyote.http11.Http11NioProtocol [req=?,e2e=?,txn=?] Initializing ProtocolHandler ["http-nio-8081"]
-2026-09-28T23:22:03.496-04:00 INFO  [main] o.apache.catalina.core.StandardService [req=?,e2e=?,txn=?] Starting service [Tomcat]
-2026-09-28T23:22:03.496-04:00 INFO  [main] org.apache.catalina.core.StandardEngine [req=?,e2e=?,txn=?] Starting Servlet engine: [Apache Tomcat/10.1.59]
-2026-09-28T23:22:03.509-04:00 INFO  [main] o.a.c.c.C.[Tomcat].[localhost].[/] [req=?,e2e=?,txn=?] Initializing Spring embedded WebApplicationContext
-2026-09-28T23:22:03.510-04:00 INFO  [main] o.s.b.w.s.c.ServletWebServerApplicationContext [req=?,e2e=?,txn=?] Root WebApplicationContext: initialization completed in 1010 ms
-2026-09-28T23:22:03.827-04:00 INFO  [main] org.flywaydb.core.FlywayExecutor [req=?,e2e=?,txn=?] Database: jdbc:postgresql://localhost:5432/openfednow (PostgreSQL 16.15)
-2026-09-28T23:22:03.858-04:00 INFO  [main] o.f.core.internal.command.DbValidate [req=?,e2e=?,txn=?] Successfully validated 10 migrations (execution time 00:00.016s)
-2026-09-28T23:22:03.880-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Current version of schema "public": 10
-2026-09-28T23:22:03.882-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Schema "public" is up to date. No migration necessary.
-2026-09-28T23:22:03.924-04:00 DEBUG [main] io.openfednow.gateway.CorrelationFilter [req=?,e2e=?,txn=?] Filter 'correlationFilter' configured for use
-2026-09-28T23:22:03.926-04:00 DEBUG [main] i.o.gateway.ratelimit.RateLimitFilter [req=?,e2e=?,txn=?] Filter 'rateLimitFilter' configured for use
-2026-09-28T23:22:03.926-04:00 DEBUG [main] i.o.g.s.JwsInboundVerificationFilter [req=?,e2e=?,txn=?] Filter 'jwsInboundVerificationFilter' configured for use
-2026-09-28T23:22:03.926-04:00 DEBUG [main] i.o.s.audit.AdminAccessAuditFilter [req=?,e2e=?,txn=?] Filter 'adminAccessAuditFilter' configured for use
-2026-09-28T23:22:04.134-04:00 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo [req=?,e2e=?,txn=?] No LoadTimeWeaver setup: ignoring JPA class transformer
-2026-09-28T23:22:04.292-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=?,txn=?] Initialized JPA EntityManagerFactory for persistence unit 'default'
-2026-09-28T23:22:04.662-04:00 INFO  [main] i.o.reliability.ReliabilityRailConfig [req=?,e2e=?,txn=?] Synthetic reliability rail configured=true
-2026-09-28T23:22:04.763-04:00 WARN  [main] o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration [req=?,e2e=?,txn=?] spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
-2026-09-28T23:22:04.932-04:00 INFO  [main] o.s.b.a.e.web.EndpointLinksResolver [req=?,e2e=?,txn=?] Exposing 3 endpoints beneath base path '/actuator'
-2026-09-28T23:22:04.958-04:00 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [req=?,e2e=?,txn=?] Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
-2026-09-28T23:22:05.563-04:00 INFO  [main] o.apache.coyote.http11.Http11NioProtocol [req=?,e2e=?,txn=?] Starting ProtocolHandler ["http-nio-8081"]
-2026-09-28T23:22:05.568-04:00 INFO  [main] o.s.b.w.embedded.tomcat.TomcatWebServer [req=?,e2e=?,txn=?] Tomcat started on port 8081 (http) with context path '/'
-2026-09-28T23:22:05.579-04:00 INFO  [main] io.openfednow.OpenFedNowApplication [req=?,e2e=?,txn=?] Started OpenFedNowApplication in 3.405 seconds (process running for 3.615)
-2026-09-28T23:22:05.581-04:00 DEBUG [scheduling-1] i.o.shadowledger.AvailabilityBridge [req=?,e2e=?,txn=?] Core availability poll: mode=ONLINE
-2026-09-28T23:22:05.595-04:00 WARN  [main] o.s.core.events.SpringDocAppInitializer [req=?,e2e=?,txn=?] SpringDoc /v3/api-docs endpoint is enabled by default. To disable it in production, set the property 'springdoc.api-docs.enabled=false'
-2026-09-28T23:22:05.595-04:00 WARN  [main] o.s.core.events.SpringDocAppInitializer [req=?,e2e=?,txn=?] SpringDoc /swagger-ui.html endpoint is enabled by default. To disable it in production, set the property 'springdoc.swagger-ui.enabled=false'
-2026-09-28T23:22:05.597-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=?,txn=?] Saga recovery: no in-flight sagas found at startup
-2026-09-28T23:22:05.597-04:00 INFO  [main] i.o.shadowledger.BalanceSeedService [req=?,e2e=?,txn=?] Shadow Ledger startup seed: no accounts configured (openfednow.shadow-ledger.seed-accounts is empty)
-2026-09-28T23:22:05.725-04:00 INFO  [http-nio-8081-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/] [req=?,e2e=?,txn=?] Initializing Spring DispatcherServlet 'dispatcherServlet'
-2026-09-28T23:22:05.725-04:00 INFO  [http-nio-8081-exec-1] o.s.web.servlet.DispatcherServlet [req=?,e2e=?,txn=?] Initializing Servlet 'dispatcherServlet'
-2026-09-28T23:22:05.726-04:00 INFO  [http-nio-8081-exec-1] o.s.web.servlet.DispatcherServlet [req=?,e2e=?,txn=?] Completed initialization in 1 ms
-2026-09-28T23:22:11.158-04:00 INFO  [SpringApplicationShutdownHook] o.s.b.w.embedded.tomcat.GracefulShutdown [req=?,e2e=?,txn=?] Commencing graceful shutdown. Waiting for active requests to complete
-2026-09-28T23:22:11.165-04:00 INFO  [tomcat-shutdown] o.s.b.w.embedded.tomcat.GracefulShutdown [req=?,e2e=?,txn=?] Graceful shutdown complete
-2026-09-28T23:22:11.173-04:00 INFO  [SpringApplicationShutdownHook] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=?,txn=?] Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-09-28T23:33:08.300-04:00 INFO  [main] io.openfednow.OpenFedNowApplication [req=?,e2e=?,txn=?] Starting OpenFedNowApplication v0.1.0-SNAPSHOT using Java 17.0.20.1 with PID 75770 (/Users/danielmori/Developer/open-fednow-reliability/target/openfednow-0.1.0-SNAPSHOT.jar started by danielmori in /Users/danielmori/Developer/open-fednow-reliability)
+2026-09-28T23:33:08.301-04:00 DEBUG [main] io.openfednow.OpenFedNowApplication [req=?,e2e=?,txn=?] Running with Spring Boot v3.5.16, Spring v6.2.19
+2026-09-28T23:33:08.301-04:00 INFO  [main] io.openfednow.OpenFedNowApplication [req=?,e2e=?,txn=?] No active profile set, falling back to 1 default profile: "default"
+2026-09-28T23:33:08.830-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-28T23:33:08.831-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-09-28T23:33:08.841-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Finished Spring Data repository scanning in 6 ms. Found 0 JPA repository interfaces.
+2026-09-28T23:33:08.847-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-28T23:33:08.847-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-09-28T23:33:08.851-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Finished Spring Data repository scanning in 1 ms. Found 0 Redis repository interfaces.
+2026-09-28T23:33:09.286-04:00 INFO  [main] o.s.b.w.embedded.tomcat.TomcatWebServer [req=?,e2e=?,txn=?] Tomcat initialized with port 8081 (http)
+2026-09-28T23:33:09.290-04:00 INFO  [main] o.apache.coyote.http11.Http11NioProtocol [req=?,e2e=?,txn=?] Initializing ProtocolHandler ["http-nio-8081"]
+2026-09-28T23:33:09.291-04:00 INFO  [main] o.apache.catalina.core.StandardService [req=?,e2e=?,txn=?] Starting service [Tomcat]
+2026-09-28T23:33:09.291-04:00 INFO  [main] org.apache.catalina.core.StandardEngine [req=?,e2e=?,txn=?] Starting Servlet engine: [Apache Tomcat/10.1.59]
+2026-09-28T23:33:09.303-04:00 INFO  [main] o.a.c.c.C.[Tomcat].[localhost].[/] [req=?,e2e=?,txn=?] Initializing Spring embedded WebApplicationContext
+2026-09-28T23:33:09.304-04:00 INFO  [main] o.s.b.w.s.c.ServletWebServerApplicationContext [req=?,e2e=?,txn=?] Root WebApplicationContext: initialization completed in 985 ms
+2026-09-28T23:33:09.571-04:00 INFO  [main] org.flywaydb.core.FlywayExecutor [req=?,e2e=?,txn=?] Database: jdbc:postgresql://localhost:5432/openfednow (PostgreSQL 16.15)
+2026-09-28T23:33:09.600-04:00 INFO  [main] o.f.core.internal.command.DbValidate [req=?,e2e=?,txn=?] Successfully validated 10 migrations (execution time 00:00.015s)
+2026-09-28T23:33:09.624-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Current version of schema "public": 10
+2026-09-28T23:33:09.625-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Schema "public" is up to date. No migration necessary.
+2026-09-28T23:33:09.665-04:00 DEBUG [main] io.openfednow.gateway.CorrelationFilter [req=?,e2e=?,txn=?] Filter 'correlationFilter' configured for use
+2026-09-28T23:33:09.666-04:00 DEBUG [main] i.o.gateway.ratelimit.RateLimitFilter [req=?,e2e=?,txn=?] Filter 'rateLimitFilter' configured for use
+2026-09-28T23:33:09.666-04:00 DEBUG [main] i.o.g.s.JwsInboundVerificationFilter [req=?,e2e=?,txn=?] Filter 'jwsInboundVerificationFilter' configured for use
+2026-09-28T23:33:09.666-04:00 DEBUG [main] i.o.s.audit.AdminAccessAuditFilter [req=?,e2e=?,txn=?] Filter 'adminAccessAuditFilter' configured for use
+2026-09-28T23:33:09.861-04:00 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo [req=?,e2e=?,txn=?] No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-09-28T23:33:10.003-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=?,txn=?] Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-09-28T23:33:10.346-04:00 INFO  [main] i.o.reliability.ReliabilityRailConfig [req=?,e2e=?,txn=?] Synthetic reliability rail configured=true
+2026-09-28T23:33:10.439-04:00 WARN  [main] o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration [req=?,e2e=?,txn=?] spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-09-28T23:33:10.611-04:00 INFO  [main] o.s.b.a.e.web.EndpointLinksResolver [req=?,e2e=?,txn=?] Exposing 3 endpoints beneath base path '/actuator'
+2026-09-28T23:33:10.640-04:00 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [req=?,e2e=?,txn=?] Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2026-09-28T23:33:11.248-04:00 INFO  [main] o.apache.coyote.http11.Http11NioProtocol [req=?,e2e=?,txn=?] Starting ProtocolHandler ["http-nio-8081"]
+2026-09-28T23:33:11.257-04:00 INFO  [main] o.s.b.w.embedded.tomcat.TomcatWebServer [req=?,e2e=?,txn=?] Tomcat started on port 8081 (http) with context path '/'
+2026-09-28T23:33:11.268-04:00 INFO  [main] io.openfednow.OpenFedNowApplication [req=?,e2e=?,txn=?] Started OpenFedNowApplication in 3.276 seconds (process running for 3.455)
+2026-09-28T23:33:11.270-04:00 DEBUG [scheduling-1] i.o.shadowledger.AvailabilityBridge [req=?,e2e=?,txn=?] Core availability poll: mode=ONLINE
+2026-09-28T23:33:11.283-04:00 WARN  [main] o.s.core.events.SpringDocAppInitializer [req=?,e2e=?,txn=?] SpringDoc /v3/api-docs endpoint is enabled by default. To disable it in production, set the property 'springdoc.api-docs.enabled=false'
+2026-09-28T23:33:11.283-04:00 WARN  [main] o.s.core.events.SpringDocAppInitializer [req=?,e2e=?,txn=?] SpringDoc /swagger-ui.html endpoint is enabled by default. To disable it in production, set the property 'springdoc.swagger-ui.enabled=false'
+2026-09-28T23:33:11.285-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=?,txn=?] Saga recovery: no in-flight sagas found at startup
+2026-09-28T23:33:11.286-04:00 INFO  [main] i.o.shadowledger.BalanceSeedService [req=?,e2e=?,txn=?] Shadow Ledger startup seed: no accounts configured (openfednow.shadow-ledger.seed-accounts is empty)
+2026-09-28T23:33:11.368-04:00 INFO  [http-nio-8081-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/] [req=?,e2e=?,txn=?] Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-09-28T23:33:11.368-04:00 INFO  [http-nio-8081-exec-1] o.s.web.servlet.DispatcherServlet [req=?,e2e=?,txn=?] Initializing Servlet 'dispatcherServlet'
+2026-09-28T23:33:11.369-04:00 INFO  [http-nio-8081-exec-1] o.s.web.servlet.DispatcherServlet [req=?,e2e=?,txn=?] Completed initialization in 1 ms
+2026-09-28T23:33:16.840-04:00 INFO  [SpringApplicationShutdownHook] o.s.b.w.embedded.tomcat.GracefulShutdown [req=?,e2e=?,txn=?] Commencing graceful shutdown. Waiting for active requests to complete
+2026-09-28T23:33:16.846-04:00 INFO  [tomcat-shutdown] o.s.b.w.embedded.tomcat.GracefulShutdown [req=?,e2e=?,txn=?] Graceful shutdown complete
+2026-09-28T23:33:16.854-04:00 INFO  [SpringApplicationShutdownHook] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=?,txn=?] Closing JPA EntityManagerFactory for persistence unit 'default'
