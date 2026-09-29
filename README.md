@@ -4,7 +4,7 @@
 
 # OpenFedNow — Legacy Core to U.S. Instant Payment Rails
 
-**Open-source middleware connecting legacy core banking systems to U.S. instant payment rails — FedNow and RTP — through a reusable, rail-agnostic core framework.**
+**Open-source reference integration for studying legacy-core and U.S. instant-payment failure handling with synthetic FedNow and RTP fixtures.**
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Sandbox%20%2F%20Reference%20Implementation-blue)]()
@@ -16,7 +16,7 @@ OpenFedNow explores integration between legacy core banking systems and instant 
 
 > **Evaluation scope: synthetic FedNow routing.** Outbound RTP is disabled; screening failures reject by default; downtime sends default to disabled. An unknown outbound rail outcome now keeps the reservation and requires review; automated rail status verification remains unfinished. See the [capability matrix](docs/capability-matrix.md) and [reproducible evaluation](docs/evaluation.md).
 
-> **Sandbox / reference implementation.** The reusable core framework — five-layer architecture, dual-rail Layer 1 (FedNow + RTP), all three vendor adapters, saga lifecycle (recovery / timeout monitor / compensation retry), idempotency, reconciliation, fraud screening, cancellation handling, rate limiting, admin audit, and the production-hardening pass (transactions, headers, graceful shutdown, retries, dependency scanning) — is implemented and tested across 500+ unit and integration tests. Live rail connectivity remains credential-, certification-, and institution-dependent. See [docs/known-limitations.md](docs/known-limitations.md) and the [Production Boundaries](#production-boundaries) section for what remains.
+> **Sandbox / reference implementation.** Routing, vendor-shaped adapters, saga lifecycle, idempotency, reconciliation, screening, cancellation, rate limiting, and admin audit have synthetic test coverage. Passing tests do not establish atomic money movement across Redis and SQL, live rail connectivity, vendor compatibility, or production readiness. See [reliability scope](docs/reliability/scope.md), [docs/known-limitations.md](docs/known-limitations.md), and [Production Boundaries](#production-boundaries).
 
 ---
 
@@ -152,7 +152,7 @@ The layers below explore these integration concerns. Whether they address a part
 
 ## The Solution
 
-OpenFedNow is a five-layer middleware framework that resolves each of these incompatibilities through architectural patterns drawn from production-scale instant payment integration experience.
+OpenFedNow is a five-layer reference framework that explores these incompatibilities. Institution-specific resolution remains unverified.
 
 The framework separates shared routing and ledger code from vendor adapters. Source-line proportions do not measure integration effort, cost savings, institution coverage, or deployment readiness; those require measured implementation results.
 
@@ -291,7 +291,7 @@ curl -s -u admin:changeme -X POST http://localhost:8080/admin/reconcile
 
 ---
 
-## What a maintenance window looks like in production
+## Synthetic maintenance-window illustration
 
 Annotated log output from the full cycle: core goes offline, payment arrives, core returns, reconciliation runs.
 
@@ -305,7 +305,7 @@ INFO  [http-nio-8080-exec-2] MessageRouter  Inbound credit transfer received amo
 INFO  [http-nio-8080-exec-2] AvailabilityBridge  Bridge mode active — queuing inbound payment e2e=E2E-MAINT-001
 INFO  [http-nio-8080-exec-2] AvailabilityBridge  Transaction queued for core replay transactionId=E2E-MAINT-001
 INFO  [http-nio-8080-exec-2] MessageRouter  Inbound credit transfer status=ACSP rejectCode=null
-# → pacs.002 ACSP returned to FedNow in 6ms. FedNow satisfied.
+# → local synthetic ACSP returned in 6ms; this does not establish a valid live-rail response.
 
 # 02:03 — RabbitMQ queue depth: 1
 #   maintenance-window-transactions: messages=1, consumers=0
@@ -748,12 +748,12 @@ See [docs/known-limitations.md](docs/known-limitations.md) for the full analysis
 - Outbound FedNow credit transfers make one HTTP attempt and quarantine unknown outcomes; hard timeout on `FraudScreeningPort` calls (fail-closed by default; explicit fail-open option)
 - Dependabot + Trivy workflow; GitHub Actions CI with both unit and integration test jobs
 
-**Phase 6 — Live-FedNow Enablement ✅ Complete**
+**Phase 6 — Reference signing components implemented**
 - RS256 detached JWS message signing implemented per RFC 7515 + RFC 7797 ([ADR-0009](docs/adr/0009-fednow-jws-message-signing.md))
 - Outbound: `FedNowJwsSigner` + RestTemplate interceptor attaches `X-JWS-Signature` on every submission
 - Inbound: `JwsInboundVerificationFilter` verifies FedNow-signed responses, buffers body for the downstream controller
 - Opt-in via `openfednow.fednow.signing.enabled=true`; sandbox / demo flow unchanged
-- With this, the only remaining requirements for live FedNow are institution-onboarding artifacts (PKI certificates, endpoint URL, formal certification)
+- Live mapping also requires applicable restricted message and transport specifications, status authority verification, inquiry behavior, institutional controls, and certification; a certificate and URL alone are insufficient.
 
 **Open work**
 - Live FedNow / RTP connectivity (institutional credentials — see Production Boundaries)
