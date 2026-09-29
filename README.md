@@ -14,7 +14,7 @@
 
 OpenFedNow explores integration between legacy core banking systems and instant payment workflows. It is a reference implementation with synthetic tests; live compatibility and operational benefit remain to be evaluated.
 
-> **Evaluation scope: synthetic FedNow routing.** Outbound RTP is disabled; screening failures reject by default; downtime sends default to disabled. An unknown outbound rail outcome now keeps the reservation and requires review; automated rail status verification remains unfinished. See the [capability matrix](docs/capability-matrix.md) and [reproducible evaluation](docs/evaluation.md).
+> **Evaluation scope: synthetic FedNow routing.** Outbound RTP is disabled; screening failures reject by default; downtime sends default to disabled. On the legacy path, an unknown outbound rail outcome keeps the reservation and requires review. The separate SQL reliability path adds synthetic status inquiry and recovery; live status authority remains unverified. See the [capability matrix](docs/capability-matrix.md) and [reliability evaluation](docs/reliability/evaluation-report.md).
 
 > **Sandbox / reference implementation.** Routing, vendor-shaped adapters, saga lifecycle, idempotency, reconciliation, screening, cancellation, rate limiting, and admin audit have synthetic test coverage. Passing tests do not establish atomic money movement across Redis and SQL, live rail connectivity, vendor compatibility, or production readiness. See [reliability scope](docs/reliability/scope.md), [docs/known-limitations.md](docs/known-limitations.md), and [Production Boundaries](#production-boundaries).
 
@@ -69,7 +69,7 @@ OpenFedNow explores integration between legacy core banking systems and instant 
 | Reconcile concurrency guard — same-JVM serialization | ✅ `ReentrantLock` with tryLock; second concurrent call returns "Skipped" report rather than racing |
 | Saga source-rail tracking — dual-rail dispatch foundation | ✅ `source_rail` column on `saga_state` (V5); both gateways thread `Rail` through `MessageRouter` |
 | Dependency scanning — Dependabot + Trivy | ✅ Weekly Maven + Actions updates; Trivy scan fails the build on HIGH/CRITICAL findings |
-| CI — unit + integration test jobs | ✅ Workflow runs unit and Testcontainers-backed integration jobs on PRs targeting `main`; prior development-branch merges did not put the reliability slice on `main` |
+| CI — unit + integration test jobs | ✅ Workflow runs unit and Testcontainers-backed integration jobs on PRs targeting `main`; the consolidated reliability slice is proposed in [PR #87](https://github.com/danielsmori/open-fednow/pull/87) and is not yet on `main` |
 | Dual-rail architecture (FedNow + RTP) | ✅ ISO 20022 foundation; Layer 1 varies, Layers 2–4 rail-agnostic; source rail persisted on `saga_state` |
 | RTP Layer 1 — inbound XML, outbound XML, TCH cert validation hook, sandbox + HTTP client | Inbound reference routing and transport utilities implemented; `/rtp/send` disabled pending financial-control parity |
 | Optional Kafka event bus — `PaymentEventPublisher`, 6 event types | ✅ Implemented (disabled by default; no Kafka required) |
