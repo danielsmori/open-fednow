@@ -56,19 +56,9 @@ These are features that are not yet built. They are explicitly tracked as future
 
 ### 5. Vendor compatibility remains unverified
 
-`FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` are implemented and tested in reference mode. Production use is credential-, endpoint-, and certification-dependent. Each uses OAuth 2.0 and maps vendor rejection codes to ISO 20022.
+`FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` are vendor-shaped reference implementations. Their local WireMock suites exercise JSON/SOAP construction, authentication and response mapping. They have not been tested in an actual vendor environment and are not verified for any particular product. The [v1 reliability capability matrix](reliability/adapter-capabilities-v1.md) records fixture-only evidence and unsupported all-channel reservation, expiry, posting/reversal deduplication and outcome lookup. The guarded SQL reliability bridge does not call these adapters. A vendor-backed live send must fail closed until an institution establishes the missing capabilities and applicable specifications.
 
-| Adapter | Protocol | Auth | Tests |
-|---------|----------|------|-------|
-| `FiservAdapter` | REST/JSON | OAuth 2.0 (form body) | WireMock, 12 tests |
-| `FisAdapter` | REST/JSON | OAuth 2.0 (Basic auth header) | WireMock, 11 tests |
-| `JackHenryAdapter` | SOAP/XML (jXchange) | OAuth 2.0 (Basic auth header) | WireMock, 12 tests |
-
-`MockVendorAdapter` is a functional reference implementation — it provides a full in-memory balance ledger and configurable failure modes (timeout simulation, core availability toggle), and is activated via `openfednow.adapter=mock`. It is suitable for development and contract-testing, but is not a substitute for a real vendor integration.
-
-`CoreBankingAdapterContractTest` defines the shared behavioral contract. `SandboxAdapterContractTest`, `MockVendorAdapterContractTest`, and `JackHenryAdapterContractTest` extend it. Fiserv and FIS are covered by dedicated WireMock integration tests.
-
-**Production deployment note:** Each adapter requires institution-specific credentials (OAuth client ID, client secret, and base URL) obtained from the respective vendor. The `JackHenryAdapter` additionally requires an institution routing ID (9-digit ABA number) used as `InstRtId` in the jXchange SOAP header. The adapter interface (`CoreBankingAdapter`) is the only contract point — the rest of the framework does not need to change.
+`MockVendorAdapter` has an in-memory balance ledger and configurable failures for local development. It is not a substitute for a real institution core. The existing adapter contract tests cover the narrow `CoreBankingAdapter` methods, not the stronger financial guarantees needed for live outbound payments.
 
 ---
 
@@ -116,7 +106,7 @@ These are implemented and worth calling out so deployers know what they get with
 
 ### Saga lifecycle resilience
 
-- **Saga recovery on restart.** `SagaRecoveryService` listens to `ApplicationReadyEvent` and dispatches every non-terminal saga to a terminal state on startup. `INITIATED` / `FUNDS_RESERVED` / `CORE_SUBMITTED` sagas are compensated (reason `NARR`); `FEDNOW_CONFIRMED` advances to `COMPLETED`; `COMPENSATING` is finalized to `FAILED` preserving the original reason code.
+- **Saga recovery on restart.** `SagaRecoveryService` listens to `ApplicationReadyEvent` and processes legacy in-flight sagas on startup. It quarantines interrupted `SUBMITTING` as `OUTCOME_UNKNOWN`; those unknown obligations remain unresolved rather than being forced terminal. `INITIATED` / `FUNDS_RESERVED` / `CORE_SUBMITTED` sagas are compensated (reason `NARR`); `FEDNOW_CONFIRMED` advances to `COMPLETED`; `COMPENSATING` is finalized to `FAILED` preserving the original reason code.
 - **Saga timeout monitor.** `SagaTimeoutMonitor` runs on a fixed schedule (`openfednow.saga.timeout-check-interval-seconds`, default 10) and compensates any saga in a forward-progress state whose `created_at` is older than `openfednow.saga.timeout-seconds` (default 30). Reason code `XPIR` (ISO 20022 Expired) distinguishes timeout-driven failures from restart-recovery failures. Each timeout increments the `saga.timeout` Micrometer counter visible at `/actuator/metrics`.
 
 ### Operator endpoints under `/admin`
@@ -166,11 +156,11 @@ The full decision matrix and design tradeoffs are documented in [ADR-0007](adr/0
 
 ## Local Development Limitations
 
-These are behaviors that differ between the local H2-backed development setup and a production PostgreSQL deployment.
+These distinguish the H2-backed default test suite from the PostgreSQL runtime and tagged integration suite.
 
 ### 12. H2 is only used by tests — the runtime uses PostgreSQL
 
-The `application.yml` default datasource is PostgreSQL (`jdbc:postgresql://localhost:5432/openfednow`) and `docker-compose.yml` provides that instance. Running the app on H2 is not supported: the idempotency INSERT uses `ON CONFLICT DO NOTHING`, which H2 does not implement even in Postgres-compat mode. Every table that carries durable state — `shadow_ledger_transaction_log`, `saga_state`, `idempotency_keys`, `reconciliation_run`, `admin_audit_log` — survives restarts under Postgres.
+The `application.yml` default datasource is PostgreSQL (`jdbc:postgresql://localhost:5432/openfednow`) and `docker-compose.yml` provides that instance. Running the app on H2 is not supported: the idempotency INSERT uses `ON CONFLICT DO NOTHING`, which H2 does not implement even in Postgres-compat mode. The PostgreSQL runtime also holds the synthetic reliability tables from migrations V9–V12. PostgreSQL persistence alone does not establish live rail or core correctness.
 
 H2 is still used by the test suite (see `src/test/resources/application.properties`) so tests remain fast and Docker-free. `@Tag("integration")` tests override that with real Postgres via Testcontainers.
 
@@ -180,7 +170,7 @@ H2 is still used by the test suite (see `src/test/resources/application.properti
 
 The `docker-compose.yml` starts a single Redis node with AOF persistence enabled (`redis-server --appendonly yes`), so Shadow Ledger balances survive a Redis restart. What is **not** configured is replication — a single lost Redis node with an unrecoverable AOF would still drop the ledger.
 
-For production, deploy Redis with at minimum one replica (Sentinel or Cluster), and back up the AOF to durable storage on the schedule your recovery objective demands.
+A real deployment would require an institution-defined durability, failover and recovery design. Replication alone would not make the Redis and PostgreSQL effects atomic or validate cross-channel funds availability.
 
 ---
 

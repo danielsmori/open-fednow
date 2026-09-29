@@ -19,16 +19,14 @@ import java.util.Enumeration;
 /**
  * Layer 1 — Certificate Management
  *
- * <p>Manages TLS mutual authentication using Federal Reserve PKI certificates.
- * FedNow requires that all participating institutions authenticate using
- * certificates issued by the Federal Reserve's Certificate Authority.
+ * <p>Provides certificate configuration and validation hooks for the local
+ * gateway. This component does not itself establish a live rail connection.
  *
  * <p>Responsibilities:
  * <ul>
  *   <li>Certificate expiry monitoring (alerts at 30 days before expiry)</li>
- *   <li>Inbound mTLS validation — FedNow client certificates must be issued
- *       by the Fed PKI; in dev/staging this check is skipped when no
- *       truststore is configured</li>
+ *   <li>Inbound check hook — skipped when no truststore is configured;
+ *       TLS termination must be verified separately</li>
  *   <li>Outbound connection setup is handled by the JVM keystore configured
  *       via {@code TLS_KEYSTORE_PATH} and {@code TLS_KEYSTORE_PASSWORD}</li>
  * </ul>
@@ -54,52 +52,35 @@ public class CertificateManager {
     private String tchTruststorePath;
 
     /**
-     * Validates the client certificate on an inbound connection from FedNow.
+     * Checks whether an inbound Fed truststore path is configured.
      *
      * <p>When no Fed truststore is configured (dev / sandbox mode), validation
-     * is skipped and a warning is logged. In production the truststore is
-     * mounted from the Kubernetes secret {@code openfednow-tls}.
-     *
-     * @throws SecurityException if the certificate is invalid, expired, or
-     *         not issued by the Federal Reserve Certificate Authority
+     * is skipped. When configured, this method still does not inspect the
+     * current request certificate; peer validation must be enforced and tested
+     * at a separately configured TLS termination layer.
      */
     public void validateClientCertificate() {
         if (!StringUtils.hasText(fedTruststorePath)) {
             log.debug("Fed PKI truststore not configured — skipping inbound mTLS validation (dev/sandbox mode)");
             return;
         }
-        // In production, inbound mTLS is enforced at the TLS termination layer
-        // (Kubernetes Ingress / Istio) using the Fed truststore. If we reach
-        // this point the infrastructure has already validated the certificate.
-        log.debug("Inbound certificate validated by TLS termination layer");
+        log.debug("Fed truststore path configured; inbound peer validation depends on external TLS termination");
     }
 
     /**
-     * Validates the client certificate on an inbound connection from the TCH RTP® network.
-     *
-     * <p>TCH uses its own Certificate Authority, separate from the Federal Reserve PKI
-     * used by FedNow. Both follow the same validation lifecycle in this framework:
-     * skip in sandbox/dev (no truststore configured), enforce via the TLS termination
-     * layer in production.
+     * Checks whether an inbound TCH truststore path is configured.
      *
      * <p>When no TCH truststore is configured (dev / sandbox mode), validation is
-     * skipped and a debug message is logged. In production the TCH truststore is
-     * provided through institutional onboarding with The Clearing House.
-     *
-     * @throws SecurityException if the certificate is invalid, expired, or
-     *         not issued by the TCH Certificate Authority
+     * skipped. Even when configured, this method does not inspect the current
+     * request certificate; peer validation must be enforced and tested at an
+     * external TLS termination layer.
      */
     public void validateTchClientCertificate() {
         if (!StringUtils.hasText(tchTruststorePath)) {
             log.debug("TCH truststore not configured — skipping inbound mTLS validation (dev/sandbox mode)");
             return;
         }
-        // In production, inbound mTLS for RTP is enforced at the TLS termination layer
-        // using the TCH CA truststore (same Kubernetes Ingress / Istio pattern as FedNow).
-        // TCH PKI certificates are issued exclusively through The Clearing House
-        // institutional onboarding — the same class of credential dependency as
-        // Federal Reserve PKI for live FedNow deployment.
-        log.debug("Inbound TCH certificate validated by TLS termination layer");
+        log.debug("TCH truststore path configured; inbound peer validation depends on external TLS termination");
     }
 
     /**
