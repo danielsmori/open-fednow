@@ -40,6 +40,30 @@ def report(cwd, destination):
     return counts
 
 
+def run_reliability_mutant(files, name, relative_path, replacements, test_name):
+    """An isolated build must fail one named financial/state assertion."""
+    with tempfile.TemporaryDirectory(prefix="openfednow-" + name + "-") as temp:
+        mutant = Path(temp)
+        for file in files:
+            dest = mutant / file
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ROOT / file, dest)
+        target = mutant / relative_path
+        source = target.read_text()
+        for old, new in replacements:
+            if source.count(old) != 1:
+                raise RuntimeError(f"Mutation target changed: {name}: {old[:70]}")
+            source = source.replace(old, new)
+        target.write_text(source)
+        command = ["mvn", "-B", "--no-transfer-progress", "-DexcludedGroups=",
+                   "-Dtest=" + test_name, "test"]
+        code = run(command, mutant, name)
+        counts = report(mutant, OUT / name)
+        detected = code != 0 and counts == dict(tests=1, failures=1, errors=0, skipped=0)
+        return {"command": command, "exit_code": code,
+                "mutation_detected": detected, **counts}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--integration", action="store_true", help="also require Docker infrastructure tests")
@@ -119,6 +143,33 @@ def main():
                 "command": command, "exit_code": code,
                 "mutation_detected": detected, **counts}
             ok &= detected
+        service = "src/main/java/io/openfednow/reliability/ReliablePaymentService.java"
+        migration = "src/main/resources/db/migration/V9__create_reliable_payment_reference.sql"
+        mutants = [
+            ("atomic-claim-negative-control", migration, [
+                ("    CONSTRAINT uq_reliability_business UNIQUE (institution_id, direction, rail, business_key),\n", ""),
+                ("    CONSTRAINT uq_reliability_transaction UNIQUE (institution_id, direction, rail, transaction_id),\n", ""),
+                ("    CONSTRAINT uq_reliability_message UNIQUE (institution_id, direction, rail, message_id),\n", "")],
+             "ReliablePaymentIntegrationTest#acceptancePostsOnceAndDuplicateRetrievesSameOperation"),
+            ("premature-release-negative-control", service, [
+                ('if ("SUBMITTING".equals(current.state()) || "RESERVED".equals(current.state())) {',
+                 'if ("SUBMITTING".equals(current.state()) || "RESERVED".equals(current.state())) {\n'
+                 '            jdbc.update("UPDATE reliability_account SET held_minor = held_minor - ? WHERE account_id = ?", current.amountMinor(), current.accountId());')],
+             "ReliablePaymentIntegrationTest#lostAcceptanceStaysUnknownUntilInquiryAndNeverSubmitsAgain"),
+            ("duplicate-event-negative-control", service, [
+                ("if (eventInserted == 0) {",
+                 'if (eventInserted == 0) {\n'
+                 '            jdbc.update("UPDATE reliability_account SET ledger_minor = ledger_minor - ? WHERE account_id = ?", current.amountMinor(), current.accountId());')],
+             "ReliablePaymentIntegrationTest#lostAcceptanceStaysUnknownUntilInquiryAndNeverSubmitsAgain"),
+            ("missing-intent-negative-control", service, [
+                ("UPDATE reliability_payment SET state = 'SUBMITTING', attempt_id = ?,",
+                 "UPDATE reliability_payment SET state = 'RESERVED', attempt_id = ?,")],
+             "ReliablePaymentIntegrationTest#possibleSendIntentSurvivesWorkerCrashWithoutReplay"),
+        ]
+        for name, path, replacements, test_name in mutants:
+            result = run_reliability_mutant(files, name, path, replacements, test_name)
+            results[name] = result
+            ok &= result["mutation_detected"]
     if args.external:
         package_command = ["mvn", "-B", "--no-transfer-progress", "-DskipTests", "package"]
         package_code = run(package_command, ROOT, "external-package")

@@ -233,6 +233,20 @@ def run_case(case, driver, rail, core_mode):
         return {"negative_control_detected": detected, "actual": snapshot}
     snapshot = final_snapshot(driver, rail, view, message)
     assert_effects(snapshot, "SETTLED", 10000)
+    if case_id == "S01":
+        rejected_account = "A-" + uuid.uuid4().hex[:18]
+        code, _ = driver.seed(rejected_account, 100000, True, core_mode)
+        require(code == 200, "could not seed rejection fixture")
+        rejected_message = payment("S01-rejection", rejected_account)
+        rail.call("POST", "/control/" + rejected_message["messageId"], {"status": "REJECTED"})
+        code, rejected = driver.submit(rejected_message)
+        require(code in (200, 202), "rejection fixture submission failed")
+        if core_mode == "ASYNC":
+            require(rejected["state"] == "CORE_PENDING", "async rejection was sent before core ack")
+            _, rejected = driver.ack_core(rejected["operationId"])
+        rejected_snapshot = final_snapshot(driver, rail, rejected, rejected_message)
+        assert_effects(rejected_snapshot, "REJECTED", 10000)
+        return {"accepted": snapshot, "rejected": rejected_snapshot}
     return snapshot
 
 
@@ -249,7 +263,7 @@ def main():
     driver = OpenFedNowDriver(Client(args.target_url, args.username, args.password))
     rail = Client(args.rail_url)
     cases = []
-    for case in manifest["cases"]:
+    for case in (item for item in manifest["cases"] if item.get("executable", True)):
         try:
             trace = run_case(case, driver, rail, args.core_mode)
             cases.append({"id": case["id"], "result": "PASS", "trace": trace})
@@ -258,8 +272,9 @@ def main():
     result = {"schema_version": manifest["schema_version"], "source": "synthetic",
               "target_url": args.target_url, "rail_url": args.rail_url,
               "core_mode": args.core_mode,
-              "cases": cases, "unsupported": ["S04", "S05", "S08", "S09", "S10",
-                                         "S11", "S12", "S13", "S15", "S18"]}
+              "cases": cases,
+              "not_in_this_runner": [{"id": item["id"], "coverage": item["coverage"]}
+                                     for item in manifest["cases"] if not item.get("executable", True)]}
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(result, indent=2) + "\n")

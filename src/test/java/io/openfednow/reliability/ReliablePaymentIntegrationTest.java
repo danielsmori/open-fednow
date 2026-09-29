@@ -50,9 +50,9 @@ class ReliablePaymentIntegrationTest extends AbstractInfrastructureIntegrationTe
         PaymentView again = payments.submit(request);
 
         assertThat(first.state()).isEqualTo("SETTLED");
-        assertThat(again.operationId()).isEqualTo(first.operationId());
         assertThat(payments.account("SYN-DEBTOR").ledgerMinor()).isEqualTo(90_000);
         assertThat(payments.account("SYN-DEBTOR").heldMinor()).isZero();
+        assertThat(again.operationId()).isEqualTo(first.operationId());
         assertThat(payments.effects(first.operationId()).stream().map(ReliablePaymentService.EffectView::effectType))
                 .containsExactlyInAnyOrder("HOLD", "POST");
         verify(rail, times(1)).submit(any(), anyString());
@@ -80,7 +80,22 @@ class ReliablePaymentIntegrationTest extends AbstractInfrastructureIntegrationTe
         assertThat(payments.account("SYN-DEBTOR").ledgerMinor()).isEqualTo(87_500);
         assertThat(payments.account("SYN-DEBTOR").heldMinor()).isZero();
         payments.observe(pending.operationId(), status(request, "SETTLED", "R-LATE"));
+        assertThat(payments.account("SYN-DEBTOR").ledgerMinor()).isEqualTo(87_500);
         assertThat(payments.effects(pending.operationId())).hasSize(2);
+    }
+
+    @Test
+    void possibleSendIntentSurvivesWorkerCrashWithoutReplay() {
+        Pacs008Message request = payment("E2E-CRASH-INTENT", "TX-CRASH-INTENT", "65.00");
+        when(rail.submit(any(), anyString()))
+                .thenThrow(new AssertionError("simulated process death"))
+                .thenReturn(status(request, "SETTLED", "R-ILLEGAL-REPLAY"));
+        assertThatThrownBy(() -> payments.submit(request)).isInstanceOf(AssertionError.class);
+        payments.dispatchRecoverable(20);
+        assertThat(payments.account("SYN-DEBTOR").heldMinor()).isEqualTo(6_500);
+        PaymentView pending = payments.getByBusinessKey("021000021", request.getEndToEndId());
+        assertThat(pending.state()).isEqualTo("SUBMITTING");
+        verify(rail, times(1)).submit(any(), anyString());
     }
 
     @Test

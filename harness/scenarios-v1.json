@@ -5,10 +5,20 @@
     {"id": "S01", "name": "settlement and rejection", "oracle": "linked local HOLD+POST or HOLD+RELEASE and one remote effect"},
     {"id": "S02", "name": "accepted remote effect with lost reply", "oracle": "unknown retains hold; inquiry settles once; one remote submit"},
     {"id": "S03", "name": "rejected remote effect with lost reply", "oracle": "unknown retains hold; inquiry releases once"},
+    {"id": "S04", "name": "malformed reply and inquiry failure", "oracle": "no fabricated rejection; unresolved remains inspectable", "executable": false, "coverage": "Java integration only; external malformed wire and inquiry failure matrix pending"},
+    {"id": "S05", "name": "process death after remote effect", "oracle": "restart retains hold and inquires without resending", "executable": false, "coverage": "separate harness/restart_case.py process-kill experiment"},
     {"id": "S06", "name": "concurrent identical requests during remote effect", "oracle": "one business operation, one hold and one remote submit"},
     {"id": "S07", "name": "changed payload under same business key", "oracle": "409; no second hold or remote submit"},
+    {"id": "S08", "name": "Redis loss with SQL retained", "oracle": "same operation and hold after cache loss", "executable": false, "coverage": "Java PostgreSQL/Redis integration only"},
+    {"id": "S09", "name": "effect-boundary crash matrix", "oracle": "pre-send retry once; post-send inquiry; no false finality", "executable": false, "coverage": "partial Java pre-send and S05 post-send; broker/outbox matrix pending"},
+    {"id": "S10", "name": "duplicate conflicting and posting events", "oracle": "no final regression or double effect", "executable": false, "coverage": "partial Java integration; external event matrix pending"},
+    {"id": "S11", "name": "inquiry lease fencing", "oracle": "stale worker cannot apply status", "executable": false, "coverage": "Java integration only"},
+    {"id": "S12", "name": "inquiry eligibility and expiry", "oracle": "too-early withheld; untraceable investigated", "executable": false, "coverage": "partial Java synthetic timing; live window interpretation unavailable"},
+    {"id": "S13", "name": "failed financial effect and uncertain return", "oracle": "no false completion; return separate", "executable": false, "coverage": "partial Java release rollback and return timeout; durable return lifecycle absent"},
     {"id": "S14", "name": "other-channel debit with no exclusive reservation", "oracle": "send refused; no hold or remote effect"},
+    {"id": "S15", "name": "core unavailable or capability missing", "oracle": "unsupported send disabled", "executable": false, "coverage": "missing reservation tested; core outage matrix pending"},
     {"id": "S16", "name": "insufficient or fractional-cent amount", "oracle": "send refused; no hold or remote effect"},
-    {"id": "S17", "name": "corrupted local success report negative control", "oracle": "independent remote effect comparison detects mismatch"}
+    {"id": "S17", "name": "corrupted local success report negative control", "oracle": "independent remote effect comparison detects mismatch"},
+    {"id": "S18", "name": "multi-target portability", "oracle": "unchanged manifest on sync and async Java fixtures plus separate target", "executable": false, "coverage": "aggregate result from harness/evaluate_external.py"}
   ]
 }
