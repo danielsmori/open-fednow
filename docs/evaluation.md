@@ -1,8 +1,8 @@
-# Reproducible controls evaluation
+# Historical controls evaluation — September 23, 2026
 
 ## Scope
 
-This first package implements the narrower FedNow evaluation path from the September 23, 2026 action plan. It does not certify financial correctness, vendor compatibility, live connectivity, or production readiness. RTP outbound initiation is disabled. Rule-based screening remains optional; when a configured port fails, the router rejects by default. Downtime sends default to disabled.
+This dated first package implemented the narrower FedNow evaluation path from the September 23, 2026 action plan. It does not certify financial correctness, vendor compatibility, live connectivity, or production readiness. RTP outbound initiation is disabled. Rule-based screening remains optional; when a configured port fails, the router rejects by default. Downtime sends default to disabled.
 
 ## Run
 
@@ -37,7 +37,9 @@ Preserve the source ZIP and manifest with the results. Pin the tested commit and
 
 Infrastructure image tags are inherited from existing tests (`redis:7-alpine`, `postgres:16-alpine`, `rabbitmq:3-management`), not immutable image digests. Maven/plugin dependencies and the source manifest are recorded; a fully hermetic, image-pinned evaluation remains follow-up work. Results from the authoring environment are recorded separately in [evaluation results](evaluation-results.md).
 
-## Open engineering follow-up
+## Follow-up identified at the time
+
+The items below describe the September 23 snapshot. The later [SQL reliability evaluation](reliability/evaluation-report.md) closes some synthetic gaps; its [scenario register](reliability/requirements.csv) is the current coverage record.
 
 1. **Submission uncertainty:** add authoritative status inquiry, verified release/completion, and idempotent late-status handling against applicable rail specifications. The package now checks held reservations and restart quarantine, but cannot establish a real rail outcome.
 2. **Concurrent effects:** validate concurrent duplicates, Redis/SQL crash windows, replay and out-of-order external events. Sequential duplicate tests are narrower evidence.
@@ -51,4 +53,4 @@ Reviewed September 23, 2026:
 - [Federal Reserve: Understanding the Payment Timeout Clock](https://explore.fednow.org/resources/readiness-guide-understanding-the-payment-timeout-clock.pdf), pages 2–3. The accessible readiness guide describes acceptance without posting as ACWP and status requests using pacs.028 when the outcome message has not arrived. It warns that the guide can change and is not the final operating agreement. Its effective version is not stated in the retrieved document. This is a basis for identifying the gap, not enough to certify an implementation. Obtain the applicable current operating procedures and ISO message specifications before changing live rail semantics.
 - [Redis transactions](https://redis.io/docs/latest/develop/using-commands/transactions/), living documentation, no fixed effective date. WATCH detects modifications by other clients. This corrects the prior documentation claim; it does not prove cross-store consistency.
 
-Official rail test/certification resources, proposed application-level tests, and actual independent reproduction are different forms of evidence. This package supplies only application-level tests and a defect reproducer.
+Official rail test/certification resources, proposed application-level tests, and actual independent reproduction are different forms of evidence. This dated package supplied application-level tests and a defect reproducer; see the later [release candidate](reliability/evaluation-report.md) for expanded synthetic results.

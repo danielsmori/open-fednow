@@ -1,6 +1,6 @@
 # Reproduce the outbound submission uncertainty check
 
-This is a synthetic evaluation of a specific failure: a payment request reaches a simulated rail, but its response arrives after the client deadline. No real payment is sent and no rail or vendor has certified this behavior.
+This is the earlier focused synthetic evaluation of a specific failure: a payment request reaches a simulated rail, but its response arrives after the client deadline. No real payment is sent and no rail or vendor has certified this behavior.
 
 ## Run
 
@@ -10,7 +10,7 @@ Use the revision and environment recorded by the generated report. Install JDK 1
 python3 scripts/evaluate.py --integration --negative-control
 ```
 
-The command writes `target/evaluation/results.json`, source hashes, a source ZIP, environment and dependency records, Maven logs, and JUnit XML. It fails if a selected suite runs zero tests, skips tests, reports errors or failures, or if either deliberately broken version is not detected. Preserve the entire output directory with the revision under review; generated files are not committed.
+The command writes `target/evaluation/results.json`, source hashes, a source ZIP, environment and dependency records, Maven logs, and JUnit XML. It fails if a selected suite runs zero tests, skips tests, reports errors or failures, or if any selected deliberately broken version is not detected. The current evaluator includes six negative controls; the original focused run included two. Preserve the entire output directory with the revision under review; generated files are not committed.
 
 ## What to inspect
 

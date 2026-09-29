@@ -1,27 +1,9 @@
-# Saga Pattern
+# Saga and uncertain outcomes in the legacy reference flow
 
-OpenFedNow uses the Saga pattern to manage distributed transactions safely across FedNow, the Shadow Ledger, and the core banking system.
+The older gateway/router records saga state in PostgreSQL while the Shadow Ledger mutates Redis and a synthetic core or rail may have a separate effect. Those systems do not share one transaction. Compensation can reverse a known local effect, but it cannot establish that an external payment was rejected or undo a confirmed settlement.
 
-## Problem
+For a credit-transfer attempt, the legacy saga persists `SUBMITTING` before calling the rail-shaped client. If the response is lost, it records `OUTCOME_UNKNOWN`, retains the debit and prevents an automatic second send or timeout compensation. Startup recovery quarantines interrupted `SUBMITTING` records. An operator can inspect `/admin/sagas/{transactionId}`; the legacy route has no authoritative status inquiry or verified resolution action and is disabled by default.
 
-A single FedNow payment touches multiple systems: the Shadow Ledger (balance reservation), the core banking system (actual posting), and FedNow itself (settlement confirmation). A traditional database transaction cannot span these systems. If any step fails after others have succeeded, the partially-completed state must be rolled back.
+The separate [SQL reliability service](reliability/architecture.md) makes its synthetic hold, effect row and final state atomic in PostgreSQL, records possible-send intent before the remote call, and reconciles an unknown result through a separate local simulator. Its controlled `/fednow/send` bridge is non-production. Historical legacy obligations are not converted into synthetic SQL outcomes. Returns remain a separate unsupported durable workflow; `/fednow/return` is disabled by default.
 
-## Saga Steps (Inbound Payment)
-
-| Step | Action | Compensation |
-|------|--------|-------------|
-| 1 | Reserve funds in Shadow Ledger | Release reservation |
-| 2 | Submit to core banking system | Request reversal from core |
-| 3 | Confirm acceptance to FedNow | Send return payment (pacs.004) |
-| 4 | Reconcile Shadow Ledger with core confirmation | N/A (terminal step) |
-
-## Failure Scenarios
-
-- **Core rejects after Shadow Ledger reservation**: Compensation releases the Shadow Ledger reservation. No FedNow impact.
-- **Core rejects after FedNow confirmation**: Compensation triggers a FedNow return (pacs.004) and releases the Shadow Ledger reservation.
-- **Core timeout during SyncAsyncBridge**: Transaction enters PENDING state. Reconciliation service resolves on core return.
-
-## Related classes
-
-- `PaymentSaga.java` — saga state machine
-- `SagaOrchestrator.java` — lifecycle management and compensation coordination
+See the [scenario register](reliability/requirements.csv) and [evaluation report](reliability/evaluation-report.md) for tested crash boundaries and remaining gaps.

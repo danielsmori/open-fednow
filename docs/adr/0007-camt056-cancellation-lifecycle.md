@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted for the inbound synthetic decision matrix only. Outbound cancellation, live rail semantics, and a durable return lifecycle remain unverified.
 
 ## Context
 

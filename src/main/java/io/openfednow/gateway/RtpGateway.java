@@ -18,12 +18,13 @@ import org.springframework.web.bind.annotation.*;
 /**
  * Layer 1 — API Gateway &amp; Security (RTP® rail)
  *
- * <p>Provides reference inbound routing for The Clearing House RTP® network.
+ * <p>Provides local RTP-shaped inbound reference routing; live network access
+ * and the applicable message profile have not been verified.
  * Outbound initiation is disabled pending equivalent financial controls.
  *
  * <h2>Inbound path ({@code /rtp/receive})</h2>
  * <p>Accepts an ISO 20022 pacs.008.001.08 credit transfer in either XML
- * ({@code application/xml}, canonical RTP envelope) or JSON
+ * ({@code application/xml}, locally modeled XML envelope) or JSON
  * ({@code application/json}, for sandbox/simulator testing). After parsing,
  * the message is routed through the shared {@link MessageRouter} that also
  * handles FedNow messages. When the inbound format was XML, the pacs.002
@@ -34,7 +35,7 @@ import org.springframework.web.bind.annotation.*;
  * utilities remain available for synthetic tests and existing return paths.
  *
  * <h2>Certificate validation</h2>
- * <p>Inbound TCH certificate validation is handled by
+ * <p>An inbound certificate-check hook is handled by
  * {@link CertificateManager#validateTchClientCertificate()}. In dev/sandbox mode
  * (no {@code TCH_TRUSTSTORE_PATH} configured), validation is skipped. In
  * production, TCH PKI certificates and private-network transport are obtained
@@ -53,12 +54,13 @@ import org.springframework.web.bind.annotation.*;
     name = "RTP Gateway",
     description = """
         RTP® inbound reference gateway; outbound payment initiation is disabled. \
-        Inbound: accepts application/xml (canonical ISO 20022 envelope via RtpXmlParser) \
+        Inbound: accepts application/xml (locally modeled envelope via RtpXmlParser) \
         or application/json (sandbox/simulator); routes through the shared Layers 2–4 pipeline; \
         returns pacs.002 in the same format as the request. \
         Outbound: /rtp/send returns HTTP 503 without submitting a payment; transport utilities use RtpClient \
         (SandboxRtpClient by default; HttpRtpClient when RTP_ENDPOINT is set). \
-        TCH PKI certificates and private-network transport require TCH institutional onboarding. \
+        Live TCH message/security behavior and private-network transport require \
+        applicable specifications and institutional onboarding. \
         See docs/rtp-compatibility.md and ADR-0005."""
 )
 public class RtpGateway {
@@ -86,7 +88,7 @@ public class RtpGateway {
      *
      * <p>Accepts:
      * <ul>
-     *   <li>{@code application/xml} — canonical ISO 20022 XML envelope (RTP production format);
+     *   <li>{@code application/xml} — locally modeled ISO 20022 XML envelope;
      *       response is also returned as XML ({@code application/xml})</li>
      *   <li>{@code application/json} — JSON pacs.008 (for sandbox / compatibility testing);
      *       response is returned as JSON</li>
@@ -103,21 +105,21 @@ public class RtpGateway {
         summary = "Receive inbound credit transfer (RTP)",
         description = """
             Accepts an inbound pacs.008.001.08 FI-to-FI credit transfer. \
-            Accepts application/xml (canonical ISO 20022 XML envelope, parsed by RtpXmlParser \
+            Accepts application/xml (locally modeled ISO 20022 XML, parsed by RtpXmlParser \
             and responded to with pacs.002 XML) or application/json (sandbox/compatibility). \
-            TCH PKI certificate validation is applied; in sandbox mode (no TCH_TRUSTSTORE_PATH) \
-            this is a no-op, matching the FedNow gateway's behavior when FED_TRUSTSTORE_PATH is absent."""
+            A certificate-validation hook is called; without a configured truststore, \
+            it is a no-op. This does not establish live RTP compatibility."""
     )
     @ApiResponses({
         @ApiResponse(
             responseCode = "200",
-            description = "Message processed — inspect transactionStatus for ACSC, ACSP, or RJCT",
+            description = "Local status fixture; not a verified live RTP outcome",
             content = @Content(mediaType = "application/json",
                                schema = @Schema(implementation = Pacs002Message.class))),
         @ApiResponse(responseCode = "400",
             description = "Malformed or schema-invalid ISO 20022 pacs.008 XML/JSON"),
-        @ApiResponse(responseCode = "401",
-            description = "Client certificate absent or not issued by TCH PKI")
+        @ApiResponse(responseCode = "503",
+            description = "Local processing dependency unavailable")
     })
     public ResponseEntity<?> receiveTransfer(
             @RequestBody String rawBody,
@@ -142,8 +144,8 @@ public class RtpGateway {
 
         ResponseEntity<Pacs002Message> routerResponse = messageRouter.routeInbound(message, Rail.RTP);
 
-        // When the inbound message was XML (production RTP format), return the
-        // pacs.002 status report as canonical ISO 20022 XML. For sandbox/JSON
+        // When the inbound message was XML, return the locally modeled
+        // pacs.002 status report as XML. For sandbox/JSON
         // requests, return JSON — the same format used by the FedNow gateway.
         if (isXml && routerResponse.getBody() != null) {
             String responseXml = rtpXmlSerializer.serializePacs002(routerResponse.getBody());
@@ -181,9 +183,9 @@ public class RtpGateway {
     @Operation(
         summary = "Receive inbound cancellation request (camt.056) — RTP rail",
         description = """
-            Accepts an inbound camt.056 cancellation request received via the RTP \
-            network and returns the corresponding camt.029 resolution. \
-            Decision logic and outcomes match the FedNow rail — see ADR-0007."""
+            Accepts a synthetic inbound camt.056-shaped cancellation and returns \
+            a local camt.029-shaped resolution. The shared decision code is not \
+            a verified live RTP rule mapping — see ADR-0007."""
     )
     @ApiResponses({
         @ApiResponse(
@@ -191,8 +193,8 @@ public class RtpGateway {
             description = "Cancellation outcome",
             content = @Content(mediaType = "application/json",
                                schema = @Schema(implementation = Camt029Message.class))),
-        @ApiResponse(responseCode = "401",
-            description = "Client certificate absent or not issued by TCH PKI")
+        @ApiResponse(responseCode = "503",
+            description = "Local processing dependency unavailable")
     })
     public ResponseEntity<Camt029Message> receiveCancellation(@RequestBody Camt056Message request) {
         certificateManager.validateTchClientCertificate();

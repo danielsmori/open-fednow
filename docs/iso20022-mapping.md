@@ -1,47 +1,12 @@
-# ISO 20022 Message Mapping
+# ISO 20022-shaped reference models
 
-FedNow uses the ISO 20022 international messaging standard, the same standard used by Brazil's PIX instant payment system and most major real-time payment networks globally.
+OpenFedNow has Java models for `pacs.008`, `pacs.002`, `pacs.004`, `camt.056` and `camt.029`-shaped messages. The gateway and vendor-shaped adapter tests exercise selected fields and reason-code mappings. They do not validate the complete applicable FedNow or RTP message profiles, schema versions, transport, security, or live status authority. The SQL reliability harness uses a deliberately smaller JSON fixture; its `/submit` and `/payments` routes are not FedNow messages or pacs.028.
 
-## Supported Message Types
-
-| Message Type | Description | Direction |
+| Model or route | Local use | Boundary |
 |---|---|---|
-| `pacs.008.001.08` | FI-to-FI Customer Credit Transfer | Inbound and Outbound |
-| `pacs.002.001.10` | Payment Status Report | Inbound (from FedNow) and Outbound (to FedNow) |
-| `pacs.004.001.09` | Payment Return | Outbound (to FedNow, saga compensation path) |
+| `Pacs008Message` | Inbound reference routing and guarded synthetic send input | Live rail profile and transport unverified |
+| `Pacs002Message` | Synthetic inbound status response and legacy client result | An HTTP response alone cannot prove settlement |
+| `Pacs004Message` | Legacy return client shape | `/fednow/return` disabled by default; no durable return lifecycle |
+| `Camt056Message` / `Camt029Message` | Inbound cancellation reference decision matrix | No outbound cancellation workflow or live rail validation |
 
-## pacs.008 Key Fields
-
-| ISO 20022 Field | FedNow Usage | Notes |
-|-----------------|-------------|-------|
-| `MsgId` | Required | Unique per message |
-| `NbOfTxs` | Always `1` | FedNow processes one transaction per message |
-| `EndToEndId` | Required | Assigned by originator, carried through |
-| `TxId` | Required | Assigned by instructing agent |
-| `IntrBkSttlmAmt` | Required | USD only for FedNow |
-| `DbtrAgt/FinInstnId/ClrSysMmbId` | ABA routing number | 9-digit ABA |
-| `CdtrAgt/FinInstnId/ClrSysMmbId` | ABA routing number | 9-digit ABA |
-
-## ISO 20022 Reason Codes (pacs.002 — rejection)
-
-| Code | Meaning |
-|------|---------|
-| `AC01` | Incorrect account number |
-| `AC04` | Closed account number |
-| `AM04` | Insufficient funds |
-| `NARR` | Narrative reason (see additional information) |
-| `FF01` | Invalid file format |
-
-## ISO 20022 Return Reason Codes (pacs.004)
-
-| Code | Meaning |
-|------|---------|
-| `AC04` | Closed account — account was closed after original transfer was accepted |
-| `AM04` | Insufficient funds — core rejected on final posting after FedNow confirmation |
-| `FOCR` | Following cancellation request |
-| `DUPL` | Duplicate payment detected |
-| `NARR` | Narrative reason — see additional information field |
-
-## Vendor Mapping Notes
-
-Vendor-specific rejection codes must be mapped to ISO 20022 reason codes by each adapter. Mapping tables for each vendor are maintained in the respective adapter classes.
+Do not infer a valid rail message from the class name or a locally mapped reason code. A participant adapting this repository needs the applicable [FedNow operating procedures](https://www.frbservices.org/resources/rules-regulations/operating-circulars/) and credentialed message/security specifications, or the corresponding RTP materials. See [reliability scope](reliability/scope.md) and [RTP compatibility](rtp-compatibility.md).

@@ -1,5 +1,7 @@
 # Local evaluation results — September 23, 2026
 
+This is a dated historical snapshot. For the merged SQL reliability release and its later checks, see the [September 29 report](reliability/evaluation-report.md). Statements below about what was open or unsent refer only to September 23.
+
 Branch: `development/evaluation-controls`, based on `b38f325284265eeedfc89507bd426eda3105bc09`. The evaluation was run before the changes were committed for pull-request review. The generated source ZIP and SHA-256 manifest identify the exact tested snapshot; this report is not a release or certification record.
 
 Environment: macOS 27.0 / Apple Silicon, Homebrew JDK 17.0.20.1, Maven 3.9.16, Docker Engine 29.7.2. JDK and Maven were installed for this run; Docker Desktop was started. Dependencies were downloaded through Maven. This is a maintainer-machine run, not independent reproduction or a hermetic build.
