@@ -86,9 +86,9 @@ public class HttpFedNowClient implements FedNowClient {
      * (including retries) because the body bytes are handed to the interceptor
      * on every call.
      *
-     * <p>Idempotency is guaranteed at the FedNow side via the message's
-     * {@code EndToEndId} — a retried submission with the same signature and
-     * body is treated as a resubmission of the same logical message.
+     * <p>No rail-side idempotency guarantee is inferred from {@code EndToEndId}.
+     * The public procedures describe a distinct message identifier and inquiry
+     * process; this JSON endpoint is a synthetic transport, not a live mapping.
      *
      * @param fednowEndpoint base URL of the FedNow endpoint (no trailing slash)
      * @param timeoutSeconds connect and read timeout applied to every individual request

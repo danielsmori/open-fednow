@@ -1,0 +1,19 @@
+scenario,source_version_section,source_kind,modeled_behavior,implementation,expected_invariant,result,limitation
+S01,"FedNow Operating Procedures 3.6 §15(e)",public rail rule,service settlement and rejection are distinct,planned reference flow,linked state and money effects,not run,transport and status authority require restricted specifications
+S02,"FedNow Operating Procedures 3.6 §15(e)-(f)",public rail rule,inquire when final status missing,PR82 quarantine,hold retained without second send then one reconciliation,partial synthetic,late authoritative resolution missing
+S03,"FedNow Operating Procedures 3.6 §15(e)",public rail rule,rejection needs final status,planned reference flow,release exactly once after evidence,not run,source authentication not modeled
+S04,Engineering decision,design invariant,transport and inquiry errors do not imply payment rejection,PR82 quarantine,no fabricated rejection and inspectable pending,partial synthetic,inquiry absent
+S05,Engineering decision,design invariant,post-effect pre-ack crash is ambiguous,planned reference flow,restart inquires without resend or refund,not run,process restart not yet measured
+S06,Engineering decision,design invariant,concurrent duplicate claims need atomic ownership,planned SQL claim,one operation and at most one intended effect,not run,legacy read-then-insert race remains
+S07,Engineering decision,design invariant,scope and payload fingerprint identify an operation,planned SQL claim,changed payload conflicts and distinct scopes remain separate,not run,legacy EndToEndId global key
+S08,Engineering decision,design invariant,cache loss must not erase obligation,planned SQL authority,durable state survives Redis loss,not run,legacy split store
+S09,Engineering decision,design invariant,crash boundaries retain effect intents,planned reference flow,each boundary recovers or remains unresolved,not run,rail exactly-once cannot be inferred from an outbox
+S10,"FedNow Operating Procedures 3.6 §15(e)",public rail rule,service status and participant posting status differ,planned status correlation,no final regression or double effect,not run,restricted identity validation missing
+S11,Engineering decision,design invariant,lease fencing across inquiry workers,planned reference flow,stale worker cannot mutate final state,not run,worker absent
+S12,"FedNow Operating Procedures 3.6 §15(e)-(f)",public rail rule,inquiry timing and eligibility,planned rail profile,too-early withheld and expired investigated,not run,§15(e) cycle-day versus §15(f) calendar-day language needs live interpretation
+S13,Engineering decision,design invariant,financial reversal and return are separate effects,planned reference flow,failed effect remains retryable and return unknown remains unresolved,not run,legacy compensation catches reversal failure
+S14,Engineering decision,design invariant,other channels can spend a cached balance,planned core contract,unsafe send refused absent shared reservation,not run,core vendor capability not established
+S15,Engineering decision,design invariant,missing required core capability fails closed,planned core contract,unsupported send disabled,not run,live vendor specs unavailable
+S16,Engineering decision,design invariant,exact USD minor units and atomic reservations,planned SQL authority,no overspend or invalid financial effect,not run,legacy Redis and SQL separate
+S17,Engineering decision,design invariant,independent rail oracle checks local report,planned external harness,corrupt success detected by effect mismatch,not run,author-built fixture only
+S18,Engineering decision,design invariant,scenario contract portable across implementations,planned external harness,same oracle on distinct fixtures and target,not run,independent adoption not claimed
