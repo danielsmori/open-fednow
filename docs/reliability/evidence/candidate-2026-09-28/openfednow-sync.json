@@ -1,0 +1,487 @@
+{
+  "schema_version": "1.0",
+  "source": "synthetic",
+  "target_url": "http://127.0.0.1:8080",
+  "rail_url": "http://127.0.0.1:8099",
+  "core_mode": "SYNC",
+  "cases": [
+    {
+      "id": "S01",
+      "result": "PASS",
+      "trace": {
+        "accepted": {
+          "local": {
+            "operationId": "ed98b06a-8e4d-4183-92f6-096df729ad5d",
+            "institutionId": "021000021",
+            "businessKey": "E-676b2fb740e94eaf",
+            "transactionId": "T-676b2fb740e94eaf",
+            "messageId": "M-676b2fb740e94eaf",
+            "accountId": "A-91f9079c6762463481",
+            "amountMinor": 10000,
+            "state": "SETTLED",
+            "serviceStatus": "SETTLED",
+            "postingStatus": null,
+            "statusSource": "SYNTHETIC_RAIL",
+            "statusReference": "SIM-M-676b2fb740e94eaf",
+            "attemptId": "275acd24-3322-440c-8ec9-33910c7fc3d7",
+            "version": 2,
+            "createdAt": "2026-09-29T03:21:34.844371Z",
+            "updatedAt": "2026-09-29T03:21:34.867563Z",
+            "nextInquiryAt": null,
+            "inquiryCount": 0,
+            "investigationReason": null
+          },
+          "effects": [
+            {
+              "operationId": "ed98b06a-8e4d-4183-92f6-096df729ad5d",
+              "effectType": "HOLD",
+              "accountId": "A-91f9079c6762463481",
+              "amountMinor": 10000
+            },
+            {
+              "operationId": "ed98b06a-8e4d-4183-92f6-096df729ad5d",
+              "effectType": "POST",
+              "accountId": "A-91f9079c6762463481",
+              "amountMinor": 10000
+            }
+          ],
+          "account": {
+            "accountId": "A-91f9079c6762463481",
+            "ledgerMinor": 90000,
+            "heldMinor": 0,
+            "exclusiveControl": true,
+            "coreMode": "SYNC",
+            "version": 2
+          },
+          "remote": {
+            "transactionId": "T-676b2fb740e94eaf",
+            "businessKey": "E-676b2fb740e94eaf",
+            "messageId": "M-676b2fb740e94eaf",
+            "status": "SETTLED",
+            "source": "SYNTHETIC_RAIL",
+            "reference": "SIM-M-676b2fb740e94eaf",
+            "submitCount": 1
+          }
+        },
+        "rejected": {
+          "local": {
+            "operationId": "9e6dc22c-9bad-427a-9ea2-ad9b6df26778",
+            "institutionId": "021000021",
+            "businessKey": "E-f9e1e837c7094317",
+            "transactionId": "T-f9e1e837c7094317",
+            "messageId": "M-f9e1e837c7094317",
+            "accountId": "A-774a27bbdfc0442883",
+            "amountMinor": 10000,
+            "state": "REJECTED",
+            "serviceStatus": "REJECTED",
+            "postingStatus": null,
+            "statusSource": "SYNTHETIC_RAIL",
+            "statusReference": "SIM-M-f9e1e837c7094317",
+            "attemptId": "2ed5fd63-2705-45e6-95ad-0a1dc15c2796",
+            "version": 2,
+            "createdAt": "2026-09-29T03:21:35.332436Z",
+            "updatedAt": "2026-09-29T03:21:35.337766Z",
+            "nextInquiryAt": null,
+            "inquiryCount": 0,
+            "investigationReason": null
+          },
+          "effects": [
+            {
+              "operationId": "9e6dc22c-9bad-427a-9ea2-ad9b6df26778",
+              "effectType": "HOLD",
+              "accountId": "A-774a27bbdfc0442883",
+              "amountMinor": 10000
+            },
+            {
+              "operationId": "9e6dc22c-9bad-427a-9ea2-ad9b6df26778",
+              "effectType": "RELEASE",
+              "accountId": "A-774a27bbdfc0442883",
+              "amountMinor": 10000
+            }
+          ],
+          "account": {
+            "accountId": "A-774a27bbdfc0442883",
+            "ledgerMinor": 100000,
+            "heldMinor": 0,
+            "exclusiveControl": true,
+            "coreMode": "SYNC",
+            "version": 2
+          },
+          "remote": {
+            "transactionId": "T-f9e1e837c7094317",
+            "businessKey": "E-f9e1e837c7094317",
+            "messageId": "M-f9e1e837c7094317",
+            "status": "REJECTED",
+            "source": "SYNTHETIC_RAIL",
+            "reference": "SIM-M-f9e1e837c7094317",
+            "submitCount": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "S02",
+      "result": "PASS",
+      "trace": {
+        "local": {
+          "operationId": "0e73c5a6-e536-4978-bf4f-2f0ab88edfad",
+          "institutionId": "021000021",
+          "businessKey": "E-654adf3fe7114676",
+          "transactionId": "T-654adf3fe7114676",
+          "messageId": "M-654adf3fe7114676",
+          "accountId": "A-49b92c21b31e468b8f",
+          "amountMinor": 10000,
+          "state": "SETTLED",
+          "serviceStatus": "SETTLED",
+          "postingStatus": null,
+          "statusSource": "SYNTHETIC_RAIL",
+          "statusReference": "SIM-M-654adf3fe7114676",
+          "attemptId": "98e8fd28-9dbd-46d4-9768-7b0e078b1d4c",
+          "version": 5,
+          "createdAt": "2026-09-29T03:21:35.783712Z",
+          "updatedAt": "2026-09-29T03:21:39.354867Z",
+          "nextInquiryAt": null,
+          "inquiryCount": 1,
+          "investigationReason": "Synthetic transport outcome unknown"
+        },
+        "effects": [
+          {
+            "operationId": "0e73c5a6-e536-4978-bf4f-2f0ab88edfad",
+            "effectType": "HOLD",
+            "accountId": "A-49b92c21b31e468b8f",
+            "amountMinor": 10000
+          },
+          {
+            "operationId": "0e73c5a6-e536-4978-bf4f-2f0ab88edfad",
+            "effectType": "POST",
+            "accountId": "A-49b92c21b31e468b8f",
+            "amountMinor": 10000
+          }
+        ],
+        "account": {
+          "accountId": "A-49b92c21b31e468b8f",
+          "ledgerMinor": 90000,
+          "heldMinor": 0,
+          "exclusiveControl": true,
+          "coreMode": "SYNC",
+          "version": 2
+        },
+        "remote": {
+          "transactionId": "T-654adf3fe7114676",
+          "businessKey": "E-654adf3fe7114676",
+          "messageId": "M-654adf3fe7114676",
+          "status": "SETTLED",
+          "source": "SYNTHETIC_RAIL",
+          "reference": "SIM-M-654adf3fe7114676",
+          "submitCount": 1
+        }
+      }
+    },
+    {
+      "id": "S03",
+      "result": "PASS",
+      "trace": {
+        "local": {
+          "operationId": "d212efea-085f-45c8-ba05-eaf254c708a3",
+          "institutionId": "021000021",
+          "businessKey": "E-f63f47e57da7442d",
+          "transactionId": "T-f63f47e57da7442d",
+          "messageId": "M-f63f47e57da7442d",
+          "accountId": "A-a479f1f9f73744a596",
+          "amountMinor": 10000,
+          "state": "REJECTED",
+          "serviceStatus": "REJECTED",
+          "postingStatus": null,
+          "statusSource": "SYNTHETIC_RAIL",
+          "statusReference": "SIM-M-f63f47e57da7442d",
+          "attemptId": "7d79bb2c-2a81-494b-a115-7b764ca80c81",
+          "version": 5,
+          "createdAt": "2026-09-29T03:21:40.089733Z",
+          "updatedAt": "2026-09-29T03:21:44.376175Z",
+          "nextInquiryAt": null,
+          "inquiryCount": 1,
+          "investigationReason": "Synthetic transport outcome unknown"
+        },
+        "effects": [
+          {
+            "operationId": "d212efea-085f-45c8-ba05-eaf254c708a3",
+            "effectType": "HOLD",
+            "accountId": "A-a479f1f9f73744a596",
+            "amountMinor": 10000
+          },
+          {
+            "operationId": "d212efea-085f-45c8-ba05-eaf254c708a3",
+            "effectType": "RELEASE",
+            "accountId": "A-a479f1f9f73744a596",
+            "amountMinor": 10000
+          }
+        ],
+        "account": {
+          "accountId": "A-a479f1f9f73744a596",
+          "ledgerMinor": 100000,
+          "heldMinor": 0,
+          "exclusiveControl": true,
+          "coreMode": "SYNC",
+          "version": 2
+        },
+        "remote": {
+          "transactionId": "T-f63f47e57da7442d",
+          "businessKey": "E-f63f47e57da7442d",
+          "messageId": "M-f63f47e57da7442d",
+          "status": "REJECTED",
+          "source": "SYNTHETIC_RAIL",
+          "reference": "SIM-M-f63f47e57da7442d",
+          "submitCount": 1
+        }
+      }
+    },
+    {
+      "id": "S06",
+      "result": "PASS",
+      "trace": {
+        "local": {
+          "operationId": "b7e4be19-6139-472f-a42f-81e06fd53452",
+          "institutionId": "021000021",
+          "businessKey": "E-db361a8c0f2d426e",
+          "transactionId": "T-db361a8c0f2d426e",
+          "messageId": "M-db361a8c0f2d426e",
+          "accountId": "A-3278f1fd43ee44c4af",
+          "amountMinor": 10000,
+          "state": "SETTLED",
+          "serviceStatus": "SETTLED",
+          "postingStatus": null,
+          "statusSource": "SYNTHETIC_RAIL",
+          "statusReference": "SIM-M-db361a8c0f2d426e",
+          "attemptId": "abf22365-a790-440c-b432-02b3f7135ba4",
+          "version": 2,
+          "createdAt": "2026-09-29T03:21:45.036572Z",
+          "updatedAt": "2026-09-29T03:21:45.154121Z",
+          "nextInquiryAt": null,
+          "inquiryCount": 0,
+          "investigationReason": null
+        },
+        "effects": [
+          {
+            "operationId": "b7e4be19-6139-472f-a42f-81e06fd53452",
+            "effectType": "HOLD",
+            "accountId": "A-3278f1fd43ee44c4af",
+            "amountMinor": 10000
+          },
+          {
+            "operationId": "b7e4be19-6139-472f-a42f-81e06fd53452",
+            "effectType": "POST",
+            "accountId": "A-3278f1fd43ee44c4af",
+            "amountMinor": 10000
+          }
+        ],
+        "account": {
+          "accountId": "A-3278f1fd43ee44c4af",
+          "ledgerMinor": 90000,
+          "heldMinor": 0,
+          "exclusiveControl": true,
+          "coreMode": "SYNC",
+          "version": 2
+        },
+        "remote": {
+          "transactionId": "T-db361a8c0f2d426e",
+          "businessKey": "E-db361a8c0f2d426e",
+          "messageId": "M-db361a8c0f2d426e",
+          "status": "SETTLED",
+          "source": "SYNTHETIC_RAIL",
+          "reference": "SIM-M-db361a8c0f2d426e",
+          "submitCount": 1
+        }
+      }
+    },
+    {
+      "id": "S07",
+      "result": "PASS",
+      "trace": {
+        "local": {
+          "operationId": "a5cd45c9-8059-4281-82c0-5afb55828e64",
+          "institutionId": "021000021",
+          "businessKey": "E-28b9b795e42d4909",
+          "transactionId": "T-28b9b795e42d4909",
+          "messageId": "M-28b9b795e42d4909",
+          "accountId": "A-fd5ef9819f41400bb7",
+          "amountMinor": 10000,
+          "state": "SETTLED",
+          "serviceStatus": "SETTLED",
+          "postingStatus": null,
+          "statusSource": "SYNTHETIC_RAIL",
+          "statusReference": "SIM-M-28b9b795e42d4909",
+          "attemptId": "549257ea-8c2c-4ce6-b2da-379641250e96",
+          "version": 2,
+          "createdAt": "2026-09-29T03:21:45.690322Z",
+          "updatedAt": "2026-09-29T03:21:45.696998Z",
+          "nextInquiryAt": null,
+          "inquiryCount": 0,
+          "investigationReason": null
+        },
+        "effects": [
+          {
+            "operationId": "a5cd45c9-8059-4281-82c0-5afb55828e64",
+            "effectType": "HOLD",
+            "accountId": "A-fd5ef9819f41400bb7",
+            "amountMinor": 10000
+          },
+          {
+            "operationId": "a5cd45c9-8059-4281-82c0-5afb55828e64",
+            "effectType": "POST",
+            "accountId": "A-fd5ef9819f41400bb7",
+            "amountMinor": 10000
+          }
+        ],
+        "account": {
+          "accountId": "A-fd5ef9819f41400bb7",
+          "ledgerMinor": 90000,
+          "heldMinor": 0,
+          "exclusiveControl": true,
+          "coreMode": "SYNC",
+          "version": 2
+        },
+        "remote": {
+          "transactionId": "T-28b9b795e42d4909",
+          "businessKey": "E-28b9b795e42d4909",
+          "messageId": "M-28b9b795e42d4909",
+          "status": "SETTLED",
+          "source": "SYNTHETIC_RAIL",
+          "reference": "SIM-M-28b9b795e42d4909",
+          "submitCount": 1
+        }
+      }
+    },
+    {
+      "id": "S14",
+      "result": "PASS",
+      "trace": {
+        "account": {
+          "accountId": "A-0f8d4fe330d5415dbb",
+          "ledgerMinor": 5000,
+          "heldMinor": 0,
+          "exclusiveControl": false,
+          "coreMode": "SYNC",
+          "version": 1
+        },
+        "remote_http": 404
+      }
+    },
+    {
+      "id": "S16",
+      "result": "PASS",
+      "trace": {
+        "account": {
+          "accountId": "A-f024303e817442ae89",
+          "ledgerMinor": 100000,
+          "heldMinor": 0,
+          "exclusiveControl": true,
+          "coreMode": "SYNC",
+          "version": 0
+        }
+      }
+    },
+    {
+      "id": "S17",
+      "result": "PASS",
+      "trace": {
+        "negative_control_detected": true,
+        "actual": {
+          "local": {
+            "operationId": "f6b3994a-00da-4e33-94ab-3d81c3cefd55",
+            "institutionId": "021000021",
+            "businessKey": "E-e44bb5f9e6cd42d3",
+            "transactionId": "T-e44bb5f9e6cd42d3",
+            "messageId": "M-e44bb5f9e6cd42d3",
+            "accountId": "A-d0a97ae0b4454a3792",
+            "amountMinor": 10000,
+            "state": "REJECTED",
+            "serviceStatus": "REJECTED",
+            "postingStatus": null,
+            "statusSource": "SYNTHETIC_RAIL",
+            "statusReference": "SIM-M-e44bb5f9e6cd42d3",
+            "attemptId": "1820f76d-ca36-4904-b40c-9d016e0c5d3c",
+            "version": 2,
+            "createdAt": "2026-09-29T03:21:47.126616Z",
+            "updatedAt": "2026-09-29T03:21:47.132979Z",
+            "nextInquiryAt": null,
+            "inquiryCount": 0,
+            "investigationReason": null
+          },
+          "effects": [
+            {
+              "operationId": "f6b3994a-00da-4e33-94ab-3d81c3cefd55",
+              "effectType": "HOLD",
+              "accountId": "A-d0a97ae0b4454a3792",
+              "amountMinor": 10000
+            },
+            {
+              "operationId": "f6b3994a-00da-4e33-94ab-3d81c3cefd55",
+              "effectType": "RELEASE",
+              "accountId": "A-d0a97ae0b4454a3792",
+              "amountMinor": 10000
+            }
+          ],
+          "account": {
+            "accountId": "A-d0a97ae0b4454a3792",
+            "ledgerMinor": 100000,
+            "heldMinor": 0,
+            "exclusiveControl": true,
+            "coreMode": "SYNC",
+            "version": 2
+          },
+          "remote": {
+            "transactionId": "T-e44bb5f9e6cd42d3",
+            "businessKey": "E-e44bb5f9e6cd42d3",
+            "messageId": "M-e44bb5f9e6cd42d3",
+            "status": "REJECTED",
+            "source": "SYNTHETIC_RAIL",
+            "reference": "SIM-M-e44bb5f9e6cd42d3",
+            "submitCount": 1
+          }
+        }
+      }
+    }
+  ],
+  "not_in_this_runner": [
+    {
+      "id": "S04",
+      "coverage": "Java integration only; external malformed wire and inquiry failure matrix pending"
+    },
+    {
+      "id": "S05",
+      "coverage": "separate harness/restart_case.py process-kill experiment"
+    },
+    {
+      "id": "S08",
+      "coverage": "Java PostgreSQL/Redis integration only"
+    },
+    {
+      "id": "S09",
+      "coverage": "partial Java pre-send and S05 post-send; broker/outbox matrix pending"
+    },
+    {
+      "id": "S10",
+      "coverage": "partial Java integration; external event matrix pending"
+    },
+    {
+      "id": "S11",
+      "coverage": "Java integration only"
+    },
+    {
+      "id": "S12",
+      "coverage": "partial Java synthetic timing; live window interpretation unavailable"
+    },
+    {
+      "id": "S13",
+      "coverage": "partial Java release rollback and return timeout; durable return lifecycle absent"
+    },
+    {
+      "id": "S15",
+      "coverage": "missing reservation tested; core outage matrix pending"
+    },
+    {
+      "id": "S18",
+      "coverage": "aggregate result from harness/evaluate_external.py"
+    }
+  ]
+}

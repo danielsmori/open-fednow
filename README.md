@@ -37,9 +37,9 @@ OpenFedNow explores integration between legacy core banking systems and instant 
 | Reconciliation — replay and sync after core returns online | ✅ Implemented + tested |
 | Reconciliation pagination — keyset-paginated account scan for large institutions | ✅ Configurable batch size (default 500); memory stays flat regardless of pending-account count |
 | Saga orchestration — compensation on core rejection | ✅ Implemented + tested |
-| Idempotency — Redis + PostgreSQL dual-write, 48h window | ✅ Implemented + tested |
+| Idempotency — Redis + PostgreSQL dual-write, 48h window | ✅ Implemented + tested in legacy sandbox; cross-store effect atomicity unproven |
 | Concurrent overdraft prevention under load | ✅ Tested (race-condition suite) |
-| Send-side (outbound) payment flow | ✅ Implemented |
+| Send-side (outbound) payment flow | Synthetic reference slice implemented; legacy gateway disabled by default; no live rail/core authorization established |
 | Payment returns (pacs.004 outbound) | Synthetic client shape exists, but `/fednow/return` is disabled by default; no durable return outcome lifecycle is established. HTTP return submission makes one attempt and propagates uncertainty. |
 | Admin auth — HTTP Basic on `/admin/*` | ✅ Implemented as reference configuration |
 | Admin audit log — every `/admin/**` access recorded to PostgreSQL | ✅ Implemented; both GRANTED and DENIED captured, surfaced via `GET /admin/audit-log`. Sensitive query parameters (`token`, `apikey`, `password`, …) are rewritten to `REDACTED` before persistence by `PiiRedactor` |
@@ -62,14 +62,14 @@ OpenFedNow explores integration between legacy core banking systems and instant 
 | HTTP security headers — HSTS, X-Content-Type-Options, X-Frame-Options, Cache-Control | ✅ Configured in `SecurityConfig`; verified end-to-end via `SecurityHeadersTest` |
 | CORS — deny-by-default for server-to-server API | ✅ Explicit empty `CorsConfigurationSource`; institutions registering a browser-origin allow-list override the bean |
 | Graceful shutdown — drain in-flight requests on SIGTERM | ✅ `server.shutdown=graceful` + 30s drain window; Helm `terminationGracePeriodSeconds: 60` |
-| HikariCP tuning — prod-sized connection pool | ✅ Pool 50 / min-idle 10 / 5s connection timeout — sized for FedNow throughput; tunable via env |
-| Outbound FedNow transfer uncertainty | ✅ One submission attempt; missing status keeps funds reserved and exposes a saga for review. Return submissions retain a separate retry policy. |
+| HikariCP tuning — prod-sized connection pool | ✅ Configured pool 50 / min-idle 10 / 5s connection timeout; no capacity benchmark or live sizing validation |
+| Outbound FedNow transfer uncertainty | ✅ Legacy credit transfer attempts once and quarantines a missing status; the SQL reference slice adds durable holds and inquiry. Return submissions attempt once but have no durable lifecycle, so the return gateway stays disabled. |
 | Fraud screening timeout — hard cap on port calls | ✅ `CompletableFuture` deadline (default 1500ms); rejects on timeout / exception by default |
 | Atomic velocity counter — single Redis Lua script | ✅ `INCR` + `EXPIRE` in one round-trip; sliding window matching the documented semantic |
 | Reconcile concurrency guard — same-JVM serialization | ✅ `ReentrantLock` with tryLock; second concurrent call returns "Skipped" report rather than racing |
 | Saga source-rail tracking — dual-rail dispatch foundation | ✅ `source_rail` column on `saga_state` (V5); both gateways thread `Rail` through `MessageRouter` |
 | Dependency scanning — Dependabot + Trivy | ✅ Weekly Maven + Actions updates; Trivy scan fails the build on HIGH/CRITICAL findings |
-| CI — unit + integration test jobs | ✅ GitHub Actions workflow runs unit tests + Testcontainers-backed integration tests on every PR |
+| CI — unit + integration test jobs | ✅ Workflow runs unit and Testcontainers-backed integration jobs on PRs targeting `main`; stacked development PRs have no checks until retargeted |
 | Dual-rail architecture (FedNow + RTP) | ✅ ISO 20022 foundation; Layer 1 varies, Layers 2–4 rail-agnostic; source rail persisted on `saga_state` |
 | RTP Layer 1 — inbound XML, outbound XML, TCH cert validation hook, sandbox + HTTP client | Inbound reference routing and transport utilities implemented; `/rtp/send` disabled pending financial-control parity |
 | Optional Kafka event bus — `PaymentEventPublisher`, 6 event types | ✅ Implemented (disabled by default; no Kafka required) |
@@ -143,7 +143,7 @@ This creates four fundamental incompatibilities:
 
 - **Processing model mismatch** — Legacy systems process in batches; FedNow requires sub-20-second event-driven responses
 - **Availability mismatch** — Legacy systems have maintenance windows; FedNow operates 24/7/365
-- **Protocol mismatch** — Legacy systems use proprietary APIs; FedNow uses ISO 20022 REST/JSON messaging
+- **Protocol mismatch** — Legacy systems use institution- and vendor-specific interfaces; FedNow messages use ISO 20022 profiles. The project's JSON client is a synthetic transport, not a verified FedNow wire format
 - **Concurrency mismatch** — Legacy systems were not designed for high-volume simultaneous transaction loads
 
 The layers below explore these integration concerns. Whether they address a particular institution's constraints requires a scoped evaluation against its actual interfaces and controls.
@@ -156,18 +156,9 @@ OpenFedNow is a five-layer reference framework that explores these incompatibili
 
 The framework separates shared routing and ledger code from vendor adapters. Source-line proportions do not measure integration effort, cost savings, institution coverage, or deployment readiness; those require measured implementation results.
 
-### Core Banking Platform Coverage
+### Core banking adapters
 
-| Vendor | U.S. Bank Market Share | U.S. Credit Union Share |
-|--------|------------------------|------------------------|
-| Fiserv (DNA, Precision, Premier, Cleartouch) | 42% | 31% |
-| Jack Henry (SilverLake, Symitar, CIF 20/20) | 21% | 12% |
-| FIS (Horizon, IBS) | 9% | — |
-| **Big Three combined** | **>70%** | |
-
-*Source: Federal Reserve Bank of Kansas City, Market Structure of Core Banking Services Providers, March 2024.*
-
-These historical vendor market shares describe vendor presence, not banks unable to send payments or banks compatible with this project. The adapters are reference implementations; institution-specific compatibility remains unverified.
+Fiserv-, FIS-, and Jack Henry-shaped adapters illustrate how the shared interface can be implemented and are tested locally with mocks/WireMock. The repository has not verified any product-specific vendor interface, institution compatibility, or market coverage. Historical vendor share estimates cannot establish the number of banks served by these adapters or the impact of this software.
 
 ---
 
@@ -703,31 +694,30 @@ See [docs/known-limitations.md](docs/known-limitations.md) for the full analysis
 
 - **Cross-store consistency remains unverified.** Redis WATCH detects changes by other clients, but Redis balance updates and SQL audit writes do not form one atomic transaction. See [known limitations](docs/known-limitations.md).
 - **Admin credentials default to `admin` / `changeme` in dev / sandbox.** A `@PostConstruct` check in `SecurityConfig` refuses to start the application under `spring.profiles.active=prod` if `ADMIN_USERNAME` / `ADMIN_PASSWORD` are still at their defaults, so a misconfigured production deployment fails loud at boot rather than silently shipping with default credentials.
-- **Post-reconciliation reversals are customer-visible.** If the core rejects a provisionally accepted transaction, a pacs.004 return goes back to FedNow. The sender's institution sees a credit followed by a return — see [ADR-0003](docs/adr/0003-provisional-acceptance-acsp.md).
+- **Post-reconciliation returns remain an unverified design.** The sandbox models a return after a provisionally accepted transaction, but the deployed/live effect and legal or customer-visible outcome have not been established. The return gateway is disabled by default; see [ADR-0003](docs/adr/0003-provisional-acceptance-acsp.md).
 - **Outbound camt.056 not yet implemented.** Inbound cancellation handling is complete (camt.056 → camt.029 with state-keyed decision matrix). Initiating a cancellation against our own outbound payment is tracked as future work.
 
 ---
 
 ## Roadmap
 
-**Phase 1 — Core Framework ✅ Complete**
+**Phase 1 — Core reference framework implemented**
 - Five-layer architecture: Shadow Ledger, SyncAsyncBridge, Saga orchestration, idempotency, reconciliation
 - ISO 20022 message models — pacs.008 / pacs.002 / pacs.004 / camt.056 / camt.029
 - `MockVendorAdapter` + `CoreBankingAdapterContractTest` baseline; sandbox scenario routing
 
-**Phase 2 — Fiserv + FIS Adapters ✅ Complete**
-- Fiserv DNA / Precision / Premier / Cleartouch adapter (42% of U.S. banks)
-- FIS Horizon / IBS adapter (9% of U.S. banks)
+**Phase 2 — Fiserv + FIS reference adapters implemented; vendor validation open**
+- Fiserv and FIS reference adapter request/response shapes, tested locally with mocks; institution-specific products and compatibility remain unverified
 
-**Phase 3 — Jack Henry Adapter (reference implementation)**
-- Jack Henry SilverLake / Symitar / CIF 20/20 adapter via jXchange SOAP (21% of U.S. banks)
-- Three reference vendor adapters implemented: Fiserv + FIS + Jack Henry collectively serve over 70% of U.S. banks per KC Fed data; credit union coverage varies by vendor and remains institution-specific
+**Phase 3 — Jack Henry reference adapter implemented; vendor validation open**
+- Jack Henry jXchange-shaped reference SOAP adapter, locally tested; product-specific compatibility remains unverified
+- Three vendor-shaped reference adapters implemented; the repo does not establish coverage of any percentage of U.S. institutions
 
-**Phase 3b — RTP Layer 1 ✅ Complete**
+**Phase 3b — RTP reference transport utilities implemented; live validation open**
 - RTP reference transport utilities (outbound gateway initiation disabled): `RtpXmlParser`, `RtpXmlSerializer`, `RtpClient` with sandbox + HTTP implementations, TCH certificate-validation hook
 - `RtpGateway` inbound XML and outbound send paths wired; rail-agnostic Layers 2–4 ([ADR-0005](docs/adr/0005-dual-rail-architecture-fednow-rtp.md))
 
-**Phase 4 — Operational Tooling ✅ Complete**
+**Phase 4 — Sandbox operational tooling implemented; institution validation open**
 - Saga lifecycle: source-rail tracking, restart-time recovery, timeout monitor with `XPIR` compensation, compensation retry for failed reversals
 - Admin endpoints: saga state queries, account balance views, reconciliation history, audit log; all under HTTP Basic + `ADMIN` role
 - Admin access auditing with retention sweep; idempotency TTL cleanup; balance seeding from core on startup
@@ -736,14 +726,14 @@ See [docs/known-limitations.md](docs/known-limitations.md) for the full analysis
 - Per-client rate limiting on `/fednow/**` and `/rtp/**`; reconciliation pagination for large institutions
 - Event schema versioning ([ADR-0006](docs/adr/0006-event-schema-versioning.md))
 
-**Phase 5 — Production Hardening ✅ Complete**
+**Phase 5 — Reference hardening controls implemented; production validation open**
 - Transactional boundaries on multi-statement writes; idempotent Shadow Ledger reversals; atomic Lua velocity counter; same-JVM reconcile concurrency guard
 - HSTS, deny-by-default CORS, default-credential startup guard in prod profile
-- Graceful shutdown with bounded drain window; HikariCP pool sizing for FedNow throughput
+- Graceful shutdown with bounded drain window; configurable HikariCP pool (no FedNow capacity benchmark)
 - Outbound FedNow credit transfers make one HTTP attempt and quarantine unknown outcomes; hard timeout on `FraudScreeningPort` calls (fail-closed by default; explicit fail-open option)
 - Dependabot + Trivy workflow; GitHub Actions CI with both unit and integration test jobs
 
-**Phase 6 — Reference signing components implemented**
+**Phase 6 — Reference signing components implemented; live profile unverified**
 - RS256 detached JWS message signing implemented per RFC 7515 + RFC 7797 ([ADR-0009](docs/adr/0009-fednow-jws-message-signing.md))
 - Outbound: `FedNowJwsSigner` + RestTemplate interceptor attaches `X-JWS-Signature` on every submission
 - Inbound: `JwsInboundVerificationFilter` verifies FedNow-signed responses, buffers body for the downstream controller
