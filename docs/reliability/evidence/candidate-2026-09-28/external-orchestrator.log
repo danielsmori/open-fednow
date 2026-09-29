@@ -1,0 +1,9 @@
+{
+  "all_passed": true,
+  "runs": {
+    "openfednow-sync": 0,
+    "openfednow-async": 0,
+    "reference": 0,
+    "restart-s05": 0
+  }
+}
