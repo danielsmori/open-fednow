@@ -95,6 +95,15 @@ public class SagaOrchestrator {
                 sagaId);
     }
 
+    /** Durable duplicate guard, including submissions whose reply was lost. */
+    public java.util.Optional<SagaSnapshot> findByEndToEndId(String endToEndId) {
+        return jdbc.query("""
+                SELECT saga_id, transaction_id, end_to_end_id, state, source_rail,
+                       return_reason_code, failure_description, created_at, updated_at, request_id
+                FROM saga_state WHERE end_to_end_id = ?
+                """, this::mapSnapshot, endToEndId).stream().findFirst();
+    }
+
     /**
      * Returns saga IDs that are still in a forward-progress state and have been
      * running longer than the supplied timeout window.
@@ -218,6 +227,8 @@ public class SagaOrchestrator {
         // Reverse Shadow Ledger debit if funds were reserved (only in forward-progress states)
         PaymentSaga.SagaState current = saga.getState();
         boolean fundsWereReserved = current == PaymentSaga.SagaState.FUNDS_RESERVED
+                || current == PaymentSaga.SagaState.SUBMITTING
+                || current == PaymentSaga.SagaState.OUTCOME_UNKNOWN
                 || current == PaymentSaga.SagaState.CORE_SUBMITTED
                 || current == PaymentSaga.SagaState.FEDNOW_CONFIRMED
                 || current == PaymentSaga.SagaState.COMPLETED;
@@ -274,6 +285,8 @@ public class SagaOrchestrator {
         // were credited yet, so no reversal is required — the saga simply terminates.
         PaymentSaga.SagaState current = saga.getState();
         boolean creditWasApplied = current == PaymentSaga.SagaState.FUNDS_RESERVED
+                || current == PaymentSaga.SagaState.SUBMITTING
+                || current == PaymentSaga.SagaState.OUTCOME_UNKNOWN
                 || current == PaymentSaga.SagaState.CORE_SUBMITTED
                 || current == PaymentSaga.SagaState.FEDNOW_CONFIRMED;
         if (creditWasApplied) {
@@ -308,6 +321,13 @@ public class SagaOrchestrator {
         jdbc.update("UPDATE saga_state SET state = ?, updated_at = NOW() WHERE saga_id = ?",
                 saga.getState().name(), saga.getSagaId());
         log.debug("Saga advanced sagaId={} state={}", saga.getSagaId(), nextState);
+    }
+
+    /** Quarantine a submission without releasing its reservation. */
+    public void markOutcomeUnknown(PaymentSaga saga) {
+        if (saga.getState() == PaymentSaga.SagaState.SUBMITTING) {
+            advance(saga, PaymentSaga.SagaState.OUTCOME_UNKNOWN);
+        }
     }
 
     // ── Internal helpers ───────────────────────────────────────────────────────

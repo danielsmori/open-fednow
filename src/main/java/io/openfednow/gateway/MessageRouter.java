@@ -319,12 +319,12 @@ public class MessageRouter {
      *   <li>Submit to FedNow via {@link FedNowClient}</li>
      *   <li>On ACSC: advance saga to COMPLETED</li>
      *   <li>On RJCT: compensate saga — reverses the debit via Shadow Ledger</li>
-     *   <li>On ACSP: leave saga at CORE_SUBMITTED — reconciliation advances to COMPLETED</li>
+     *   <li>On ACSP or missing status: retain the debit and require final-status review</li>
      *   <li>Record outcome for idempotency</li>
      * </ol>
      *
      * @param message pacs.008.001.08 assembled by the ACL
-     * @return pacs.002 status report returned by FedNow (or synthetic RJCT on infrastructure error)
+     * @return authoritative pacs.002, or HTTP 503 with no fabricated rail status
      */
     public ResponseEntity<Pacs002Message> routeOutbound(Pacs008Message message) {
         MDC.put(CorrelationFilter.MDC_END_TO_END_ID, message.getEndToEndId());
@@ -356,6 +356,13 @@ public class MessageRouter {
         if (cached.isPresent()) {
             log.info("Duplicate outbound payment suppressed e2e={}", message.getEndToEndId());
             return ResponseEntity.ok(cached.get());
+        }
+
+        // The SQL saga survives Redis expiry and a process crash before an
+        // idempotency response can be written. Never resubmit that payment.
+        if (sagaOrchestrator.findByEndToEndId(message.getEndToEndId()).isPresent()) {
+            log.warn("Outbound payment already has a durable saga e2e={}", message.getEndToEndId());
+            return ResponseEntity.status(503).build();
         }
 
         // Bridge-mode send guard, after duplicate lookup. When a
@@ -418,19 +425,30 @@ public class MessageRouter {
                 message.getTransactionId());
         sagaOrchestrator.advance(saga, PaymentSaga.SagaState.FUNDS_RESERVED);
 
-        // Step 5 — submit to FedNow
+        // Step 5 — persist the possible-send boundary BEFORE calling the rail.
+        // A crash after this point must never trigger automatic compensation.
+        sagaOrchestrator.advance(saga, PaymentSaga.SagaState.SUBMITTING);
         Pacs002Message response;
         try {
             response = fedNowClient.submitCreditTransfer(message);
-            sagaOrchestrator.advance(saga, PaymentSaga.SagaState.CORE_SUBMITTED);
         } catch (Exception e) {
-            log.error("FedNow submission failed, compensating sagaId={}", saga.getSagaId(), e);
-            sagaOrchestrator.compensate(saga.getSagaId(), "NARR");
-            response = Pacs002Message.rejected(
-                    message.getEndToEndId(), message.getTransactionId(),
-                    "NARR", "FedNow submission error — debit reversed");
-            idempotencyService.recordOutcome(message.getEndToEndId(), response);
-            return ResponseEntity.ok(response);
+            log.error("FedNow outcome unknown; reservation retained sagaId={}", saga.getSagaId(), e);
+            sagaOrchestrator.markOutcomeUnknown(saga);
+            return ResponseEntity.status(503).build();
+        }
+
+        if (response == null || response.getTransactionStatus() == null
+                || !message.getEndToEndId().equals(response.getOriginalEndToEndId())
+                || !message.getTransactionId().equals(response.getOriginalTransactionId())) {
+            log.error("FedNow returned no authoritative status; reservation retained sagaId={}", saga.getSagaId());
+            sagaOrchestrator.markOutcomeUnknown(saga);
+            return ResponseEntity.status(503).build();
+        }
+
+        if (response.getTransactionStatus() == Pacs002Message.TransactionStatus.ACSP) {
+            // Accepted but not settled: do not let the timeout monitor release
+            // funds solely because final confirmation has not arrived.
+            sagaOrchestrator.markOutcomeUnknown(saga);
         }
 
         // Step 6 — handle FedNow response
@@ -445,7 +463,7 @@ public class MessageRouter {
             sagaOrchestrator.advance(saga, PaymentSaga.SagaState.COMPLETED);
             eventPublisher.publish(event(message, EventType.OUTBOUND_PAYMENT_COMPLETED, null));
         } else {
-            // ACSP: leave at CORE_SUBMITTED — reconciliation advances to COMPLETED
+            // ACSP: final rail status still needs verification.
             eventPublisher.publish(event(message, EventType.OUTBOUND_PAYMENT_PENDING, null));
         }
 

@@ -212,7 +212,27 @@ class OutboundPaymentIntegrationTest extends AbstractInfrastructureIntegrationTe
         String state = jdbc.queryForObject(
                 "SELECT state FROM saga_state WHERE transaction_id = 'TXN-OUT-ACSP-002'",
                 String.class);
-        assertThat(state).isEqualTo("CORE_SUBMITTED");
+        assertThat(state).isEqualTo("OUTCOME_UNKNOWN");
+    }
+
+    @Test
+    void lostResponseRetainsFundsAndDuplicateCannotResubmit() {
+        var payment = message("TXN-OUT-UNKNOWN", "E2E-OUT-UNKNOWN", "150.00");
+        when(fedNowClient.submitCreditTransfer(any()))
+                .thenThrow(new SubmissionOutcomeUnknownException("simulated lost response", null));
+
+        assertThat(messageRouter.routeOutbound(payment).getStatusCode().value()).isEqualTo(503);
+        assertThat(shadowLedger.getAvailableBalance(DEBTOR_ACCOUNT)).isEqualByComparingTo("850.00");
+        assertThat(jdbc.queryForObject(
+                "SELECT state FROM saga_state WHERE transaction_id = 'TXN-OUT-UNKNOWN'", String.class))
+                .isEqualTo("OUTCOME_UNKNOWN");
+        assertThat(jdbc.queryForObject(
+                "SELECT COUNT(*) FROM shadow_ledger_transaction_log WHERE transaction_id = 'TXN-OUT-UNKNOWN' AND transaction_type = 'REVERSAL'", Integer.class))
+                .isZero();
+
+        assertThat(messageRouter.routeOutbound(payment).getStatusCode().value()).isEqualTo(503);
+        verify(fedNowClient, Mockito.times(1)).submitCreditTransfer(any());
+        assertThat(shadowLedger.getAvailableBalance(DEBTOR_ACCOUNT)).isEqualByComparingTo("850.00");
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

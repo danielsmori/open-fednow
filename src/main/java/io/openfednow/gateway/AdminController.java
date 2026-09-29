@@ -92,7 +92,8 @@ public class AdminController {
      * Lists all sagas that have not yet reached a terminal state.
      *
      * <p>Returns sagas in {@code INITIATED}, {@code FUNDS_RESERVED},
-     * {@code CORE_SUBMITTED}, {@code FEDNOW_CONFIRMED}, or {@code COMPENSATING}
+     * {@code SUBMITTING}, {@code OUTCOME_UNKNOWN}, {@code CORE_SUBMITTED},
+     * {@code FEDNOW_CONFIRMED}, or {@code COMPENSATING}
      * — i.e., the work an operator might need to act on. Ordered oldest first
      * so long-running sagas surface at the top.
      */

@@ -49,7 +49,8 @@ class MessageRouterScreeningPolicyTest {
     private void assertBlocked(MessageRouter router, boolean inbound, String reason) {
         var response = inbound ? router.routeInbound(message(), Rail.FEDNOW) : router.routeOutbound(message());
         assertThat(response.getBody().getRejectReasonCode()).isEqualTo(reason);
-        verifyNoInteractions(client, ledger, sagas, core);
+        verifyNoInteractions(client, ledger, core);
+        verify(sagas, never()).initiate(any(), any());
         verify(availability, never()).queueForCoreProcessing(any(), any());
     }
 
@@ -58,7 +59,8 @@ class MessageRouterScreeningPolicyTest {
         when(screening.screen(any())).thenThrow(new IllegalStateException("Synthetic outage"));
         when(ledger.getAvailableBalance(any())).thenReturn(BigDecimal.ZERO);
         assertThat(router(false).routeOutbound(message()).getBody().getRejectReasonCode()).isEqualTo("TS01");
-        verifyNoInteractions(ledger, sagas, client);
+        verifyNoInteractions(ledger, client);
+        verify(sagas, never()).initiate(any(), any());
     }
 
     @ParameterizedTest
@@ -108,7 +110,8 @@ class MessageRouterScreeningPolicyTest {
         try {
             assertThat(router(true).routeOutbound(message()).getBody().getRejectReasonCode()).isEqualTo("AM04");
             verify(ledger).getAvailableBalance("SYNTHETIC-DEBTOR");
-            verifyNoInteractions(client, sagas, core);
+            verifyNoInteractions(client, core);
+            verify(sagas, never()).initiate(any(), any());
         } finally {
             release.countDown();
         }

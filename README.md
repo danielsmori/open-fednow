@@ -14,7 +14,7 @@
 
 OpenFedNow explores integration between legacy core banking systems and instant payment workflows. It is a reference implementation with synthetic tests; live compatibility and operational benefit remain to be evaluated.
 
-> **Evaluation scope: synthetic FedNow routing.** Outbound RTP is disabled; screening failures reject by default; downtime sends default to disabled. Submission uncertainty remains an open correctness issue. See the [capability matrix](docs/capability-matrix.md) and [reproducible evaluation](docs/evaluation.md).
+> **Evaluation scope: synthetic FedNow routing.** Outbound RTP is disabled; screening failures reject by default; downtime sends default to disabled. An unknown outbound rail outcome now keeps the reservation and requires review; automated rail status verification remains unfinished. See the [capability matrix](docs/capability-matrix.md) and [reproducible evaluation](docs/evaluation.md).
 
 > **Sandbox / reference implementation.** The reusable core framework — five-layer architecture, dual-rail Layer 1 (FedNow + RTP), all three vendor adapters, saga lifecycle (recovery / timeout monitor / compensation retry), idempotency, reconciliation, fraud screening, cancellation handling, rate limiting, admin audit, and the production-hardening pass (transactions, headers, graceful shutdown, retries, dependency scanning) — is implemented and tested across 500+ unit and integration tests. Live rail connectivity remains credential-, certification-, and institution-dependent. See [docs/known-limitations.md](docs/known-limitations.md) and the [Production Boundaries](#production-boundaries) section for what remains.
 
@@ -63,8 +63,8 @@ OpenFedNow explores integration between legacy core banking systems and instant 
 | CORS — deny-by-default for server-to-server API | ✅ Explicit empty `CorsConfigurationSource`; institutions registering a browser-origin allow-list override the bean |
 | Graceful shutdown — drain in-flight requests on SIGTERM | ✅ `server.shutdown=graceful` + 30s drain window; Helm `terminationGracePeriodSeconds: 60` |
 | HikariCP tuning — prod-sized connection pool | ✅ Pool 50 / min-idle 10 / 5s connection timeout — sized for FedNow throughput; tunable via env |
-| Outbound FedNow retry — transient-failure resilience | ✅ Resilience4j retry: 3 attempts, exponential backoff with jitter; retries 5xx + network errors, fast-fails 4xx |
-| Fraud screening timeout — hard cap on port calls | ✅ `CompletableFuture` deadline (default 1500ms); fails open on timeout / exception |
+| Outbound FedNow transfer uncertainty | ✅ One submission attempt; missing status keeps funds reserved and exposes a saga for review. Return submissions retain a separate retry policy. |
+| Fraud screening timeout — hard cap on port calls | ✅ `CompletableFuture` deadline (default 1500ms); rejects on timeout / exception by default |
 | Atomic velocity counter — single Redis Lua script | ✅ `INCR` + `EXPIRE` in one round-trip; sliding window matching the documented semantic |
 | Reconcile concurrency guard — same-JVM serialization | ✅ `ReentrantLock` with tryLock; second concurrent call returns "Skipped" report rather than racing |
 | Saga source-rail tracking — dual-rail dispatch foundation | ✅ `source_rail` column on `saga_state` (V5); both gateways thread `Rail` through `MessageRouter` |
@@ -692,7 +692,7 @@ openfednow/
 
 The repository contains reference implementations and synthetic tests. Remaining work includes internal correctness gaps as well as external onboarding dependencies:
 
-- **Submission uncertainty:** HTTP timeouts and synthetic rejections can trigger premature compensation. Status queries, durable unresolved states, safe retries, restart recovery, and late-status handling remain unfinished.
+- **Submission uncertainty:** HTTP failures and lost responses leave an `OUTCOME_UNKNOWN` saga and retain reserved funds. The sender gets HTTP 503 and must not blindly retry; the same end-to-end ID cannot submit again. Automated rail status queries, verified resolution, and late-status handling remain unfinished.
 - **Outbound RTP:** disabled until screening, reservations, idempotency, and reconciliation are validated on its actual routing path.
 - **Rail connectivity:** actual transports, message profiles, credentials, certification, and institution-specific operational controls require verification. A configured HTTP client is not certification.
 - **Vendor adapters:** mock-tested request construction is not vendor verification or confirmed compatibility.
@@ -745,7 +745,7 @@ See [docs/known-limitations.md](docs/known-limitations.md) for the full analysis
 - Transactional boundaries on multi-statement writes; idempotent Shadow Ledger reversals; atomic Lua velocity counter; same-JVM reconcile concurrency guard
 - HSTS, deny-by-default CORS, default-credential startup guard in prod profile
 - Graceful shutdown with bounded drain window; HikariCP pool sizing for FedNow throughput
-- Outbound FedNow retry on transient failures; hard timeout on `FraudScreeningPort` calls (fail-closed by default; explicit fail-open option)
+- Outbound FedNow credit transfers make one HTTP attempt and quarantine unknown outcomes; hard timeout on `FraudScreeningPort` calls (fail-closed by default; explicit fail-open option)
 - Dependabot + Trivy workflow; GitHub Actions CI with both unit and integration test jobs
 
 **Phase 6 — Live-FedNow Enablement ✅ Complete**

@@ -23,6 +23,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Unit tests for the retry behavior added to {@link HttpFedNowClient} — audit item #16.
@@ -61,10 +62,9 @@ class HttpFedNowClientRetryTest {
                         .withBody(acscJson("E2E-001", "TXN-001"))));
 
         HttpFedNowClient client = newClient(wmInfo, retryOf3());
-        Pacs002Message response = client.submitCreditTransfer(pacs008("E2E-001", "TXN-001"));
-
-        assertThat(response.getTransactionStatus()).isEqualTo(Pacs002Message.TransactionStatus.ACSC);
-        verify(3, postRequestedFor(urlPathEqualTo(TRANSFERS_PATH)));
+        assertThatThrownBy(() -> client.submitCreditTransfer(pacs008("E2E-001", "TXN-001")))
+                .isInstanceOf(SubmissionOutcomeUnknownException.class);
+        verify(1, postRequestedFor(urlPathEqualTo(TRANSFERS_PATH)));
     }
 
     @Test
@@ -75,11 +75,9 @@ class HttpFedNowClientRetryTest {
                 .willReturn(aResponse().withStatus(503)));
 
         HttpFedNowClient client = newClient(wmInfo, retryOf3());
-        Pacs002Message response = client.submitCreditTransfer(pacs008("E2E-EXH", "TXN-EXH"));
-
-        assertThat(response.getTransactionStatus()).isEqualTo(Pacs002Message.TransactionStatus.RJCT);
-        assertThat(response.getRejectReasonDescription()).contains("503");
-        verify(3, postRequestedFor(urlPathEqualTo(TRANSFERS_PATH)));
+        assertThatThrownBy(() -> client.submitCreditTransfer(pacs008("E2E-EXH", "TXN-EXH")))
+                .isInstanceOf(SubmissionOutcomeUnknownException.class);
+        verify(1, postRequestedFor(urlPathEqualTo(TRANSFERS_PATH)));
     }
 
     // ── 4xx: NOT retried ──────────────────────────────────────────────────────
@@ -91,10 +89,8 @@ class HttpFedNowClientRetryTest {
                 .willReturn(aResponse().withStatus(400)));
 
         HttpFedNowClient client = newClient(wmInfo, retryOf3());
-        Pacs002Message response = client.submitCreditTransfer(pacs008("E2E-400", "TXN-400"));
-
-        assertThat(response.getTransactionStatus()).isEqualTo(Pacs002Message.TransactionStatus.RJCT);
-        assertThat(response.getRejectReasonDescription()).contains("400");
+        assertThatThrownBy(() -> client.submitCreditTransfer(pacs008("E2E-400", "TXN-400")))
+                .isInstanceOf(SubmissionOutcomeUnknownException.class);
         // Only one attempt was made — 4xx is on the ignoreExceptions list
         verify(1, postRequestedFor(urlPathEqualTo(TRANSFERS_PATH)));
     }
@@ -107,7 +103,8 @@ class HttpFedNowClientRetryTest {
                 .willReturn(aResponse().withStatus(409)));
 
         HttpFedNowClient client = newClient(wmInfo, retryOf3());
-        client.submitCreditTransfer(pacs008("E2E-409", "TXN-409"));
+        assertThatThrownBy(() -> client.submitCreditTransfer(pacs008("E2E-409", "TXN-409")))
+                .isInstanceOf(SubmissionOutcomeUnknownException.class);
 
         verify(1, postRequestedFor(urlPathEqualTo(TRANSFERS_PATH)));
     }
@@ -120,9 +117,8 @@ class HttpFedNowClientRetryTest {
                 .willReturn(aResponse().withStatus(503)));
 
         HttpFedNowClient client = new HttpFedNowClient(wmInfo.getHttpBaseUrl(), 5);  // legacy constructor
-        Pacs002Message response = client.submitCreditTransfer(pacs008("E2E-NORE", "TXN-NORE"));
-
-        assertThat(response.getTransactionStatus()).isEqualTo(Pacs002Message.TransactionStatus.RJCT);
+        assertThatThrownBy(() -> client.submitCreditTransfer(pacs008("E2E-NORE", "TXN-NORE")))
+                .isInstanceOf(SubmissionOutcomeUnknownException.class);
         verify(1, postRequestedFor(urlPathEqualTo(TRANSFERS_PATH)));
     }
 
