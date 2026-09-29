@@ -1,0 +1,166 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ----------------------< io.openfednow:openfednow >----------------------
+[INFO] Building OpenFedNow 0.1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ openfednow ---
+[INFO] Copying 4 resources from src/main/resources to target/classes
+[INFO] Copying 16 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ openfednow ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 110 source files with javac [debug parameters release 17] to target/classes
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ openfednow ---
+[INFO] Copying 2 resources from src/test/resources to target/test-classes
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ openfednow ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 93 source files with javac [debug parameters release 17] to target/test-classes
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java:[82,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java:[82,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java:[82,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java:[82,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java:[82,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/gateway/OutboundPaymentIntegrationTest.java:[49,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/gateway/OutboundPaymentIntegrationTest.java:[49,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/gateway/OutboundPaymentIntegrationTest.java:[49,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/gateway/OutboundPaymentIntegrationTest.java:[49,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/gateway/OutboundPaymentIntegrationTest.java:[49,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/reliability/ReliablePaymentIntegrationTest.java:[31,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/reliability/ReliablePaymentIntegrationTest.java:[31,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/reliability/ReliablePaymentIntegrationTest.java:[31,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/reliability/ReliablePaymentIntegrationTest.java:[31,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/reliability/ReliablePaymentIntegrationTest.java:[31,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/shadowledger/BalanceSeedIntegrationTest.java:[30,48] org.springframework.boot.test.mock.mockito.SpyBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/shadowledger/BalanceSeedIntegrationTest.java:[30,48] org.springframework.boot.test.mock.mockito.SpyBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/shadowledger/BalanceSeedIntegrationTest.java:[30,48] org.springframework.boot.test.mock.mockito.SpyBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/shadowledger/BalanceSeedIntegrationTest.java:[30,48] org.springframework.boot.test.mock.mockito.SpyBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/shadowledger/BalanceSeedIntegrationTest.java:[30,48] org.springframework.boot.test.mock.mockito.SpyBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[INFO] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java: Some input files use or override a deprecated API.
+[INFO] /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java: Recompile with -Xlint:deprecation for details.
+[INFO] 
+[INFO] --- surefire:3.5.6:test (default-test) @ openfednow ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running io.openfednow.reliability.ReliablePaymentIntegrationTest
+08:09:40.627 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [io.openfednow.reliability.ReliablePaymentIntegrationTest]: ReliablePaymentIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+08:09:40.689 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration io.openfednow.OpenFedNowApplication for test class io.openfednow.reliability.ReliablePaymentIntegrationTest
+08:09:40.725 [main] INFO org.testcontainers.images.PullPolicy -- Image pull policy will be performed by: DefaultPullPolicy()
+08:09:40.727 [main] INFO org.testcontainers.utility.ImageNameSubstitutor -- Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::               (v3.5.16)
+
+2026-09-29T08:09:40.876-04:00 INFO  [testcontainers-lifecycle-0] org.testcontainers.DockerClientFactory [req=?,e2e=?,txn=?] Testcontainers version: 1.21.4
+2026-09-29T08:09:40.958-04:00 INFO  [testcontainers-lifecycle-0] o.t.d.DockerClientProviderStrategy [req=?,e2e=?,txn=?] Loaded org.testcontainers.dockerclient.UnixSocketClientProviderStrategy from ~/.testcontainers.properties, will try it first
+2026-09-29T08:09:41.050-04:00 INFO  [testcontainers-lifecycle-0] o.t.d.DockerClientProviderStrategy [req=?,e2e=?,txn=?] Found Docker environment with local Unix socket (unix:///var/run/docker.sock)
+2026-09-29T08:09:41.050-04:00 INFO  [testcontainers-lifecycle-0] org.testcontainers.DockerClientFactory [req=?,e2e=?,txn=?] Docker host IP address is localhost
+2026-09-29T08:09:41.059-04:00 INFO  [testcontainers-lifecycle-0] org.testcontainers.DockerClientFactory [req=?,e2e=?,txn=?] Connected to docker: 
+  Server Version: 29.7.2
+  API Version: 1.55
+  Operating System: Docker Desktop
+  Total Memory: 7933 MB
+  Labels: 
+    com.docker.desktop.address=unix:///Users/danielmori/Library/Containers/com.docker.docker/Data/docker-cli.sock
+2026-09-29T08:09:41.312-04:00 INFO  [testcontainers-lifecycle-0] tc.testcontainers/ryuk:0.12.0 [req=?,e2e=?,txn=?] Creating container for image: testcontainers/ryuk:0.12.0
+2026-09-29T08:09:41.341-04:00 INFO  [testcontainers-lifecycle-0] o.t.utility.RegistryAuthLocator [req=?,e2e=?,txn=?] Credential helper/store (docker-credential-desktop) does not have credentials for https://index.docker.io/v1/
+2026-09-29T08:09:41.392-04:00 INFO  [testcontainers-lifecycle-0] tc.testcontainers/ryuk:0.12.0 [req=?,e2e=?,txn=?] Container testcontainers/ryuk:0.12.0 is starting: 719f00e2449126fddbed9da783aaae94dd991eba1cdeff55761d570ee664b250
+2026-09-29T08:09:41.513-04:00 INFO  [testcontainers-lifecycle-0] tc.testcontainers/ryuk:0.12.0 [req=?,e2e=?,txn=?] Container testcontainers/ryuk:0.12.0 started in PT0.20081S
+2026-09-29T08:09:41.516-04:00 INFO  [testcontainers-lifecycle-0] o.t.utility.RyukResourceReaper [req=?,e2e=?,txn=?] Ryuk started - will monitor and terminate Testcontainers containers on JVM exit
+2026-09-29T08:09:41.516-04:00 INFO  [testcontainers-lifecycle-0] org.testcontainers.DockerClientFactory [req=?,e2e=?,txn=?] Checking the system...
+2026-09-29T08:09:41.516-04:00 INFO  [testcontainers-lifecycle-0] org.testcontainers.DockerClientFactory [req=?,e2e=?,txn=?] ✔︎ Docker server version should be at least 1.6.0
+2026-09-29T08:09:41.516-04:00 INFO  [testcontainers-lifecycle-0] tc.redis:7-alpine [req=?,e2e=?,txn=?] Creating container for image: redis:7-alpine
+2026-09-29T08:09:41.516-04:00 INFO  [testcontainers-lifecycle-1] tc.rabbitmq:3-management [req=?,e2e=?,txn=?] Creating container for image: rabbitmq:3-management
+2026-09-29T08:09:41.516-04:00 INFO  [testcontainers-lifecycle-2] tc.postgres:16-alpine [req=?,e2e=?,txn=?] Creating container for image: postgres:16-alpine
+2026-09-29T08:09:41.554-04:00 INFO  [testcontainers-lifecycle-1] tc.rabbitmq:3-management [req=?,e2e=?,txn=?] Container rabbitmq:3-management is starting: 38d2b0c25ae46958350e96866b1ad4f6a755d3b84ac9edb9a72fed115f347d56
+2026-09-29T08:09:41.567-04:00 INFO  [testcontainers-lifecycle-0] tc.redis:7-alpine [req=?,e2e=?,txn=?] Container redis:7-alpine is starting: 24130cec2f9e7b43a9864dd6668dc11ea012cef6b8e49520384e22f34d8d3bca
+2026-09-29T08:09:41.568-04:00 INFO  [testcontainers-lifecycle-2] tc.postgres:16-alpine [req=?,e2e=?,txn=?] Container postgres:16-alpine is starting: e080005ee27ee3d611194917011ac6b5f167c4f110c54899cfab4b1c7d657868
+2026-09-29T08:09:41.732-04:00 INFO  [testcontainers-lifecycle-0] tc.redis:7-alpine [req=?,e2e=?,txn=?] Container redis:7-alpine started in PT0.215697S
+2026-09-29T08:09:42.224-04:00 INFO  [testcontainers-lifecycle-2] tc.postgres:16-alpine [req=?,e2e=?,txn=?] Container postgres:16-alpine started in PT0.707239S
+2026-09-29T08:09:42.224-04:00 INFO  [testcontainers-lifecycle-2] tc.postgres:16-alpine [req=?,e2e=?,txn=?] Container is started (JDBC URL: jdbc:postgresql://localhost:53982/openfednow?loggerLevel=OFF)
+2026-09-29T08:09:45.308-04:00 INFO  [testcontainers-lifecycle-1] tc.rabbitmq:3-management [req=?,e2e=?,txn=?] Container rabbitmq:3-management started in PT3.791379S
+2026-09-29T08:09:45.319-04:00 INFO  [main] i.o.r.ReliablePaymentIntegrationTest [req=?,e2e=?,txn=?] Starting ReliablePaymentIntegrationTest using Java 17.0.20.1 with PID 91040 (started by danielmori in /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll)
+2026-09-29T08:09:45.319-04:00 DEBUG [main] i.o.r.ReliablePaymentIntegrationTest [req=?,e2e=?,txn=?] Running with Spring Boot v3.5.16, Spring v6.2.19
+2026-09-29T08:09:45.319-04:00 INFO  [main] i.o.r.ReliablePaymentIntegrationTest [req=?,e2e=?,txn=?] No active profile set, falling back to 1 default profile: "default"
+2026-09-29T08:09:45.719-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-29T08:09:45.720-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-09-29T08:09:45.735-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Finished Spring Data repository scanning in 10 ms. Found 0 JPA repository interfaces.
+2026-09-29T08:09:45.741-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Multiple Spring Data modules found, entering strict repository configuration mode
+2026-09-29T08:09:45.741-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-09-29T08:09:45.747-04:00 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate [req=?,e2e=?,txn=?] Finished Spring Data repository scanning in 3 ms. Found 0 Redis repository interfaces.
+2026-09-29T08:09:46.483-04:00 INFO  [main] org.flywaydb.core.FlywayExecutor [req=?,e2e=?,txn=?] Database: jdbc:postgresql://localhost:53982/openfednow?loggerLevel=OFF (PostgreSQL 16.15)
+2026-09-29T08:09:46.513-04:00 INFO  [main] o.f.c.i.s.JdbcTableSchemaHistory [req=?,e2e=?,txn=?] Schema history table "public"."flyway_schema_history" does not exist yet
+2026-09-29T08:09:46.516-04:00 INFO  [main] o.f.core.internal.command.DbValidate [req=?,e2e=?,txn=?] Successfully validated 12 migrations (execution time 00:00.015s)
+2026-09-29T08:09:46.528-04:00 INFO  [main] o.f.c.i.s.JdbcTableSchemaHistory [req=?,e2e=?,txn=?] Creating Schema History table "public"."flyway_schema_history" ...
+2026-09-29T08:09:46.574-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Current version of schema "public": << Empty Schema >>
+2026-09-29T08:09:46.581-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "1 - create shadow ledger transaction log"
+2026-09-29T08:09:46.604-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "2 - create saga state"
+2026-09-29T08:09:46.619-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "3 - create idempotency keys"
+2026-09-29T08:09:46.631-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "4 - create reconciliation run"
+2026-09-29T08:09:46.642-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "5 - add source rail to saga state"
+2026-09-29T08:09:46.650-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "6 - create admin audit log"
+2026-09-29T08:09:46.658-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "7 - add request id correlation"
+2026-09-29T08:09:46.666-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "8 - outbound submission uncertainty"
+2026-09-29T08:09:46.675-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "9 - create reliable payment reference"
+2026-09-29T08:09:46.690-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "10 - synthetic async core ack"
+2026-09-29T08:09:46.699-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "11 - reliability inquiry observability"
+2026-09-29T08:09:46.706-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Migrating schema "public" to version "12 - synthetic core availability"
+2026-09-29T08:09:46.712-04:00 INFO  [main] o.f.core.internal.command.DbMigrate [req=?,e2e=?,txn=?] Successfully applied 12 migrations to schema "public", now at version v12 (execution time 00:00.056s)
+2026-09-29T08:09:46.870-04:00 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo [req=?,e2e=?,txn=?] No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-09-29T08:09:47.161-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=?,txn=?] Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-09-29T08:09:47.774-04:00 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [req=?,e2e=?,txn=?] Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2026-09-29T08:09:48.351-04:00 INFO  [main] i.o.r.ReliablePaymentIntegrationTest [req=?,e2e=?,txn=?] Started ReliablePaymentIntegrationTest in 7.604 seconds (process running for 7.967)
+2026-09-29T08:09:48.355-04:00 DEBUG [scheduling-1] i.o.shadowledger.AvailabilityBridge [req=?,e2e=?,txn=?] Core availability poll: mode=ONLINE
+2026-09-29T08:09:48.359-04:00 INFO  [main] i.o.processing.saga.SagaRecoveryService [req=?,e2e=?,txn=?] Saga recovery: no in-flight sagas found at startup
+2026-09-29T08:09:48.359-04:00 INFO  [main] i.o.shadowledger.BalanceSeedService [req=?,e2e=?,txn=?] Shadow Ledger startup seed: no accounts configured (openfednow.shadow-ledger.seed-accounts is empty)
+2026-09-29T08:09:48.481-04:00 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean [req=?,e2e=?,txn=?] Closing JPA EntityManagerFactory for persistence unit 'default'
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 7.884 s <<< FAILURE! -- in io.openfednow.reliability.ReliablePaymentIntegrationTest
+[ERROR] io.openfednow.reliability.ReliablePaymentIntegrationTest.lostAcceptanceStaysUnknownUntilInquiryAndNeverSubmitsAgain -- Time elapsed: 0.108 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+expected: 87500L
+ but was: 75000L
+	at io.openfednow.reliability.ReliablePaymentIntegrationTest.lostAcceptanceStaysUnknownUntilInquiryAndNeverSubmitsAgain(ReliablePaymentIntegrationTest.java:84)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+[INFO] 
+[INFO] Results:
+[INFO] 
+[ERROR] Failures: 
+[ERROR]   ReliablePaymentIntegrationTest.lostAcceptanceStaysUnknownUntilInquiryAndNeverSubmitsAgain:84 
+expected: 87500L
+ but was: 75000L
+[INFO] 
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  11.471 s
+[INFO] Finished at: 2026-09-29T08:09:48-04:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.6:test (default-test) on project openfednow: There are test failures.
+[ERROR] 
+[ERROR] See /private/var/folders/d0/fmsh4v2s6xv2pbkqxr6y4hbr0000gn/T/openfednow-duplicate-event-negative-control-gk9ivnll/target/surefire-reports for the individual test results.
+[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

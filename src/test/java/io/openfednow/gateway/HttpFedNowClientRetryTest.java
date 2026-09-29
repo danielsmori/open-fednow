@@ -6,6 +6,7 @@ import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
 import io.openfednow.iso20022.Pacs002Message;
 import io.openfednow.iso20022.Pacs008Message;
+import io.openfednow.iso20022.Pacs004Message;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
@@ -137,6 +138,27 @@ class HttpFedNowClientRetryTest {
 
         assertThat(response.getTransactionStatus()).isEqualTo(Pacs002Message.TransactionStatus.ACSC);
         verify(1, postRequestedFor(urlPathEqualTo(TRANSFERS_PATH)));
+    }
+
+    @Test
+    void lostReturnReplyIsUnknownAndNeverRetried(WireMockRuntimeInfo wmInfo) {
+        stubFor(post(urlPathEqualTo(HttpFedNowClient.RETURNS_PATH))
+                .willReturn(aResponse().withStatus(200).withFixedDelay(1200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(acscJson("E2E-RETURN", "TXN-RETURN"))));
+        Pacs004Message paymentReturn = Pacs004Message.builder()
+                .messageId("MSG-RETURN").creationDateTime(OffsetDateTime.now())
+                .returnId("RETURN-001").originalMessageId("MSG-ORIGINAL")
+                .originalEndToEndId("E2E-RETURN")
+                .originalTransactionId("TXN-RETURN")
+                .returnedAmount(new BigDecimal("25.00"))
+                .returnedAmountCurrency("USD").returnReasonCode("AC04")
+                .returningAgentRoutingNumber("021000021")
+                .receivingAgentRoutingNumber("026009593").build();
+        HttpFedNowClient client = new HttpFedNowClient(wmInfo.getHttpBaseUrl(), 1, retryOf3());
+        assertThatThrownBy(() -> client.submitReturn(paymentReturn))
+                .isInstanceOf(SubmissionOutcomeUnknownException.class);
+        verify(1, postRequestedFor(urlPathEqualTo(HttpFedNowClient.RETURNS_PATH)));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

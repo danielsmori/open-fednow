@@ -4,7 +4,7 @@
 
 # OpenFedNow — Legacy Core to U.S. Instant Payment Rails
 
-**Open-source middleware connecting legacy core banking systems to U.S. instant payment rails — FedNow and RTP — through a reusable, rail-agnostic core framework.**
+**Open-source reference integration for studying legacy-core and U.S. instant-payment failure handling with synthetic FedNow and RTP fixtures.**
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Sandbox%20%2F%20Reference%20Implementation-blue)]()
@@ -14,9 +14,9 @@
 
 OpenFedNow explores integration between legacy core banking systems and instant payment workflows. It is a reference implementation with synthetic tests; live compatibility and operational benefit remain to be evaluated.
 
-> **Evaluation scope: synthetic FedNow routing.** Outbound RTP is disabled; screening failures reject by default; downtime sends default to disabled. An unknown outbound rail outcome now keeps the reservation and requires review; automated rail status verification remains unfinished. See the [capability matrix](docs/capability-matrix.md) and [reproducible evaluation](docs/evaluation.md).
+> **Evaluation scope: synthetic FedNow routing.** Outbound RTP is disabled; screening failures reject by default; downtime sends default to disabled. On the legacy path, an unknown outbound rail outcome keeps the reservation and requires review. The separate SQL reliability path adds synthetic status inquiry and recovery; live status authority remains unverified. See the [capability matrix](docs/capability-matrix.md) and [reliability evaluation](docs/reliability/evaluation-report.md).
 
-> **Sandbox / reference implementation.** The reusable core framework — five-layer architecture, dual-rail Layer 1 (FedNow + RTP), all three vendor adapters, saga lifecycle (recovery / timeout monitor / compensation retry), idempotency, reconciliation, fraud screening, cancellation handling, rate limiting, admin audit, and the production-hardening pass (transactions, headers, graceful shutdown, retries, dependency scanning) — is implemented and tested across 500+ unit and integration tests. Live rail connectivity remains credential-, certification-, and institution-dependent. See [docs/known-limitations.md](docs/known-limitations.md) and the [Production Boundaries](#production-boundaries) section for what remains.
+> **Sandbox / reference implementation.** Routing, vendor-shaped adapters, saga lifecycle, idempotency, reconciliation, screening, cancellation, rate limiting, and admin audit have synthetic test coverage. Passing tests do not establish atomic money movement across Redis and SQL, live rail connectivity, vendor compatibility, or production readiness. See [reliability scope](docs/reliability/scope.md), [docs/known-limitations.md](docs/known-limitations.md), and [Production Boundaries](#production-boundaries).
 
 ---
 
@@ -37,10 +37,10 @@ OpenFedNow explores integration between legacy core banking systems and instant 
 | Reconciliation — replay and sync after core returns online | ✅ Implemented + tested |
 | Reconciliation pagination — keyset-paginated account scan for large institutions | ✅ Configurable batch size (default 500); memory stays flat regardless of pending-account count |
 | Saga orchestration — compensation on core rejection | ✅ Implemented + tested |
-| Idempotency — Redis + PostgreSQL dual-write, 48h window | ✅ Implemented + tested |
+| Idempotency — Redis + PostgreSQL dual-write, 48h window | ✅ Implemented + tested in legacy sandbox; cross-store effect atomicity unproven |
 | Concurrent overdraft prevention under load | ✅ Tested (race-condition suite) |
-| Send-side (outbound) payment flow | ✅ Implemented |
-| Payment returns (pacs.004 outbound) | ✅ `POST /fednow/return` with retry + JWS signing; sandbox and HTTP clients implement `FedNowClient.submitReturn` |
+| Send-side (outbound) payment flow | Synthetic reference slice implemented; legacy gateway disabled by default; no live rail/core authorization established |
+| Payment returns (pacs.004 outbound) | Synthetic client shape exists, but `/fednow/return` is disabled by default; no durable return outcome lifecycle is established. HTTP return submission makes one attempt and propagates uncertainty. |
 | Admin auth — HTTP Basic on `/admin/*` | ✅ Implemented as reference configuration |
 | Admin audit log — every `/admin/**` access recorded to PostgreSQL | ✅ Implemented; both GRANTED and DENIED captured, surfaced via `GET /admin/audit-log`. Sensitive query parameters (`token`, `apikey`, `password`, …) are rewritten to `REDACTED` before persistence by `PiiRedactor` |
 | PII redaction in structured logs | ✅ Account numbers masked to last 4 in `MessageRouter` insufficient-funds log, `ShadowLedger` / `ReconciliationService` discrepancy log; single policy source in `io.openfednow.security.pii.PiiRedactor` |
@@ -62,14 +62,14 @@ OpenFedNow explores integration between legacy core banking systems and instant 
 | HTTP security headers — HSTS, X-Content-Type-Options, X-Frame-Options, Cache-Control | ✅ Configured in `SecurityConfig`; verified end-to-end via `SecurityHeadersTest` |
 | CORS — deny-by-default for server-to-server API | ✅ Explicit empty `CorsConfigurationSource`; institutions registering a browser-origin allow-list override the bean |
 | Graceful shutdown — drain in-flight requests on SIGTERM | ✅ `server.shutdown=graceful` + 30s drain window; Helm `terminationGracePeriodSeconds: 60` |
-| HikariCP tuning — prod-sized connection pool | ✅ Pool 50 / min-idle 10 / 5s connection timeout — sized for FedNow throughput; tunable via env |
-| Outbound FedNow transfer uncertainty | ✅ One submission attempt; missing status keeps funds reserved and exposes a saga for review. Return submissions retain a separate retry policy. |
+| HikariCP tuning — prod-sized connection pool | ✅ Configured pool 50 / min-idle 10 / 5s connection timeout; no capacity benchmark or live sizing validation |
+| Outbound FedNow transfer uncertainty | ✅ Legacy credit transfer attempts once and quarantines a missing status; the SQL reference slice adds durable holds and inquiry. Return submissions attempt once but have no durable lifecycle, so the return gateway stays disabled. |
 | Fraud screening timeout — hard cap on port calls | ✅ `CompletableFuture` deadline (default 1500ms); rejects on timeout / exception by default |
 | Atomic velocity counter — single Redis Lua script | ✅ `INCR` + `EXPIRE` in one round-trip; sliding window matching the documented semantic |
 | Reconcile concurrency guard — same-JVM serialization | ✅ `ReentrantLock` with tryLock; second concurrent call returns "Skipped" report rather than racing |
 | Saga source-rail tracking — dual-rail dispatch foundation | ✅ `source_rail` column on `saga_state` (V5); both gateways thread `Rail` through `MessageRouter` |
 | Dependency scanning — Dependabot + Trivy | ✅ Weekly Maven + Actions updates; Trivy scan fails the build on HIGH/CRITICAL findings |
-| CI — unit + integration test jobs | ✅ GitHub Actions workflow runs unit tests + Testcontainers-backed integration tests on every PR |
+| CI — unit + integration test jobs | ✅ Workflow runs unit and Testcontainers-backed integration jobs on PRs targeting `main`; the consolidated reliability slice is proposed in [PR #87](https://github.com/danielsmori/open-fednow/pull/87) and is not yet on `main` |
 | Dual-rail architecture (FedNow + RTP) | ✅ ISO 20022 foundation; Layer 1 varies, Layers 2–4 rail-agnostic; source rail persisted on `saga_state` |
 | RTP Layer 1 — inbound XML, outbound XML, TCH cert validation hook, sandbox + HTTP client | Inbound reference routing and transport utilities implemented; `/rtp/send` disabled pending financial-control parity |
 | Optional Kafka event bus — `PaymentEventPublisher`, 6 event types | ✅ Implemented (disabled by default; no Kafka required) |
@@ -143,7 +143,7 @@ This creates four fundamental incompatibilities:
 
 - **Processing model mismatch** — Legacy systems process in batches; FedNow requires sub-20-second event-driven responses
 - **Availability mismatch** — Legacy systems have maintenance windows; FedNow operates 24/7/365
-- **Protocol mismatch** — Legacy systems use proprietary APIs; FedNow uses ISO 20022 REST/JSON messaging
+- **Protocol mismatch** — Legacy systems use institution- and vendor-specific interfaces; FedNow messages use ISO 20022 profiles. The project's JSON client is a synthetic transport, not a verified FedNow wire format
 - **Concurrency mismatch** — Legacy systems were not designed for high-volume simultaneous transaction loads
 
 The layers below explore these integration concerns. Whether they address a particular institution's constraints requires a scoped evaluation against its actual interfaces and controls.
@@ -152,22 +152,13 @@ The layers below explore these integration concerns. Whether they address a part
 
 ## The Solution
 
-OpenFedNow is a five-layer middleware framework that resolves each of these incompatibilities through architectural patterns drawn from production-scale instant payment integration experience.
+OpenFedNow is a five-layer reference framework that explores these incompatibilities. Institution-specific resolution remains unverified.
 
 The framework separates shared routing and ledger code from vendor adapters. Source-line proportions do not measure integration effort, cost savings, institution coverage, or deployment readiness; those require measured implementation results.
 
-### Core Banking Platform Coverage
+### Core banking adapters
 
-| Vendor | U.S. Bank Market Share | U.S. Credit Union Share |
-|--------|------------------------|------------------------|
-| Fiserv (DNA, Precision, Premier, Cleartouch) | 42% | 31% |
-| Jack Henry (SilverLake, Symitar, CIF 20/20) | 21% | 12% |
-| FIS (Horizon, IBS) | 9% | — |
-| **Big Three combined** | **>70%** | |
-
-*Source: Federal Reserve Bank of Kansas City, Market Structure of Core Banking Services Providers, March 2024.*
-
-These historical vendor market shares describe vendor presence, not banks unable to send payments or banks compatible with this project. The adapters are reference implementations; institution-specific compatibility remains unverified.
+Fiserv-, FIS-, and Jack Henry-shaped adapters illustrate how the shared interface can be implemented and are tested locally with mocks/WireMock. The repository has not verified any product-specific vendor interface, institution compatibility, or market coverage. Historical vendor share estimates cannot establish the number of banks served by these adapters or the impact of this software.
 
 ---
 
@@ -191,7 +182,7 @@ curl http://localhost:8080/fednow/health
 
 Then either:
 
-**Option A — browser console** (recommended for a first pass): open <http://localhost:8080/demo/> and click **Start live demo →**. The console has a **▶ Guided tour** button that walks through 9 curated scenarios with captions explaining each — designed to record cleanly in ~65 seconds.
+**Option A — browser console:** open <http://localhost:8080/demo/> for the synthetic guided tour. Its legacy outbound and return examples require explicit sandbox-only flags (`LEGACY_OUTBOUND_SANDBOX_ENABLED=true` and `LEGACY_RETURN_SANDBOX_ENABLED=true`); leave those off outside a local demo. The console's “Start live demo” label refers to a local interactive demonstration, not a live rail.
 
 **Option B — shell script** for a scripted end-to-end check:
 
@@ -268,7 +259,7 @@ curl -s -X POST http://localhost:8080/fednow/receive \
 {"transactionStatus":"ACSP","originalEndToEndId":"E2E-DEMO-003","originalTransactionId":"TXN-DEMO-003"}
 ```
 
-`ACSP` — AcceptedSettlementInProcess. FedNow received a response within its 20-second window. The `PEND_` prefix works identically. For the full maintenance-window path (core offline → ACSP → RabbitMQ queue → reconcile), restart the app with `OPENFEDNOW_SANDBOX_CORE_AVAILABLE=false mvn spring-boot:run`.
+`ACSP` is the local fixture's AcceptedSettlementInProcess-shaped response. It does not establish a live FedNow status or timing result. The `PEND_` prefix works identically in the fixture. For the maintenance-window experiment, restart the app with `OPENFEDNOW_SANDBOX_CORE_AVAILABLE=false mvn spring-boot:run`.
 
 ### 4. Trigger reconciliation
 
@@ -291,7 +282,7 @@ curl -s -u admin:changeme -X POST http://localhost:8080/admin/reconcile
 
 ---
 
-## What a maintenance window looks like in production
+## Synthetic maintenance-window illustration
 
 Annotated log output from the full cycle: core goes offline, payment arrives, core returns, reconciliation runs.
 
@@ -305,7 +296,7 @@ INFO  [http-nio-8080-exec-2] MessageRouter  Inbound credit transfer received amo
 INFO  [http-nio-8080-exec-2] AvailabilityBridge  Bridge mode active — queuing inbound payment e2e=E2E-MAINT-001
 INFO  [http-nio-8080-exec-2] AvailabilityBridge  Transaction queued for core replay transactionId=E2E-MAINT-001
 INFO  [http-nio-8080-exec-2] MessageRouter  Inbound credit transfer status=ACSP rejectCode=null
-# → pacs.002 ACSP returned to FedNow in 6ms. FedNow satisfied.
+# → local synthetic ACSP returned in 6ms; this does not establish a valid live-rail response.
 
 # 02:03 — RabbitMQ queue depth: 1
 #   maintenance-window-transactions: messages=1, consumers=0
@@ -352,7 +343,7 @@ The test suite uses Testcontainers (PostgreSQL + Redis + RabbitMQ) for all integ
 
 ## The Shadow Ledger in Action
 
-The Shadow Ledger is what makes 24/7 FedNow participation possible with a legacy core that has nightly maintenance windows. It's the most defensible piece of this architecture, so here's what it actually does.
+The Shadow Ledger is a synthetic bridge experiment for a legacy core maintenance window. Its cached balance cannot prove cross-channel availability, so it does not establish 24/7 FedNow participation.
 
 ### The problem it solves
 
@@ -360,7 +351,7 @@ The Shadow Ledger is what makes 24/7 FedNow participation possible with a legacy
 Legacy core: offline 2am–6am for batch processing
 FedNow:      $300 payment arrives at 3am
 Without Shadow Ledger: institution doesn't respond → FedNow marks you unavailable
-With Shadow Ledger:    institution responds ACSP in under 1 second → FedNow happy
+With Shadow Ledger:    local fixture emits ACSP → live response validity unverified
 ```
 
 ### Concrete behavior, step by step
@@ -444,8 +435,7 @@ $ curl -s -u guest:guest \
 queued: 1
 ```
 
-`pacs.002 ACSP` is returned to FedNow immediately — well within the 20-second window.
-The core never saw this request. FedNow has no idea the core was offline.
+The local fixture emits an ACSP-shaped status immediately while the core is offline. Its suitability for a live FedNow flow is unverified; the public procedures distinguish settlement from receiver posting.
 
 ---
 
@@ -547,16 +537,16 @@ The framework is structured as five independent layers. Each layer addresses a s
 `FedNowGateway` routes sends through `MessageRouter`, which performs screening, balance checks, reservations, and saga processing. Both gateways route inbound messages through the shared router and record the source `Rail`. The former `/rtp/send` implementation called `RtpClient` directly, bypassing those financial controls; it now returns HTTP 503 without submission. RTP parsing, serialization, and HTTP utilities remain available for synthetic tests and return paths. Configuring a URL or trust store does not establish working or certified rail connectivity.
 
 **Layer 2 — Anti-Corruption Layer / Core Banking Adapter**
-The architectural core of the framework. Translates between the modern ISO 20022 world (REST APIs, JSON, UTF-8) and the proprietary world of each core banking vendor (vendor-specific APIs, proprietary formats). Also manages the synchronous-to-asynchronous bridge: FedNow requires synchronous sub-20-second responses, but legacy core processing is inherently asynchronous. This layer decouples the two models. The vendor-specific adapter is the only component that varies between institutions (~13% of total scope).
+The framework translates between ISO 20022-shaped models and vendor-shaped mock interfaces. Actual vendor interfaces, timing, and integration effort require institution-specific review; source-line proportions do not measure that effort.
 
 **Layer 3 — Real-Time Processing Engine**
 Manages transaction orchestration and state across distributed systems. Key components: Saga pattern implementation for distributed transaction management (with compensation logic for rollback across multiple systems), idempotency key management to prevent duplicate processing, distributed cache for real-time balance availability, and circuit breakers to prevent cascade failures.
 
 **Layer 4 — Shadow Ledger & 24/7 Availability Bridge**
-Resolves the hardest operational problem: legacy core systems go offline for maintenance while instant payment rails never do. The Shadow Ledger maintains a real-time view of available balances independently of the core system. Transactions arriving during core downtime are queued via async messaging and processed against the Shadow Ledger. A reconciliation service ensures the core ledger remains authoritative when it returns online. From the payment network's perspective, the institution is always available.
+Explores a maintenance-window queue and a cached balance. The Redis balance and SQL audit record do not commit together, and external channels can spend funds without updating this cache. Receive-side provisional responses and send-side availability require additional institution and rail validation.
 
 **Layer 5 — Legacy Core Banking**
-The existing core banking infrastructure — unchanged. A deliberate architectural principle: the framework works around legacy systems, never requiring their transformation. This protects the stability of core banking operations while enabling full FedNow participation.
+The reference adapter boundary leaves an institution's core unchanged. Whether a real core can provide enforceable reservations, lookup, and deduplication is a prerequisite for safe sends, not a property established by this repository.
 
 ---
 
@@ -573,11 +563,7 @@ FedNow uses the ISO 20022 international messaging standard — the same standard
 
 ## Architectural Background
 
-The five-layer architecture reflects a production-informed methodology based on experience with Santander Brazil's PIX integration (2020–2021). PIX launched on November 16, 2020 under Central Bank of Brazil mandate, with the national network reaching 175 million registered users and a single-day record of 313.3 million transactions across all participating institutions.
-
-The core architectural problem — connecting legacy batch-processing systems to a 24/7 real-time payment network under ISO 20022 — represents the same class of legacy-to-real-time integration challenge across PIX, FedNow, and RTP, though each rail has its own network, certification, message-envelope, and regulatory requirements. The methodology underlying the Anti-Corruption Layer, Shadow Ledger, and Saga orchestration approach was applied in a production-scale instant-payment environment and is adapted here to U.S.-specific rails, vendors, credentials, and certification requirements.
-
-The Santander PIX platform is proprietary to Santander Brazil. OpenFedNow is a new, independent implementation built from the ground up for the U.S. FedNow/RTP context, with Fiserv, FIS, and Jack Henry adapters replacing the original mainframe adapters.
+PIX, FedNow, and RTP all raise legacy-to-real-time integration questions, but their rules, messages, access, and controls differ. This repository is an independent synthetic implementation; it does not disclose or verify any person's work on a proprietary PIX platform.
 
 ---
 
@@ -692,7 +678,7 @@ openfednow/
 
 The repository contains reference implementations and synthetic tests. Remaining work includes internal correctness gaps as well as external onboarding dependencies:
 
-- **Submission uncertainty:** HTTP failures and lost responses leave an `OUTCOME_UNKNOWN` saga and retain reserved funds. The sender gets HTTP 503 and must not blindly retry; the same end-to-end ID cannot submit again. Automated rail status queries, verified resolution, and late-status handling remain unfinished.
+- **Submission uncertainty:** the new `/reference/v1/payments` synthetic path persists scoped ownership, a hold and attempt intent in SQL, exposes pending lookup, and can reconcile against its separate simulator. The legacy `/fednow/send` and `/fednow/return` effects are disabled by default because their cross-store/core and return controls remain unsafe. An explicit non-production evaluation flag can instead route `/fednow/send` through the same SQL reliability service as `/reference/v1/payments`; an independent sandbox-only flag retains the old demonstration. None of these paths maps to live FedNow without restricted specifications and institution controls.
 - **Outbound RTP:** disabled until screening, reservations, idempotency, and reconciliation are validated on its actual routing path.
 - **Rail connectivity:** actual transports, message profiles, credentials, certification, and institution-specific operational controls require verification. A configured HTTP client is not certification.
 - **Vendor adapters:** mock-tested request construction is not vendor verification or confirmed compatibility.
@@ -708,31 +694,30 @@ See [docs/known-limitations.md](docs/known-limitations.md) for the full analysis
 
 - **Cross-store consistency remains unverified.** Redis WATCH detects changes by other clients, but Redis balance updates and SQL audit writes do not form one atomic transaction. See [known limitations](docs/known-limitations.md).
 - **Admin credentials default to `admin` / `changeme` in dev / sandbox.** A `@PostConstruct` check in `SecurityConfig` refuses to start the application under `spring.profiles.active=prod` if `ADMIN_USERNAME` / `ADMIN_PASSWORD` are still at their defaults, so a misconfigured production deployment fails loud at boot rather than silently shipping with default credentials.
-- **Post-reconciliation reversals are customer-visible.** If the core rejects a provisionally accepted transaction, a pacs.004 return goes back to FedNow. The sender's institution sees a credit followed by a return — see [ADR-0003](docs/adr/0003-provisional-acceptance-acsp.md).
+- **Post-reconciliation returns remain an unverified design.** The sandbox models a return after a provisionally accepted transaction, but the deployed/live effect and legal or customer-visible outcome have not been established. The return gateway is disabled by default; see [ADR-0003](docs/adr/0003-provisional-acceptance-acsp.md).
 - **Outbound camt.056 not yet implemented.** Inbound cancellation handling is complete (camt.056 → camt.029 with state-keyed decision matrix). Initiating a cancellation against our own outbound payment is tracked as future work.
 
 ---
 
 ## Roadmap
 
-**Phase 1 — Core Framework ✅ Complete**
+**Phase 1 — Core reference framework implemented**
 - Five-layer architecture: Shadow Ledger, SyncAsyncBridge, Saga orchestration, idempotency, reconciliation
 - ISO 20022 message models — pacs.008 / pacs.002 / pacs.004 / camt.056 / camt.029
 - `MockVendorAdapter` + `CoreBankingAdapterContractTest` baseline; sandbox scenario routing
 
-**Phase 2 — Fiserv + FIS Adapters ✅ Complete**
-- Fiserv DNA / Precision / Premier / Cleartouch adapter (42% of U.S. banks)
-- FIS Horizon / IBS adapter (9% of U.S. banks)
+**Phase 2 — Fiserv + FIS reference adapters implemented; vendor validation open**
+- Fiserv and FIS reference adapter request/response shapes, tested locally with mocks; institution-specific products and compatibility remain unverified
 
-**Phase 3 — Jack Henry Adapter (reference implementation)**
-- Jack Henry SilverLake / Symitar / CIF 20/20 adapter via jXchange SOAP (21% of U.S. banks)
-- Three reference vendor adapters implemented: Fiserv + FIS + Jack Henry collectively serve over 70% of U.S. banks per KC Fed data; credit union coverage varies by vendor and remains institution-specific
+**Phase 3 — Jack Henry reference adapter implemented; vendor validation open**
+- Jack Henry jXchange-shaped reference SOAP adapter, locally tested; product-specific compatibility remains unverified
+- Three vendor-shaped reference adapters implemented; the repo does not establish coverage of any percentage of U.S. institutions
 
-**Phase 3b — RTP Layer 1 ✅ Complete**
+**Phase 3b — RTP reference transport utilities implemented; live validation open**
 - RTP reference transport utilities (outbound gateway initiation disabled): `RtpXmlParser`, `RtpXmlSerializer`, `RtpClient` with sandbox + HTTP implementations, TCH certificate-validation hook
 - `RtpGateway` inbound XML and outbound send paths wired; rail-agnostic Layers 2–4 ([ADR-0005](docs/adr/0005-dual-rail-architecture-fednow-rtp.md))
 
-**Phase 4 — Operational Tooling ✅ Complete**
+**Phase 4 — Sandbox operational tooling implemented; institution validation open**
 - Saga lifecycle: source-rail tracking, restart-time recovery, timeout monitor with `XPIR` compensation, compensation retry for failed reversals
 - Admin endpoints: saga state queries, account balance views, reconciliation history, audit log; all under HTTP Basic + `ADMIN` role
 - Admin access auditing with retention sweep; idempotency TTL cleanup; balance seeding from core on startup
@@ -741,19 +726,19 @@ See [docs/known-limitations.md](docs/known-limitations.md) for the full analysis
 - Per-client rate limiting on `/fednow/**` and `/rtp/**`; reconciliation pagination for large institutions
 - Event schema versioning ([ADR-0006](docs/adr/0006-event-schema-versioning.md))
 
-**Phase 5 — Production Hardening ✅ Complete**
+**Phase 5 — Reference hardening controls implemented; production validation open**
 - Transactional boundaries on multi-statement writes; idempotent Shadow Ledger reversals; atomic Lua velocity counter; same-JVM reconcile concurrency guard
 - HSTS, deny-by-default CORS, default-credential startup guard in prod profile
-- Graceful shutdown with bounded drain window; HikariCP pool sizing for FedNow throughput
+- Graceful shutdown with bounded drain window; configurable HikariCP pool (no FedNow capacity benchmark)
 - Outbound FedNow credit transfers make one HTTP attempt and quarantine unknown outcomes; hard timeout on `FraudScreeningPort` calls (fail-closed by default; explicit fail-open option)
 - Dependabot + Trivy workflow; GitHub Actions CI with both unit and integration test jobs
 
-**Phase 6 — Live-FedNow Enablement ✅ Complete**
+**Phase 6 — Reference signing components implemented; live profile unverified**
 - RS256 detached JWS message signing implemented per RFC 7515 + RFC 7797 ([ADR-0009](docs/adr/0009-fednow-jws-message-signing.md))
 - Outbound: `FedNowJwsSigner` + RestTemplate interceptor attaches `X-JWS-Signature` on every submission
 - Inbound: `JwsInboundVerificationFilter` verifies FedNow-signed responses, buffers body for the downstream controller
 - Opt-in via `openfednow.fednow.signing.enabled=true`; sandbox / demo flow unchanged
-- With this, the only remaining requirements for live FedNow are institution-onboarding artifacts (PKI certificates, endpoint URL, formal certification)
+- Live mapping also requires applicable restricted message and transport specifications, status authority verification, inquiry behavior, institutional controls, and certification; a certificate and URL alone are insufficient.
 
 **Open work**
 - Live FedNow / RTP connectivity (institutional credentials — see Production Boundaries)

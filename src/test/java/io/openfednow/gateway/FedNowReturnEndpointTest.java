@@ -51,7 +51,7 @@ class FedNowReturnEndpointTest {
     }
 
     @Test
-    void validReturnMessageIsForwardedToClient() throws Exception {
+    void validReturnMessageIsDisabledByDefault() throws Exception {
         Pacs002Message ack = Pacs002Message.builder()
                 .messageId("FEDNOW-RET-ACK-001")
                 .originalEndToEndId("E2E-ORIG-1")
@@ -64,15 +64,13 @@ class FedNowReturnEndpointTest {
         mockMvc.perform(post("/fednow/return")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(validReturn())))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.transactionStatus").value("ACSC"))
-                .andExpect(jsonPath("$.originalEndToEndId").value("E2E-ORIG-1"));
+                .andExpect(status().isServiceUnavailable());
 
-        verify(fedNowClient, times(1)).submitReturn(any(Pacs004Message.class));
+        verify(fedNowClient, times(0)).submitReturn(any(Pacs004Message.class));
     }
 
     @Test
-    void rejectionResponseFromFedNowIsPassedThrough() throws Exception {
+    void rejectionResponseCannotBypassDefaultGuard() throws Exception {
         Pacs002Message rjct = Pacs002Message.rejected(
                 "E2E-ORIG-2", "TXN-ORIG-2", "NOOR", "Original transaction not found at FedNow");
         when(fedNowClient.submitReturn(any(Pacs004Message.class))).thenReturn(rjct);
@@ -80,9 +78,7 @@ class FedNowReturnEndpointTest {
         mockMvc.perform(post("/fednow/return")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(validReturn())))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.transactionStatus").value("RJCT"))
-                .andExpect(jsonPath("$.rejectReasonCode").value("NOOR"));
+                .andExpect(status().isServiceUnavailable());
     }
 
     @Test

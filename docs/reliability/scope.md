@@ -1,0 +1,11 @@
+# Reliability evaluation scope
+
+Reviewed source: Federal Reserve Financial Services, *FedNow Service Operating Procedures*, version 3.6, effective April 28, 2026. The [official operating-circulars index](https://www.frbservices.org/resources/rules-regulations/operating-circulars/) listed this version on September 28, 2026. The operating procedures are public rules, not an implementation or transport specification. Restricted message, security, institution, and vendor specifications were unavailable for this work.
+
+OpenFedNow is a synthetic reference integration. Its JSON `/transfers` client, in-memory rail, mock core adapters, and tests do not establish live FedNow connectivity, participant certification, vendor compatibility, or production safety. Outbound RTP remains disabled. Bridge-mode outbound sends are disabled by default. An ACSP emitted for inbound bridge processing is an application experiment and must not be represented as a verified FedNow provisional response; the public procedures distinguish service settlement from receiver posting.
+
+The target audience is engineers evaluating failure handling and adapting a scenario contract to their own controlled test environments. A scenario pass means the specified observable invariant held for the tested source, fixture, schedule, and dependencies. It does not establish reliability in untested schedules or financial institutions.
+
+The older outbound route retains an unresolved cross-store boundary: the Redis balance mutation and SQL saga/audit writes cannot commit atomically. A cached balance cannot authorize a send safely when other channels may debit the core independently. Its old gateway send and return effects are disabled by default. An explicit non-production bridge can route `/fednow/send` through the same SQL reliability service for external evaluation; it does not connect the service to an institution core or live rail. The new `/reference/v1/payments` path uses synthetic SQL-authoritative accounts with an explicit exclusive-channel reservation fixture; it is not an institution core adapter. A real send must fail closed until that capability and the live rail mapping are established.
+
+No live-network result, bank adoption, economic benefit, or personal contribution is asserted here.

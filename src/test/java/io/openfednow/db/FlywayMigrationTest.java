@@ -68,13 +68,13 @@ class FlywayMigrationTest {
     }
 
     @Test
-    void exactlyEightMigrationsArePresent() {
+    void exactlyTwelveMigrationsArePresent() {
         Flyway flyway = Flyway.configure()
                 .dataSource(dataSource)
                 .locations("classpath:db/migration")
                 .load();
 
-        assertThat(flyway.info().all()).hasSize(8);
+        assertThat(flyway.info().all()).hasSize(12);
     }
 
     // --- V1: shadow_ledger_transaction_log ---

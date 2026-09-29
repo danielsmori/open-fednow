@@ -1,0 +1,27 @@
+{
+  "openfednow-sync": {
+    "exit_code": 0,
+    "stdout": "{\n  \"pass\": 8,\n  \"fail\": 0,\n  \"output\": \"/Users/danielmori/Developer/open-fednow-reliability/target/evaluation/openfednow-sync.json\"\n}\n",
+    "stderr": "",
+    "result_file": "/Users/danielmori/Developer/open-fednow-reliability/target/evaluation/openfednow-sync.json"
+  },
+  "openfednow-async": {
+    "exit_code": 0,
+    "stdout": "{\n  \"pass\": 8,\n  \"fail\": 0,\n  \"output\": \"/Users/danielmori/Developer/open-fednow-reliability/target/evaluation/openfednow-async.json\"\n}\n",
+    "stderr": "",
+    "result_file": "/Users/danielmori/Developer/open-fednow-reliability/target/evaluation/openfednow-async.json"
+  },
+  "reference": {
+    "exit_code": 0,
+    "stdout": "{\n  \"pass\": 8,\n  \"fail\": 0,\n  \"output\": \"/Users/danielmori/Developer/open-fednow-reliability/target/evaluation/reference.json\"\n}\n",
+    "stderr": "",
+    "result_file": "/Users/danielmori/Developer/open-fednow-reliability/target/evaluation/reference.json"
+  },
+  "restart-s05": {
+    "exit_code": 0,
+    "stdout": "{\n  \"result\": \"PASS\",\n  \"error\": null,\n  \"output\": \"/Users/danielmori/Developer/open-fednow-reliability/target/evaluation/restart-s05.json\"\n}\n",
+    "stderr": "",
+    "result_file": "/Users/danielmori/Developer/open-fednow-reliability/target/evaluation/restart-s05.json"
+  },
+  "all_passed": true
+}

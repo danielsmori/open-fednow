@@ -1,0 +1,60 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ----------------------< io.openfednow:openfednow >----------------------
+[INFO] Building OpenFedNow 0.1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ openfednow ---
+[INFO] Copying 4 resources from src/main/resources to target/classes
+[INFO] Copying 11 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ openfednow ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 98 source files with javac [debug parameters release 17] to target/classes
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit
+WARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ openfednow ---
+[INFO] Copying 2 resources from src/test/resources to target/test-classes
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ openfednow ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 91 source files with javac [debug parameters release 17] to target/test-classes
+[WARNING] /Users/danielmori/Developer/open-fednow-plan-baseline/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java:[82,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /Users/danielmori/Developer/open-fednow-plan-baseline/src/test/java/io/openfednow/gateway/OutboundPaymentIntegrationTest.java:[49,6] org.springframework.boot.test.mock.mockito.MockBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[WARNING] /Users/danielmori/Developer/open-fednow-plan-baseline/src/test/java/io/openfednow/shadowledger/BalanceSeedIntegrationTest.java:[30,48] org.springframework.boot.test.mock.mockito.SpyBean in org.springframework.boot.test.mock.mockito has been deprecated and marked for removal
+[INFO] /Users/danielmori/Developer/open-fednow-plan-baseline/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java: Some input files use or override a deprecated API.
+[INFO] /Users/danielmori/Developer/open-fednow-plan-baseline/src/test/java/io/openfednow/events/KafkaEventBusIntegrationTest.java: Recompile with -Xlint:deprecation for details.
+[INFO] 
+[INFO] --- surefire:3.5.6:test (default-test) @ openfednow ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running io.openfednow.gateway.UncertainSubmissionReproducerTest
+Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+WARNING: A Java agent has been loaded dynamically (/Users/danielmori/.m2/repository/net/bytebuddy/byte-buddy-agent/1.17.8/byte-buddy-agent-1.17.8.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+22:33:40.329 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer received amount=10.00 currency=USD
+22:33:40.331 [main] INFO io.openfednow.gateway.HttpFedNowClient -- Submitting pacs.008 to FedNow endpoint=http://localhost:62184/transfers
+22:33:41.391 [main] WARN io.openfednow.gateway.HttpFedNowClient -- FedNow connection error (after retries if any): I/O error on POST request for "http://localhost:62184/transfers": Read timed out
+22:33:41.392 [main] INFO io.openfednow.gateway.MessageRouter -- FedNow rejected outbound payment, compensating sagaId=SAGA-UNCERTAIN reason=NARR
+22:33:41.393 [main] INFO io.openfednow.gateway.MessageRouter -- Outbound credit transfer status=RJCT rejectCode=NARR
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.410 s -- in io.openfednow.gateway.UncertainSubmissionReproducerTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  5.981 s
+[INFO] Finished at: 2026-09-28T22:33:41-04:00
+[INFO] ------------------------------------------------------------------------

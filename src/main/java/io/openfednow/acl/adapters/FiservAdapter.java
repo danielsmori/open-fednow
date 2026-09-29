@@ -4,6 +4,7 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.openfednow.acl.adapters.fiserv.FiservHttpClient;
 import io.openfednow.acl.adapters.fiserv.FiservTokenManager;
 import io.openfednow.acl.core.CoreBankingAdapter;
+import io.openfednow.acl.core.CoreReliabilityCapabilities;
 import io.openfednow.acl.core.CoreBankingResponse;
 import io.openfednow.iso20022.Pacs008Message;
 import jakarta.annotation.PostConstruct;
@@ -127,6 +128,11 @@ public class FiservAdapter implements CoreBankingAdapter {
     @Override
     public String getVendorName() {
         return "Fiserv";
+    }
+
+    @Override
+    public CoreReliabilityCapabilities reliabilityCapabilities() {
+        return CoreReliabilityCapabilities.vendorShapedFixture();
     }
 
     // ── Circuit breaker fallbacks ─────────────────────────────────────────────
