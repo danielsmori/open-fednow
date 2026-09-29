@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "target" / "evaluation"
 UNIT = "MessageRouterScreeningPolicyTest,MessageRouterBridgeSendsGuardTest,MessageRouterCurrencyGuardTest,RtpGatewayTest,JackHenryAdapterTest,UncertainSubmissionReproducerTest"
 INTEGRATION = "OutboundPaymentIntegrationTest,SagaRecoveryServiceIntegrationTest,SagaTimeoutIntegrationTest,PostgresIntegrationTest,FraudTimeoutIntegrationTest,FraudRoutingIntegrationTest,ReliablePaymentIntegrationTest"
+ADAPTERS = "VendorReliabilityCapabilityContractTest,FisAdapterTest,FiservAdapterTest,JackHenryAdapterTest"
 
 
 def capture(args):
@@ -93,7 +94,11 @@ def main():
     dep_code = run(["mvn", "-B", "--no-transfer-progress", "dependency:list"], ROOT, "dependencies")
     results = {"dependency_resolution_exit_code": dep_code}
     ok = dep_code == 0
-    for name, selection, options in [("controls", UNIT, [])] + ([("integration", INTEGRATION, ["-Dgroups=integration", "-DexcludedGroups="])] if args.integration else []):
+    selections = [("controls", UNIT, []), ("adapters", ADAPTERS, [])]
+    if args.integration:
+        selections.append(("integration", INTEGRATION,
+                           ["-Dgroups=integration", "-DexcludedGroups="]))
+    for name, selection, options in selections:
         shutil.rmtree(ROOT / "target" / "surefire-reports", ignore_errors=True)
         command = ["mvn", "-B", "--no-transfer-progress", "-Dtest=" + selection, *options, "test"]
         code = run(command, ROOT, name)

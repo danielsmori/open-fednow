@@ -45,6 +45,7 @@ def stop(process):
 
 
 def main():
+    started = time.monotonic()
     OUT.mkdir(parents=True, exist_ok=True)
     if not JAR.exists():
         raise RuntimeError("Build the current jar first: mvn -B package -DskipTests")
@@ -54,6 +55,8 @@ def main():
     logs = []
     processes = []
     results = {}
+    setup_seconds = None
+    rss_kib = None
     try:
         rail, log = start([sys.executable, "harness/rail_simulator.py", "--port", "8099",
                            "--db", str(OUT / "rail.sqlite")], "rail-simulator.log")
@@ -71,28 +74,58 @@ def main():
                     "SPRING_APPLICATION_JSON": json.dumps({"server": {"port": 8080},
                          "openfednow": {"reliability": {
                              "synthetic-rail-url": "http://127.0.0.1:8099",
-                             "fixture-api-enabled": True}}})})
+                             "fixture-api-enabled": True,
+                             "legacy-entry-bridge-enabled": True}}})})
         java = str(Path(env["JAVA_HOME"]) / "bin/java") if env.get("JAVA_HOME") else "java"
         target, log = start([java, "-jar", str(JAR)], "openfednow-target.log", env)
         processes.append(target); logs.append(log)
         wait("http://127.0.0.1:8080/fednow/health", target)
+        setup_seconds = time.monotonic() - started
+        rss_sample = subprocess.run(["ps", "-o", "rss=", "-p", str(target.pid)],
+                                    text=True, capture_output=True)
+        if rss_sample.returncode == 0 and rss_sample.stdout.strip().isdigit():
+            rss_kib = int(rss_sample.stdout.strip())
         for name, url, mode in [("openfednow-sync", "http://127.0.0.1:8080", "SYNC"),
                                 ("openfednow-async", "http://127.0.0.1:8080", "ASYNC"),
+                                ("openfednow-bridge", "http://127.0.0.1:8080", "SYNC"),
                                 ("reference", "http://127.0.0.1:8100", "SYNC")]:
             output = OUT / (name + ".json")
             command = [sys.executable, "harness/run.py", "--target-url", url,
                        "--rail-url", "http://127.0.0.1:8099",
                        "--core-mode", mode, "--output", str(output)]
+            if name == "openfednow-bridge":
+                command.extend(["--submit-path", "/fednow/send"])
+            run_started = time.monotonic()
             run = subprocess.run(command, cwd=ROOT, text=True, capture_output=True)
             results[name] = {"exit_code": run.returncode, "stdout": run.stdout,
-                             "stderr": run.stderr, "result_file": str(output)}
+                             "stderr": run.stderr, "result_file": str(output),
+                             "elapsed_seconds": time.monotonic() - run_started}
+        output = OUT / "edge-cases.json"
+        command = [sys.executable, "harness/edge_cases.py", "--output", str(output)]
+        run_started = time.monotonic()
+        run = subprocess.run(command, cwd=ROOT, text=True, capture_output=True)
+        results["java-edge-cases"] = {"exit_code": run.returncode, "stdout": run.stdout,
+                                       "stderr": run.stderr, "result_file": str(output),
+                                       "elapsed_seconds": time.monotonic() - run_started}
         stop(target)
+        command = [sys.executable, "harness/two_worker_case.py", "--jar", str(JAR),
+                   "--rail-url", "http://127.0.0.1:8099",
+                   "--output", str(OUT / "two-worker-s11.json")]
+        run_started = time.monotonic()
+        run = subprocess.run(command, cwd=ROOT, text=True, capture_output=True, env=env)
+        results["two-worker-s11"] = {"exit_code": run.returncode, "stdout": run.stdout,
+                                      "stderr": run.stderr,
+                                      "result_file": str(OUT / "two-worker-s11.json"),
+                                      "elapsed_seconds": time.monotonic() - run_started}
         command = [sys.executable, "harness/restart_case.py", "--jar", str(JAR),
-                   "--rail-url", "http://127.0.0.1:8099", "--output", str(OUT / "restart-s05.json")]
+                   "--rail-url", "http://127.0.0.1:8099", "--output", str(OUT / "restart-s05.json"),
+                   "--investigation-evidence", str(OUT / "edge-cases.json")]
+        run_started = time.monotonic()
         run = subprocess.run(command, cwd=ROOT, text=True, capture_output=True, env=env)
         results["restart-s05"] = {"exit_code": run.returncode, "stdout": run.stdout,
                                    "stderr": run.stderr,
-                                   "result_file": str(OUT / "restart-s05.json")}
+                                   "result_file": str(OUT / "restart-s05.json"),
+                                   "elapsed_seconds": time.monotonic() - run_started}
     except Exception as error:
         results["execution_error"] = repr(error)
     finally:
@@ -100,8 +133,13 @@ def main():
             stop(process)
         for log in logs:
             log.close()
+    results["measurements"] = {"setup_seconds": setup_seconds,
+                                "java_rss_kib_after_start": rss_kib,
+                                "total_elapsed_seconds": time.monotonic() - started,
+                                "resource_limitations": "One macOS ps RSS sample; no throughput or peak-memory benchmark"}
     results["all_passed"] = "execution_error" not in results and all(
-        item["exit_code"] == 0 for key, item in results.items() if key != "execution_error")
+        item["exit_code"] == 0 for item in results.values()
+        if isinstance(item, dict) and "exit_code" in item)
     (OUT / "external-results.json").write_text(json.dumps(results, indent=2) + "\n")
     print(json.dumps({"all_passed": results["all_passed"],
                       "runs": {key: value.get("exit_code") for key, value in results.items()

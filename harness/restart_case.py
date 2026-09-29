@@ -31,6 +31,8 @@ def main():
     parser.add_argument("--rail-url", default="http://127.0.0.1:8099")
     parser.add_argument("--target-port", type=int, default=8081)
     parser.add_argument("--output", default="target/evaluation/restart-s05.json")
+    parser.add_argument("--investigation-evidence",
+                        help="Edge-case JSON containing an aged investigation to verify across restart")
     args = parser.parse_args()
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -54,9 +56,28 @@ def main():
                                 stdout=run_log, stderr=subprocess.STDOUT)
 
     result = {"id": "S05", "result": "FAIL"}
+    investigation = None
+    if args.investigation_evidence:
+        edge = json.loads(Path(args.investigation_evidence).read_text())
+        investigation = next(case for case in edge["cases"]
+                             if case["id"] == "S12-aged-investigation" and case["result"] == "PASS")
+
+    def verify_investigation():
+        if investigation is None:
+            return None
+        old = investigation["local"]
+        code, current = driver.lookup(old["operationId"])
+        require(code == 200 and current["state"] == "INVESTIGATION",
+                "aged investigation disappeared or changed after restart")
+        _, account_view = driver.account(old["accountId"])
+        require(account_view["heldMinor"] == old["amountMinor"]
+                and account_view["ledgerMinor"] == 100000,
+                "restart erased unresolved financial obligation")
+        return {"payment": current, "account": account_view}
     try:
         app = start()
         wait_healthy(target)
+        investigation_before = verify_investigation()
         account = "A-" + uuid.uuid4().hex[:18]
         code, _ = driver.seed(account, 100000, True)
         require(code == 200, "could not seed account")
@@ -83,6 +104,7 @@ def main():
                 pass
         app = start()
         wait_healthy(target)
+        investigation_after = verify_investigation()
         code, pending = target.call("GET", "/reference/v1/payments/by-key/" +
                                     message["debtorAgentRoutingNumber"] + "/" + message["endToEndId"])
         require(code == 200, "durable payment identity lost after process restart")
@@ -106,6 +128,8 @@ def main():
         assert_effects(snapshot, "SETTLED", 10000)
         result = {"id": "S05", "result": "PASS", "pre_inquiry": pending,
                   "pre_inquiry_account": held_account, "final": snapshot,
+                  "investigationBeforeRestart": investigation_before,
+                  "investigationAfterRestart": investigation_after,
                   "fault_boundary": "SIGKILL after remote effect and before local outcome persistence",
                   "target_log": str(log_path)}
     except Exception as error:

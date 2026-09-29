@@ -4,9 +4,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 /** Bounded synthetic inquiry worker; the rail profile is intentionally not a live pacs.028 mapping. */
 @Component
+@ConditionalOnProperty(name = "openfednow.reliability.inquiry-worker-enabled",
+        havingValue = "true", matchIfMissing = true)
 public class ReliabilityInquiryWorker {
     private static final Logger log = LoggerFactory.getLogger(ReliabilityInquiryWorker.class);
     private final ReliablePaymentService payments;

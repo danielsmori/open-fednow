@@ -46,8 +46,9 @@ class Client:
 
 
 class OpenFedNowDriver:
-    def __init__(self, client):
+    def __init__(self, client, submit_path="/reference/v1/payments"):
         self.client = client
+        self.submit_path = submit_path
 
     def seed(self, account, amount, exclusive=True, core_mode="SYNC"):
         return self.client.call("POST", "/reference/v1/fixtures/accounts",
@@ -59,7 +60,7 @@ class OpenFedNowDriver:
                                 {"amountMinor": amount})
 
     def submit(self, payment):
-        return self.client.call("POST", "/reference/v1/payments", payment)
+        return self.client.call("POST", self.submit_path, payment)
 
     def lookup(self, operation):
         return self.client.call("GET", f"/reference/v1/payments/{operation}")
@@ -179,7 +180,32 @@ def run_case(case, driver, rail, core_mode):
         require(code in (400, 422), "fractional-cent amount was not refused")
         _, account_view = driver.account(account)
         require(account_view["heldMinor"] == 0, "invalid payment created a hold")
-        return {"account": account_view}
+        first = payment("S16-first", account, "700.00")
+        second = payment("S16-second", account, "700.00")
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            responses = list(pool.map(driver.submit, (first, second)))
+        accepted = [(code, body, msg) for (code, body), msg in zip(responses, (first, second))
+                    if code in (200, 202)]
+        refused = [(code, body, msg) for (code, body), msg in zip(responses, (first, second))
+                   if code in (409, 422)]
+        require(len(accepted) == 1 and len(refused) == 1,
+                "distinct simultaneous reservations overspent or both failed")
+        winner = accepted[0][2]
+        if core_mode == "ASYNC":
+            _, settled = driver.ack_core(accepted[0][1]["operationId"])
+        else:
+            settled = accepted[0][1]
+        snapshot = final_snapshot(driver, rail, settled, winner)
+        require(sorted(effect["effectType"] for effect in snapshot["effects"]) == ["HOLD", "POST"],
+                "winning reservation did not post exactly once")
+        require(snapshot["account"]["ledgerMinor"] == 30000
+                and snapshot["account"]["heldMinor"] == 0,
+                "simultaneous reservation balance is wrong")
+        require(snapshot["remote"]["submitCount"] == 1, "winning payment submitted twice")
+        lost_code, _ = rail.call("GET", "/payments/" + refused[0][2]["messageId"])
+        require(lost_code == 404, "refused payment reached the rail")
+        return {"winner": snapshot, "refusedHttp": refused[0][0],
+                "refusedRemoteHttp": lost_code}
     if case_id == "S06":
         return concurrent_case(driver, rail, message, core_mode)
     if case_id in ("S02", "S03"):
@@ -221,9 +247,28 @@ def run_case(case, driver, rail, core_mode):
         changed = dict(message, interbankSettlementAmount="101.00")
         code, _ = driver.submit(changed)
         require(code == 409, "changed payload did not conflict")
+        changed_payee = dict(message, creditorAccountNumber="OTHER-RECEIVER")
+        code, _ = driver.submit(changed_payee)
+        require(code == 409, "changed payee did not conflict")
         snapshot = final_snapshot(driver, rail, view, message)
         assert_effects(snapshot, "SETTLED", 10000)
-        return snapshot
+        other_account = "A-" + uuid.uuid4().hex[:18]
+        code, _ = driver.seed(other_account, 100000, True, core_mode)
+        require(code == 200, "second institution account seed failed")
+        distinct_scope = dict(message, debtorAgentRoutingNumber="123456789",
+                              debtorAccountNumber=other_account,
+                              messageId="M-" + uuid.uuid4().hex[:16],
+                              transactionId="T-" + uuid.uuid4().hex[:16])
+        code, other_view = driver.submit(distinct_scope)
+        require(code in (200, 202), "same business key in another institution was refused")
+        if core_mode == "ASYNC":
+            _, other_view = driver.ack_core(other_view["operationId"])
+        require(other_view["operationId"] != view["operationId"],
+                "different institution reused the original operation")
+        other_snapshot = final_snapshot(driver, rail, other_view, distinct_scope)
+        assert_effects(other_snapshot, "SETTLED", 10000)
+        return {"original": snapshot, "other_institution": other_snapshot,
+                "amountConflictHttp": 409, "payeeConflictHttp": 409}
     if case_id == "S17":
         snapshot = final_snapshot(driver, rail, view, message)
         corrupt = dict(snapshot, local=dict(view, state="SETTLED"))
@@ -258,9 +303,10 @@ def main():
     parser.add_argument("--password", default="changeme")
     parser.add_argument("--output", default="target/evaluation/external-harness.json")
     parser.add_argument("--core-mode", choices=("SYNC", "ASYNC"), default="SYNC")
+    parser.add_argument("--submit-path", default="/reference/v1/payments")
     args = parser.parse_args()
     manifest = json.loads((ROOT / "scenarios-v1.json").read_text())
-    driver = OpenFedNowDriver(Client(args.target_url, args.username, args.password))
+    driver = OpenFedNowDriver(Client(args.target_url, args.username, args.password), args.submit_path)
     rail = Client(args.rail_url)
     cases = []
     for case in (item for item in manifest["cases"] if item.get("executable", True)):

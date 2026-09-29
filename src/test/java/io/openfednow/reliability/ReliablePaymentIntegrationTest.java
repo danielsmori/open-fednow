@@ -77,11 +77,35 @@ class ReliablePaymentIntegrationTest extends AbstractInfrastructureIntegrationTe
         assertThat(leases).hasSize(1);
         PaymentView settled = payments.finishInquiry(leases.get(0), status(request, "SETTLED", "R-LATE"));
         assertThat(settled.state()).isEqualTo("SETTLED");
+        assertThat(settled.lastInquiryAt()).isNotNull();
         assertThat(payments.account("SYN-DEBTOR").ledgerMinor()).isEqualTo(87_500);
         assertThat(payments.account("SYN-DEBTOR").heldMinor()).isZero();
         payments.observe(pending.operationId(), status(request, "SETTLED", "R-LATE"));
         assertThat(payments.account("SYN-DEBTOR").ledgerMinor()).isEqualTo(87_500);
         assertThat(payments.effects(pending.operationId())).hasSize(2);
+    }
+
+    @Test
+    void unavailableSyntheticCoreRefusesSendAndDefersAsyncAcknowledgment() {
+        Pacs008Message offline = payment("E2E-CORE-OFF", "TX-CORE-OFF", "20.00");
+        payments.setSyntheticCoreAvailability("SYN-DEBTOR", false);
+        assertThatThrownBy(() -> payments.submit(offline)).isInstanceOf(ResponseStatusException.class);
+        assertThat(payments.account("SYN-DEBTOR").heldMinor()).isZero();
+        verify(rail, times(0)).submit(any(), anyString());
+
+        payments.provisionSyntheticAccount("ASYNC-CORE-OFF", 100_000, true, "ASYNC");
+        Pacs008Message delayed = payment("E2E-CORE-DELAY", "TX-CORE-DELAY", "30.00");
+        delayed.setDebtorAccountNumber("ASYNC-CORE-OFF");
+        PaymentView pending = payments.submit(delayed);
+        payments.setSyntheticCoreAvailability("ASYNC-CORE-OFF", false);
+        assertThat(payments.acknowledgeSyntheticCore(pending.operationId()).state())
+                .isEqualTo("CORE_PENDING");
+        verify(rail, times(0)).submit(any(), anyString());
+        payments.setSyntheticCoreAvailability("ASYNC-CORE-OFF", true);
+        when(rail.submit(any(), anyString())).thenReturn(status(delayed, "SETTLED", "R-CORE-RECOVERED"));
+        assertThat(payments.acknowledgeSyntheticCore(pending.operationId()).state())
+                .isEqualTo("SETTLED");
+        verify(rail, times(1)).submit(any(), anyString());
     }
 
     @Test

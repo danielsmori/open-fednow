@@ -6,6 +6,8 @@ import io.openfednow.iso20022.Pacs002Message;
 import io.openfednow.iso20022.Pacs004Message;
 import io.openfednow.iso20022.Pacs008Message;
 import io.openfednow.processing.cancellation.CancellationService;
+import io.openfednow.reliability.PaymentView;
+import io.openfednow.reliability.ReliablePaymentService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -15,6 +17,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -48,6 +52,11 @@ public class FedNowGateway {
     private final CertificateManager certificateManager;
     private final CancellationService cancellationService;
     private final FedNowClient fedNowClient;
+    private final ReliablePaymentService reliablePayments;
+    private final Environment environment;
+
+    @Value("${openfednow.reliability.legacy-entry-bridge-enabled:false}")
+    private boolean reliabilityBridgeEnabled;
 
     @Value("${openfednow.legacy-outbound-sandbox-enabled:false}")
     private boolean legacyOutboundSandboxEnabled;
@@ -55,14 +64,25 @@ public class FedNowGateway {
     @Value("${openfednow.legacy-return-sandbox-enabled:false}")
     private boolean legacyReturnSandboxEnabled;
 
+    @Autowired
     public FedNowGateway(MessageRouter messageRouter,
                          CertificateManager certificateManager,
                          CancellationService cancellationService,
-                         FedNowClient fedNowClient) {
+                         FedNowClient fedNowClient,
+                         ReliablePaymentService reliablePayments,
+                         Environment environment) {
         this.messageRouter = messageRouter;
         this.certificateManager = certificateManager;
         this.cancellationService = cancellationService;
         this.fedNowClient = fedNowClient;
+        this.reliablePayments = reliablePayments;
+        this.environment = environment;
+    }
+
+    /** Keeps standalone legacy controller tests compatible; Spring uses the injected constructor. */
+    FedNowGateway(MessageRouter messageRouter, CertificateManager certificateManager,
+                  CancellationService cancellationService, FedNowClient fedNowClient) {
+        this(messageRouter, certificateManager, cancellationService, fedNowClient, null, null);
     }
 
     /**
@@ -132,7 +152,19 @@ public class FedNowGateway {
         @ApiResponse(responseCode = "500",
             description = "Internal processing error")
     })
-    public ResponseEntity<Pacs002Message> sendTransfer(@Valid @RequestBody Pacs008Message message) {
+    public ResponseEntity<?> sendTransfer(@Valid @RequestBody Pacs008Message message) {
+        // Controlled synthetic bridge: the original entry point delegates to
+        // the same SQL ownership, reservation, intent and inquiry service.
+        // Never enable this demonstration in the production profile.
+        if (reliabilityBridgeEnabled) {
+            if (reliablePayments == null || environment == null ||
+                    java.util.Arrays.asList(environment.getActiveProfiles()).contains("prod")) {
+                return ResponseEntity.status(503).build();
+            }
+            PaymentView view = reliablePayments.submit(message);
+            boolean pending = !"SETTLED".equals(view.state()) && !"REJECTED".equals(view.state());
+            return ResponseEntity.status(pending ? 202 : 200).body(view);
+        }
         // The legacy route has no atomic cross-store claim or authoritative
         // core reservation. Keep it available only as an explicit sandbox demo.
         if (!legacyOutboundSandboxEnabled || !(fedNowClient instanceof SandboxFedNowClient)) {

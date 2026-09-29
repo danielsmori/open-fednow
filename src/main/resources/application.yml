@@ -73,10 +73,14 @@ openfednow:
   legacy-outbound-sandbox-enabled: ${LEGACY_OUTBOUND_SANDBOX_ENABLED:false}
   legacy-return-sandbox-enabled: ${LEGACY_RETURN_SANDBOX_ENABLED:false}
   reliability:
+    # Routes /fednow/send through the SQL synthetic service for evaluation only.
+    # The production profile refuses this bridge even if explicitly configured.
+    legacy-entry-bridge-enabled: ${RELIABILITY_LEGACY_ENTRY_BRIDGE_ENABLED:false}
     synthetic-rail-url: ${RELIABILITY_SYNTHETIC_RAIL_URL:}
     fixture-api-enabled: ${RELIABILITY_FIXTURE_API_ENABLED:false}
     transport-timeout-millis: ${RELIABILITY_TRANSPORT_TIMEOUT_MILLIS:1500}
     inquiry-poll-millis: ${RELIABILITY_INQUIRY_POLL_MILLIS:5000}
+    inquiry-worker-enabled: ${RELIABILITY_INQUIRY_WORKER_ENABLED:true}
 
   # Admin endpoint credentials (reference implementation — integrate with institution IAM in production).
   # For rotation without a restart, set credential-file to a two-line file whose

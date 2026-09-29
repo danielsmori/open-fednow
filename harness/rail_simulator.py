@@ -35,6 +35,14 @@ def main():
             self.end_headers()
             self.wfile.write(body)
 
+        def raw(self, code, body=b"", content_type="application/json"):
+            self.send_response(code)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            if body:
+                self.wfile.write(body)
+
         def read_json(self):
             if self.headers.get("Transfer-Encoding", "").lower() == "chunked":
                 chunks = []
@@ -101,6 +109,15 @@ def main():
                     pass
                 self.connection.close()
                 return
+            if fault.get("submit_reply") == "empty":
+                return self.raw(200)
+            if fault.get("submit_reply") == "malformed":
+                return self.raw(200, b"{broken")
+            if fault.get("submit_reply") == "failed":
+                return self.json(503, {"error": "synthetic submission response unavailable"})
+            if fault.get("submit_reply") == "uncorrelated":
+                return self.json(200, observation(dict(payment, transactionId="OTHER-TRANSACTION"),
+                                                  status, "SIM-" + key))
             self.json(200, observation(payment, status, "SIM-" + key))
 
         def do_GET(self):
@@ -120,10 +137,22 @@ def main():
             if self.path.startswith("/payments/"):
                 key = unquote(self.path.split("/", 2)[2])
                 with lock:
+                    fault = faults.get(key, {})
                     row = db.execute("SELECT business_key,transaction_id,status,submit_count "
                                      "FROM payments WHERE message_id=?", (key,)).fetchone()
                 if not row:
                     return self.json(404, {"error": "untraceable"})
+                if fault.get("inquiry_reply") == "empty":
+                    return self.raw(200)
+                if fault.get("inquiry_reply") == "malformed":
+                    return self.raw(200, b"{broken")
+                if fault.get("inquiry_reply") == "failed":
+                    return self.json(503, {"error": "synthetic inquiry unavailable"})
+                if fault.get("inquiry_reply") == "uncorrelated":
+                    return self.json(200, {"transactionId": "OTHER-TRANSACTION",
+                                           "businessKey": row[0], "messageId": key,
+                                           "status": row[2], "source": "SYNTHETIC_RAIL",
+                                           "reference": "SIM-" + key, "submitCount": row[3]})
                 return self.json(200, {"transactionId": row[1], "businessKey": row[0],
                                        "messageId": key, "status": row[2],
                                        "source": "SYNTHETIC_RAIL", "reference": "SIM-" + key,

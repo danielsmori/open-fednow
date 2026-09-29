@@ -69,7 +69,7 @@ OpenFedNow explores integration between legacy core banking systems and instant 
 | Reconcile concurrency guard — same-JVM serialization | ✅ `ReentrantLock` with tryLock; second concurrent call returns "Skipped" report rather than racing |
 | Saga source-rail tracking — dual-rail dispatch foundation | ✅ `source_rail` column on `saga_state` (V5); both gateways thread `Rail` through `MessageRouter` |
 | Dependency scanning — Dependabot + Trivy | ✅ Weekly Maven + Actions updates; Trivy scan fails the build on HIGH/CRITICAL findings |
-| CI — unit + integration test jobs | ✅ Workflow runs unit and Testcontainers-backed integration jobs on PRs targeting `main`; stacked development PRs have no checks until retargeted |
+| CI — unit + integration test jobs | ✅ Workflow runs unit and Testcontainers-backed integration jobs on PRs targeting `main`; prior development-branch merges did not put the reliability slice on `main` |
 | Dual-rail architecture (FedNow + RTP) | ✅ ISO 20022 foundation; Layer 1 varies, Layers 2–4 rail-agnostic; source rail persisted on `saga_state` |
 | RTP Layer 1 — inbound XML, outbound XML, TCH cert validation hook, sandbox + HTTP client | Inbound reference routing and transport utilities implemented; `/rtp/send` disabled pending financial-control parity |
 | Optional Kafka event bus — `PaymentEventPublisher`, 6 event types | ✅ Implemented (disabled by default; no Kafka required) |
@@ -678,7 +678,7 @@ openfednow/
 
 The repository contains reference implementations and synthetic tests. Remaining work includes internal correctness gaps as well as external onboarding dependencies:
 
-- **Submission uncertainty:** the new `/reference/v1/payments` synthetic path persists scoped ownership, a hold and attempt intent in SQL, exposes pending lookup, and can reconcile against its separate simulator. The legacy `/fednow/send` and `/fednow/return` routes are disabled by default because their cross-store/core and return controls remain unsafe; an explicit sandbox-only flag can enable their demonstrations. None of these paths maps to live FedNow without restricted specifications and institution controls.
+- **Submission uncertainty:** the new `/reference/v1/payments` synthetic path persists scoped ownership, a hold and attempt intent in SQL, exposes pending lookup, and can reconcile against its separate simulator. The legacy `/fednow/send` and `/fednow/return` effects are disabled by default because their cross-store/core and return controls remain unsafe. An explicit non-production evaluation flag can instead route `/fednow/send` through the same SQL reliability service as `/reference/v1/payments`; an independent sandbox-only flag retains the old demonstration. None of these paths maps to live FedNow without restricted specifications and institution controls.
 - **Outbound RTP:** disabled until screening, reservations, idempotency, and reconciliation are validated on its actual routing path.
 - **Rail connectivity:** actual transports, message profiles, credentials, certification, and institution-specific operational controls require verification. A configured HTTP client is not certification.
 - **Vendor adapters:** mock-tested request construction is not vendor verification or confirmed compatibility.

@@ -9,5 +9,5 @@ public record PaymentView(
         long amountMinor, String state, String serviceStatus,
         String postingStatus, String statusSource, String statusReference,
         String attemptId, long version, Instant createdAt, Instant updatedAt,
-        Instant nextInquiryAt, int inquiryCount, String investigationReason) {
+        Instant lastInquiryAt, Instant nextInquiryAt, int inquiryCount, String investigationReason) {
 }

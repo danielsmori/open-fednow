@@ -140,6 +140,7 @@ public class ReliablePaymentService {
                 UPDATE reliability_account
                 SET held_minor = held_minor + ?, version = version + 1
                 WHERE account_id = ? AND currency = 'USD' AND exclusive_control = TRUE
+                  AND core_available = TRUE
                   AND ledger_minor - held_minor >= ?
                 """, amount, message.getDebtorAccountNumber(), amount);
         if (held != 1) {
@@ -169,6 +170,10 @@ public class ReliablePaymentService {
         transaction.executeWithoutResult(status -> {
             PaymentView current = lock(operationId);
             if (!"CORE_PENDING".equals(current.state())) return;
+            Boolean available = jdbc.queryForObject(
+                    "SELECT core_available FROM reliability_account WHERE account_id = ?",
+                    Boolean.class, current.accountId());
+            if (!Boolean.TRUE.equals(available)) return;
             jdbc.update("""
                     UPDATE reliability_core_ack SET status = 'ACKED', acknowledged_at = NOW()
                     WHERE operation_id = ? AND status = 'PENDING'
@@ -317,12 +322,13 @@ public class ReliablePaymentService {
 
     public AccountView account(String accountId) {
         List<AccountView> rows = jdbc.query("""
-                SELECT account_id, ledger_minor, held_minor, exclusive_control, core_mode, version
+                SELECT account_id, ledger_minor, held_minor, exclusive_control,
+                       core_mode, core_available, version
                 FROM reliability_account WHERE account_id = ?
                 """, (rs, row) -> new AccountView(rs.getString("account_id"),
                 rs.getLong("ledger_minor"), rs.getLong("held_minor"),
                 rs.getBoolean("exclusive_control"), rs.getString("core_mode"),
-                rs.getLong("version")), accountId);
+                rs.getBoolean("core_available"), rs.getLong("version")), accountId);
         if (rows.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Synthetic account not found");
         }
@@ -342,6 +348,17 @@ public class ReliablePaymentService {
         if (changed != 1) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "No available synthetic funds for external debit");
+        }
+        return account(accountId);
+    }
+
+    public AccountView setSyntheticCoreAvailability(String accountId, boolean available) {
+        int changed = jdbc.update("""
+                UPDATE reliability_account SET core_available = ?, version = version + 1
+                WHERE account_id = ?
+                """, available, accountId);
+        if (changed != 1) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Synthetic account not found");
         }
         return account(accountId);
     }
@@ -369,8 +386,23 @@ public class ReliablePaymentService {
         return get(operationId);
     }
 
+    /** Controlled fixture for testing an aged unresolved obligation without waiting a day. */
+    public PaymentView ageSyntheticUnresolved(String operationId) {
+        int changed = jdbc.update("""
+                UPDATE reliability_payment SET created_at = NOW() - INTERVAL '25 hours',
+                    next_inquiry_at = NOW() - INTERVAL '1 second'
+                WHERE operation_id = ? AND state IN ('SUBMITTING', 'OUTCOME_UNKNOWN')
+                """, operationId);
+        if (changed != 1) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Only unresolved synthetic payments can be aged");
+        }
+        return get(operationId);
+    }
+
     public record AccountView(String accountId, long ledgerMinor, long heldMinor,
-                              boolean exclusiveControl, String coreMode, long version) { }
+                              boolean exclusiveControl, String coreMode,
+                              boolean coreAvailable, long version) { }
     public record EffectView(String operationId, String effectType,
                              String accountId, long amountMinor) { }
 
@@ -403,6 +435,27 @@ public class ReliablePaymentService {
         }));
     }
 
+    /** Targeted claim used by the two-process fixture to test the real SQL lease. */
+    public InquiryLease claimSyntheticInquiry(String operationId) {
+        return transaction.execute(status -> {
+            List<String> ids = jdbc.queryForList("""
+                    SELECT operation_id FROM reliability_payment
+                    WHERE operation_id = ? AND state IN ('SUBMITTING', 'OUTCOME_UNKNOWN')
+                      AND next_inquiry_at <= NOW()
+                      AND (inquiry_lease_until IS NULL OR inquiry_lease_until < NOW())
+                    FOR UPDATE SKIP LOCKED
+                    """, String.class, operationId);
+            if (ids.isEmpty()) return null;
+            String token = UUID.randomUUID().toString();
+            jdbc.update("""
+                    UPDATE reliability_payment SET inquiry_lease_token = ?,
+                        inquiry_lease_until = NOW() + INTERVAL '15 seconds',
+                        version = version + 1 WHERE operation_id = ?
+                    """, token, operationId);
+            return new InquiryLease(get(operationId), token);
+        });
+    }
+
     public PaymentView finishInquiry(InquiryLease lease, RailObservation observation) {
         return Objects.requireNonNull(transaction.execute(status -> {
             PaymentView current = lock(lease.payment().operationId());
@@ -418,6 +471,7 @@ public class ReliablePaymentService {
             jdbc.update("""
                     UPDATE reliability_payment SET inquiry_lease_token = NULL,
                         inquiry_lease_until = NULL, inquiry_count = inquiry_count + 1,
+                        last_inquiry_at = NOW(),
                         version = version + 1 WHERE operation_id = ?
                     """, current.operationId());
             if (!"SUBMITTING".equals(current.state()) && !"OUTCOME_UNKNOWN".equals(current.state())) {
@@ -592,7 +646,8 @@ public class ReliablePaymentService {
                 rs.getString("status_source"), rs.getString("status_reference"),
                 rs.getString("attempt_id"), rs.getLong("version"),
                 timestamp(rs, "created_at"), timestamp(rs, "updated_at"),
-                timestamp(rs, "next_inquiry_at"), rs.getInt("inquiry_count"),
+                timestamp(rs, "last_inquiry_at"), timestamp(rs, "next_inquiry_at"),
+                rs.getInt("inquiry_count"),
                 rs.getString("investigation_reason"));
     }
 

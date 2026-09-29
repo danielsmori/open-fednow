@@ -12,10 +12,8 @@ import java.math.BigDecimal;
  * a concrete implementation of this interface.
  *
  * <p>This interface defines the minimal contract required to integrate any
- * core banking system with the OpenFedNow framework. Approximately 85% of
- * the framework is shared across all implementations; only the concrete
- * adapter — this interface's implementation — varies per vendor (~15% of
- * total engineering scope).
+ * core banking system with the OpenFedNow framework. Shared code does not
+ * establish any measured percentage of institution integration effort.
  *
  * <p>Implementations must handle:
  * <ul>
@@ -68,4 +66,9 @@ public interface CoreBankingAdapter {
      * @return vendor name (e.g., "Fiserv-DNA", "JackHenry-SilverLake", "FIS-Horizon")
      */
     String getVendorName();
+
+    /** Evidence profile; the default grants no outbound reservation capability. */
+    default CoreReliabilityCapabilities reliabilityCapabilities() {
+        return CoreReliabilityCapabilities.unsupported();
+    }
 }

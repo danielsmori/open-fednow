@@ -41,7 +41,7 @@ class PostgresIntegrationTest extends AbstractInfrastructureIntegrationTest {
         Integer applied = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM flyway_schema_history WHERE success = TRUE",
                 Integer.class);
-        assertThat(applied).isEqualTo(10);
+        assertThat(applied).isEqualTo(12);
     }
 
     // --- All tables exist ---
