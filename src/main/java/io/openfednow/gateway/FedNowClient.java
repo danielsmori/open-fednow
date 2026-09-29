@@ -6,15 +6,15 @@ import io.openfednow.iso20022.Pacs008Message;
 
 /**
  * Outbound client for submitting ISO 20022 pacs.008 credit transfers to the
- * Federal Reserve FedNow Service and receiving pacs.002 status reports in return.
+ * a synthetic FedNow-shaped endpoint and receiving pacs.002-shaped reports.
  *
  * <p>{@link HttpFedNowClient} provides HTTP transport to a configured endpoint
  * and is activated when {@code FEDNOW_ENDPOINT} is set. In integration tests,
  * a WireMock server stands in for the FedNow simulator endpoint — no special
  * Spring profile is required. Live FedNow connectivity additionally requires
- * Federal Reserve PKI client certificates, mutual TLS, and message signing
- * per the FedNow Technical Specifications; those are institution-provided
- * credentials, not framework components.
+ * institution access, restricted message/transport specifications, status
+ * authority validation, certification, and operational controls. The JSON
+ * endpoint here is not documented as a live FedNow interface.
  *
  * <p>When {@code FEDNOW_ENDPOINT} is not set, {@link SandboxFedNowClient}
  * is active by default and returns synthetic in-memory responses suitable
@@ -26,9 +26,8 @@ public interface FedNowClient {
      * Submits an outbound credit transfer to FedNow and returns the payment
      * status report.
      *
-     * <p>This call must complete within the FedNow 20-second response window.
-     * The implementation enforces a configurable timeout (default: 18 seconds)
-     * to leave headroom for upstream processing.
+     * <p>This local call has a configurable timeout. It is not the FedNow
+     * payment timeout clock defined by the service operating procedures.
      *
      * @param message the ISO 20022 pacs.008.001.08 credit transfer to submit
      * @return an authoritative pacs.002 status report
@@ -47,9 +46,9 @@ public interface FedNowClient {
      * institution builds a {@link Pacs004Message} referencing the original
      * pacs.008 and submits it here; FedNow acknowledges with a pacs.002.
      *
-     * <p>Same latency, retry, and signing behavior as
-     * {@link #submitCreditTransfer(Pacs008Message)}. Idempotency is
-     * guaranteed at the FedNow side via the return's {@code returnId}.
+     * <p>The current synthetic return path retries, but does not establish
+     * rail-side deduplication via {@code returnId}; uncertain return outcomes
+     * require separate investigation before any live mapping.
      *
      * @param message the ISO 20022 pacs.004.001.09 return to submit
      * @return pacs.002 status report from FedNow; never {@code null}. On

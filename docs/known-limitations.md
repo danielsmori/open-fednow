@@ -6,15 +6,15 @@ This document catalogs the genuine limitations of the OpenFedNow framework — b
 
 ## Architecture-Level Limitations
 
-These are deliberate design choices with known trade-offs. They are not bugs.
+These are observed design and implementation risks. Some behavior is deliberately modeled in the sandbox; its suitability for a live payment service remains unverified.
 
-### 1. Post-reconciliation reversals are customer-visible
+### 1. Post-reconciliation return behavior is unverified
 
-**What happens:** If the core banking system rejects a transaction that was provisionally accepted during a maintenance window (for example, because the account was frozen or the funds were seized between when the Shadow Ledger reserved them and when the core came back online), the compensation path sends a pacs.004 return payment to FedNow. The sender's institution receives a credit — and then receives a return of that credit.
+**What the sandbox models:** If a synthetic core rejects a transaction that the bridge fixture provisionally accepted, the compensation path constructs a pacs.004-shaped return. The return gateway is disabled by default; no live rail submission, settlement or customer-visible result was verified.
 
 **Why this exists:** The architecture accepts ACSP (provisional acceptance) before the core has confirmed. This is a reference behavior, not an established FedNow-compliant response. The official readiness guide describes acceptance without posting using ACWP; the project's ACSP behavior needs review against the applicable operating procedures and message specifications before live use.
 
-**Consequence:** Depending on regulatory context and the reason for rejection, the institution may be required to notify the sender, the sender's institution, or both. The specific notification requirements depend on the rejection reason code (e.g., account seizure vs. technical failure) and the institution's compliance obligations under Regulation J and its FedNow participation agreement.
+**Consequence:** The customer, legal and operational consequences require institution-specific review before any live adaptation. This repository does not establish them.
 
 **Related:** [ADR-0003](adr/0003-provisional-acceptance-acsp.md), [ADR-0004](adr/0004-eventual-consistency-shadow-ledger-and-core.md)
 
@@ -40,13 +40,13 @@ Redis WATCH detects changes to watched keys by **other clients**, including clie
 
 ---
 
-### 4. ACSP during maintenance window is a deliberate departure from "core is authoritative"
+### 4. Synthetic ACSP-shaped bridge response relies on a cached balance
 
-**What happens:** During a maintenance window, the institution returns ACSP to FedNow before the core has seen the transaction. The Shadow Ledger is the decision-maker for that window. This is architecturally necessary — but it is not zero-risk.
+**What the sandbox models:** During a simulated maintenance window, the local bridge can return an ACSP-shaped response before the synthetic core has processed the transaction. This is not verified live FedNow behavior. The Redis Shadow Ledger is the fixture's decision input for that window; it cannot establish the bank's true available funds across other channels.
 
-**The bounded risk:** The Shadow Ledger's balance is initialized from the core and updated atomically on each transaction. Two sources of divergence exist: a core-side rejection of a provisionally accepted payment (see limitation #1 above), and card-processor STIP activity that authorizes debits on the same account outside the Shadow Ledger during the window — the "STIP gap." Other sources of drift, including cross-store crash windows and concurrent external activity, have not been excluded by this evaluation.
+**The unbounded institution-specific risk:** The Shadow Ledger's balance is initialized from the core and updated atomically within Redis on each transaction, but other systems may change the bank's true available balance. Documented sources of divergence include: a core-side rejection of a provisionally accepted payment (see limitation #1 above), and card-processor STIP activity that authorizes debits on the same account outside the Shadow Ledger during the window — the "STIP gap." Other sources of drift, including cross-store crash windows and concurrent external activity, have not been excluded by this evaluation.
 
-**Why this is documented:** Compliance teams at regulated institutions should understand that for the duration of a maintenance window (typically 2–4 hours), the core is not the ledger of record. The Shadow Ledger is. The full analysis of the STIP gap and the four-step mitigation roadmap (kill switch, aggregate cap, real-time card authorization port, and configuration postures from receive-only through STIP-aware) is in [ADR-0010](adr/0010-bridge-mode-fraud-risk.md). This should be disclosed in the institution's internal control documentation.
+**Why this is documented:** The sandbox design temporarily authorizes from a cached balance during a simulated maintenance window. It does not transfer legal or operational authority from an institution's core to this software. The full analysis of the STIP gap and the four-step mitigation roadmap (kill switch, aggregate cap, real-time card authorization port, and configuration postures from receive-only through STIP-aware) is in [ADR-0010](adr/0010-bridge-mode-fraud-risk.md). This should be disclosed in the institution's internal control documentation.
 
 ---
 
@@ -77,7 +77,7 @@ These are features that are not yet built. They are explicitly tracked as future
 `FedNowClient` is an interface with two implementations:
 
 - **`SandboxFedNowClient`** — active by default (when `FEDNOW_ENDPOINT` is not set). Returns synthetic in-memory responses for local development and testing.
-- **`HttpFedNowClient`** — activated when `FEDNOW_ENDPOINT` is set. Provides HTTP transport with retry-on-transient-failures + optional JWS detached message signing (activate via `openfednow.fednow.signing.enabled=true`; see [ADR-0009](adr/0009-fednow-jws-message-signing.md)). Live FedNow production additionally requires Federal Reserve PKI client certificates and mutual TLS. These are institution-provided credentials and are outside the scope of the framework.
+- **`HttpFedNowClient`** — activated when `FEDNOW_ENDPOINT` is set. Provides a synthetic JSON HTTP transport with one attempt for credit transfers and returns, plus optional JWS detached signing (activate via `openfednow.fednow.signing.enabled=true`; see [ADR-0009](adr/0009-fednow-jws-message-signing.md)). It is not a verified live FedNow transport. Production requires the applicable restricted specifications, institution access, authenticated status handling and certification in addition to credentials and mutual TLS.
 
 The `FedNowClientConfig` bean is conditional: `HttpFedNowClient` is only created when `openfednow.gateway.fednow-endpoint` is present. When that property is absent, `SandboxFedNowClient` activates via `@ConditionalOnMissingBean`. This means `mvn spring-boot:run` without any environment variables uses the sandbox client throughout.
 
@@ -196,4 +196,4 @@ For production, deploy Redis with at minimum one replica (Sentinel or Cluster), 
 
 `UncertainSubmissionReproducerTest` simulates a server receiving a request and delaying its response beyond the client's deadline. Credit transfers now make one HTTP attempt. Before the request, the saga persists `SUBMITTING`; if no valid status arrives, it becomes `OUTCOME_UNKNOWN`. The debit remains reserved, the caller receives HTTP 503 without a synthetic pacs.002, and another request with the same end-to-end ID cannot submit again. Startup recovery moves interrupted `SUBMITTING` sagas to `OUTCOME_UNKNOWN`; the timeout monitor excludes both states. An ACSP response also retains the debit pending final confirmation. The test uses WireMock and mocked financial services; it does not reproduce real settlement.
 
-An operator can locate the saga at `/admin/sagas/{transactionId}` and compare it with an authoritative rail or institution record. There is no implemented status-inquiry integration or verified resolution action. Do not release funds or retry by changing database rows based only on HTTP status, elapsed time, or this simulator. Concurrent initial requests, cross-store crashes, and late rail messages still need validation. See [evaluation scope and follow-up](evaluation.md).
+An operator can locate a legacy saga at `/admin/sagas/{transactionId}` and compare it with an authoritative rail or institution record. That legacy path has no implemented status inquiry or verified resolution action and its gateway send is disabled by default. The separate `/reference/v1/payments` synthetic slice has SQL ownership, holds, inquiry and an external simulator; see [reliability architecture](reliability/architecture.md) and [scenario register](reliability/requirements.csv). Neither path may release funds or retry based only on HTTP status, elapsed time or a synthetic simulator. Live status authentication and institution core capabilities remain unverified.
