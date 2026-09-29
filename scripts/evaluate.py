@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "target" / "evaluation"
 UNIT = "MessageRouterScreeningPolicyTest,MessageRouterBridgeSendsGuardTest,MessageRouterCurrencyGuardTest,RtpGatewayTest,JackHenryAdapterTest,UncertainSubmissionReproducerTest"
-INTEGRATION = "OutboundPaymentIntegrationTest,SagaRecoveryServiceIntegrationTest,SagaTimeoutIntegrationTest,PostgresIntegrationTest,FraudTimeoutIntegrationTest,FraudRoutingIntegrationTest"
+INTEGRATION = "OutboundPaymentIntegrationTest,SagaRecoveryServiceIntegrationTest,SagaTimeoutIntegrationTest,PostgresIntegrationTest,FraudTimeoutIntegrationTest,FraudRoutingIntegrationTest,ReliablePaymentIntegrationTest"
 
 
 def capture(args):
@@ -44,7 +44,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--integration", action="store_true", help="also require Docker infrastructure tests")
     parser.add_argument("--negative-control", action="store_true", help="require a fail-open mutation to fail its regression test")
+    parser.add_argument("--external", action="store_true", help="run the external synthetic harness against two processes and both core fixtures")
     args = parser.parse_args()
+    if args.external:
+        args.integration = True
     if not shutil.which("mvn"):
         parser.error("Maven is required; use JDK 17 and Maven 3.9.x")
     # Remove only this script's generated reports so prior runs cannot count as evidence.
@@ -116,6 +119,19 @@ def main():
                 "command": command, "exit_code": code,
                 "mutation_detected": detected, **counts}
             ok &= detected
+    if args.external:
+        package_command = ["mvn", "-B", "--no-transfer-progress", "-DskipTests", "package"]
+        package_code = run(package_command, ROOT, "external-package")
+        external_command = ["python3", "harness/evaluate_external.py"]
+        external_code = run(external_command, ROOT, "external-orchestrator") if package_code == 0 else 1
+        external_results = OUT / "external-results.json"
+        results["external"] = {"package_command": package_command,
+                               "package_exit_code": package_code,
+                               "command": external_command,
+                               "exit_code": external_code,
+                               "results_file": str(external_results),
+                               "results_present": external_results.is_file()}
+        ok &= package_code == 0 and external_code == 0 and external_results.is_file()
     results["evaluation_passed"] = bool(ok)
     (OUT / "results.json").write_text(json.dumps(results, indent=2) + "\n")
     print(json.dumps(results, indent=2))
