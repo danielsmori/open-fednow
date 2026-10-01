@@ -151,7 +151,14 @@ def concurrent_case(driver, rail, message, core_mode):
     require(final["state"] == "SETTLED", "race did not reach settlement")
     snapshot = final_snapshot(driver, rail, final, message)
     assert_effects(snapshot, "SETTLED", 10000)
-    return snapshot
+    return {**snapshot, "concurrency": {
+        "first_operation_id": original["operationId"],
+        "duplicate_operation_id": duplicate["operationId"],
+        "duplicate_http": second_code,
+        "first_observed_state": original["state"],
+        "duplicate_observed_state": duplicate["state"],
+        "barrier": barrier,
+        "assertion": "same operation, one HOLD, one POST, one remote submit"}}
 
 
 def run_case(case, driver, rail, core_mode):
@@ -228,7 +235,9 @@ def run_case(case, driver, rail, core_mode):
         _, account_view = driver.account(account)
         require(account_view["heldMinor"] == 10000 and account_view["ledgerMinor"] == 100000,
                 "funds released or posted before inquiry")
+        pending_view = dict(view)
         code, duplicate = driver.submit(message)
+        duplicate_http = code
         require(duplicate["operationId"] == view["operationId"], "duplicate did not retrieve original")
         code, _ = driver.inquiry_due(view["operationId"])
         require(code == 200, "could not advance synthetic inquiry clock")
@@ -242,7 +251,12 @@ def run_case(case, driver, rail, core_mode):
         require(view["state"] == expected, f"inquiry did not resolve: {view['state']}")
         snapshot = final_snapshot(driver, rail, view, message)
         assert_effects(snapshot, expected, 10000)
-        return snapshot
+        return {**snapshot, "recovery": {
+            "before_inquiry": pending_view,
+            "account_before_inquiry": account_view,
+            "duplicate_http": duplicate_http,
+            "duplicate_operation_id": duplicate["operationId"],
+            "expected_after_inquiry": expected}}
     if case_id == "S07":
         changed = dict(message, interbankSettlementAmount="101.00")
         code, _ = driver.submit(changed)
@@ -275,7 +289,10 @@ def run_case(case, driver, rail, core_mode):
         detected = corrupt["local"]["state"] != corrupt["remote"]["status"]
         require(detected, "independent oracle missed corrupted local success")
         assert_effects(snapshot, "REJECTED", 10000)
-        return {"negative_control_detected": detected, "actual": snapshot}
+        return {"negative_control_detected": detected, "actual": snapshot,
+                "mutated_local_state": corrupt["local"]["state"],
+                "same_input_remote_state": corrupt["remote"]["status"],
+                "mutation": "isolated corruption of the observed local state, not a production code path"}
     snapshot = final_snapshot(driver, rail, view, message)
     assert_effects(snapshot, "SETTLED", 10000)
     if case_id == "S01":
