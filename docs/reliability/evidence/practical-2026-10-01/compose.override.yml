@@ -1,0 +1,7 @@
+services:
+  redis:
+    container_name: openfednow-practical-redis
+  rabbitmq:
+    container_name: openfednow-practical-rabbitmq
+  postgres:
+    container_name: openfednow-practical-postgres
