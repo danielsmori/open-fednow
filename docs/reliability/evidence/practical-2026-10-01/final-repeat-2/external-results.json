@@ -1,0 +1,58 @@
+{
+  "openfednow-sync": {
+    "exit_code": 0,
+    "stdout": "{\n  \"pass\": 8,\n  \"fail\": 0,\n  \"output\": \"/Users/danielmori/Developer/open-fednow-practical-source/target/evaluation/openfednow-sync.json\"\n}\n",
+    "stderr": "",
+    "result_file": "/Users/danielmori/Developer/open-fednow-practical-source/target/evaluation/openfednow-sync.json",
+    "elapsed_seconds": 13.919870083000003
+  },
+  "openfednow-async": {
+    "exit_code": 0,
+    "stdout": "{\n  \"pass\": 8,\n  \"fail\": 0,\n  \"output\": \"/Users/danielmori/Developer/open-fednow-practical-source/target/evaluation/openfednow-async.json\"\n}\n",
+    "stderr": "",
+    "result_file": "/Users/danielmori/Developer/open-fednow-practical-source/target/evaluation/openfednow-async.json",
+    "elapsed_seconds": 15.628294083
+  },
+  "openfednow-bridge": {
+    "exit_code": 0,
+    "stdout": "{\n  \"pass\": 8,\n  \"fail\": 0,\n  \"output\": \"/Users/danielmori/Developer/open-fednow-practical-source/target/evaluation/openfednow-bridge.json\"\n}\n",
+    "stderr": "",
+    "result_file": "/Users/danielmori/Developer/open-fednow-practical-source/target/evaluation/openfednow-bridge.json",
+    "elapsed_seconds": 14.432720167000006
+  },
+  "reference": {
+    "exit_code": 0,
+    "stdout": "{\n  \"pass\": 8,\n  \"fail\": 0,\n  \"output\": \"/Users/danielmori/Developer/open-fednow-practical-source/target/evaluation/reference.json\"\n}\n",
+    "stderr": "",
+    "result_file": "/Users/danielmori/Developer/open-fednow-practical-source/target/evaluation/reference.json",
+    "elapsed_seconds": 0.1402542920000016
+  },
+  "java-edge-cases": {
+    "exit_code": 0,
+    "stdout": "{\n  \"pass\": 11,\n  \"fail\": 0\n}\n",
+    "stderr": "",
+    "result_file": "/Users/danielmori/Developer/open-fednow-practical-source/target/evaluation/edge-cases.json",
+    "elapsed_seconds": 28.183165416999998
+  },
+  "two-worker-s11": {
+    "exit_code": 0,
+    "stdout": "{\n  \"result\": \"PASS\",\n  \"error\": null\n}\n",
+    "stderr": "",
+    "result_file": "/Users/danielmori/Developer/open-fednow-practical-source/target/evaluation/two-worker-s11.json",
+    "elapsed_seconds": 23.809825417000013
+  },
+  "restart-s05": {
+    "exit_code": 0,
+    "stdout": "{\n  \"result\": \"PASS\",\n  \"error\": null,\n  \"output\": \"/Users/danielmori/Developer/open-fednow-practical-source/target/evaluation/restart-s05.json\"\n}\n",
+    "stderr": "",
+    "result_file": "/Users/danielmori/Developer/open-fednow-practical-source/target/evaluation/restart-s05.json",
+    "elapsed_seconds": 15.633132999999987
+  },
+  "measurements": {
+    "setup_seconds": 4.954567792,
+    "java_rss_kib_after_start": 676912,
+    "total_elapsed_seconds": 116.784118167,
+    "resource_limitations": "One macOS ps RSS sample; no throughput or peak-memory benchmark"
+  },
+  "all_passed": true
+}
