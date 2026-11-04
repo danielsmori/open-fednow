@@ -1,0 +1,14 @@
+# Scoped exceptions for Spring Framework 6.2.19 in this application.
+# Reviewed against the vendor advisories on 2026-11-04. The conditions below
+# are absent in src/main: no XsltView, catch-all implicit view rendering,
+# Server-Sent Events, or view fragments. The compatible 6.2.20 fix is
+# enterprise-only; Spring Framework 7 is incompatible with Spring Boot 3.5.
+# Revisit these exceptions when moving to a compatible fixed Boot release.
+
+# Requires XsltView and a /** mapping that renders an implicit view name.
+# https://spring.io/security/cve-2026-47884/
+CVE-2026-47884
+
+# Requires Server-Sent Events carrying view fragments.
+# https://spring.io/security/cve-2026-47890/
+CVE-2026-47890
