@@ -1,7 +1,7 @@
 name: Dependency Vulnerability Scan
 
 # Scan Maven dependencies without an NVD API key. HIGH/CRITICAL findings fail
-# the job; no vulnerability suppressions are carried over from the old scanner.
+# the job. Application-specific exceptions, if any, are documented in .trivyignore.
 on:
   schedule:
     - cron: "0 4 * * 1"

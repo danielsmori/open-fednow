@@ -57,6 +57,17 @@
                 <artifactId>amqp-client</artifactId>
                 <version>5.37.0</version>
             </dependency>
+            <!-- Kafka 3.9.2 otherwise pulls vulnerable compression libraries. -->
+            <dependency>
+                <groupId>at.yawk.lz4</groupId>
+                <artifactId>lz4-java</artifactId>
+                <version>1.11.4</version>
+            </dependency>
+            <dependency>
+                <groupId>org.xerial.snappy</groupId>
+                <artifactId>snappy-java</artifactId>
+                <version>1.1.10.9</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
