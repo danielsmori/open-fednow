@@ -133,6 +133,14 @@
     color: var(--dim);
     font-size: 13px;
   }
+  #payment-evidence { display: none; margin-top: 12px; }
+  #payment-evidence.visible { display: block; }
+  .payment-label { color: var(--yellow); font-size: 12px; margin-bottom: 8px; }
+  .payment-values { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .payment-values div { background: var(--code-bg); border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; min-width: 0; }
+  .payment-values span { display: block; color: var(--dim); font-size: 11px; }
+  .payment-values strong { display: block; font: 12px SF Mono, Menlo, Consolas, monospace; overflow-wrap: anywhere; }
+  .payment-actions { margin-top: 10px; display: flex; gap: 8px; }
   .pane {
     background: var(--panel);
     border: 1px solid var(--border);
@@ -453,6 +461,21 @@
   <div class="step-header">
     <h2 id="step-title">Ready</h2>
     <p id="step-desc">Pick a scenario on the left, or hit "Run all scenarios" to walk the pipeline top-to-bottom.</p>
+    <div id="payment-evidence">
+      <div class="payment-label">LOCAL SYNTHETIC CORE (PostgreSQL) · SEPARATE SYNTHETIC RAIL (SQLite) · No live FedNow or vendor connection</div>
+      <div class="payment-values">
+        <div><span>Operation ID · Java service</span><strong id="payment-id">—</strong></div>
+        <div><span>Local state · Java service</span><strong id="payment-state">—</strong></div>
+        <div><span>Rail status · simulator</span><strong id="payment-rail-status">—</strong></div>
+        <div><span>Booked balance · synthetic core</span><strong id="payment-balance">—</strong></div>
+        <div><span>Held funds · synthetic core</span><strong id="payment-hold">—</strong></div>
+        <div><span>Submissions · rail simulator</span><strong id="payment-submits">—</strong></div>
+      </div>
+      <div class="payment-actions">
+        <button id="payment-repeat" disabled>Repeat same request</button>
+        <button id="payment-check" disabled>Check status / inquire</button>
+      </div>
+    </div>
   </div>
   <div class="pane" id="req-pane">
     <div class="pane-header">
@@ -494,6 +517,13 @@ const ADMIN_AUTH = 'Basic ' + btoa('admin:changeme');
 // response. `route` is a scenario id; the on-click handler dispatches to
 // runScenario() which orchestrates request/response rendering + feed logging.
 const GROUPS = [
+  {
+    name: 'Payment Integration · synthetic',
+    scenarios: [
+      { id: 'payment-normal', label: 'Normal payment', desc: 'Guarded send · settled status' },
+      { id: 'payment-lost', label: 'Lost confirmation', desc: 'Repeat request · inquire · inspect effects' },
+    ],
+  },
   {
     name: 'FedNow inbound',
     scenarios: [
@@ -795,13 +825,14 @@ function buildSidebar() {
       btn.className = 'scenario-btn';
       btn.innerHTML = `${s.label}<div class="desc">${s.desc}</div>`;
       btn.dataset.id = s.id;
-      btn.addEventListener('click', () => runScenario(s.id));
+      btn.addEventListener('click', () => s.id.startsWith('payment-') ? startPayment(s.id) : runScenario(s.id));
       sidebar.appendChild(btn);
     }
   }
 }
 
 function renderStep(scenarioId) {
+  document.getElementById('payment-evidence').classList.remove('visible');
   const s = SCENARIOS[scenarioId];
   document.getElementById('step-title').textContent = s.title;
   document.getElementById('step-desc').textContent = s.description;
@@ -886,6 +917,145 @@ async function runScenario(scenarioId) {
   }
   refreshStatusBar();
 }
+
+// The Payment Integration walkthrough reads the Java fixture and the separate
+// rail simulator on every action. Values below never come from a browser counter.
+let paymentRun = null;
+let paymentBusy = false;
+const paymentField = (id, value) => { document.getElementById(id).textContent = value; };
+const dollars = minor => `$${(minor / 100).toFixed(2)}`;
+
+function paymentRequest() {
+  const key = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+  const account = `SYN-DEMO-${key}`;
+  return {
+    messageId: `M-DEMO-${key}`, endToEndId: `E-DEMO-${key}`,
+    transactionId: `T-DEMO-${key}`, creationDateTime: new Date().toISOString(),
+    numberOfTransactions: 1, interbankSettlementAmount: '100.00',
+    interbankSettlementCurrency: 'USD', debtorAgentRoutingNumber: '021000021',
+    creditorAgentRoutingNumber: '026009593', debtorAccountNumber: account,
+    creditorAccountNumber: 'SYN-RECEIVER', debtorName: 'Synthetic Sender',
+    creditorName: 'Synthetic Receiver', remittanceInformation: 'LOCAL PAYMENT INTEGRATION DEMO',
+  };
+}
+
+async function paymentCall(req, admin = false) {
+  renderRequest(req);
+  const result = await callApi(req, admin);
+  renderResponse(result.status, result.body, result.isXml);
+  if (result.status < 200 || result.status >= 300) {
+    throw new Error(`${req.method} ${req.url}: HTTP ${result.status} ${JSON.stringify(result.body)}`);
+  }
+  return result.body;
+}
+
+async function paymentSnapshot() {
+  const message = paymentRun.message;
+  const operation = paymentRun.operationId;
+  const [local, account, rail] = await Promise.all([
+    callApi({ method: 'GET', url: `/reference/v1/payments/${encodeURIComponent(operation)}`, headers: {} }, true),
+    callApi({ method: 'GET', url: `/reference/v1/fixtures/accounts/${encodeURIComponent(message.debtorAccountNumber)}`, headers: {} }, true),
+    callApi({ method: 'GET', url: `/reference/v1/fixtures/rail/payments/${encodeURIComponent(message.messageId)}`, headers: {} }, true),
+  ]);
+  for (const [name, result] of [['local payment', local], ['synthetic core', account], ['rail simulator', rail]]) {
+    if (result.status !== 200) throw new Error(`${name} lookup: HTTP ${result.status} ${JSON.stringify(result.body)}`);
+  }
+  paymentField('payment-id', local.body.operationId);
+  paymentField('payment-state', local.body.state);
+  paymentField('payment-rail-status', rail.body.status);
+  paymentField('payment-balance', dollars(account.body.ledgerMinor));
+  paymentField('payment-hold', dollars(account.body.heldMinor));
+  paymentField('payment-submits', String(rail.body.submitCount));
+  renderResponse(200, { local: local.body, syntheticCore: account.body, syntheticRail: rail.body });
+  return { local: local.body, account: account.body, rail: rail.body };
+}
+
+function paymentButtons() {
+  document.getElementById('payment-repeat').disabled = paymentBusy || !paymentRun || paymentRun.flow !== 'payment-lost';
+  document.getElementById('payment-check').disabled = paymentBusy || !paymentRun;
+}
+
+async function paymentAction(action) {
+  if (paymentBusy) return;
+  paymentBusy = true;
+  paymentButtons();
+  try { await action(); }
+  catch (error) {
+    document.getElementById('res-status').textContent = 'ERROR';
+    document.getElementById('res-status').className = 'status err';
+    document.getElementById('res-body').textContent = String(error);
+  } finally {
+    paymentBusy = false;
+    paymentButtons();
+  }
+}
+
+function startPayment(flow) {
+  paymentAction(async () => {
+    paymentRun = null;
+    paymentButtons();
+    const lost = flow === 'payment-lost';
+    document.getElementById('payment-evidence').classList.add('visible');
+    paymentField('step-title', lost ? 'Payment Integration · lost confirmation' : 'Payment Integration · normal payment');
+    paymentField('step-desc', lost
+      ? 'The simulator records a settlement but drops its reply. Repeat the identical request, then inquire.'
+      : 'A guarded local send settles against the synthetic core and separate synthetic rail.');
+    for (const id of ['payment-id', 'payment-state', 'payment-rail-status', 'payment-balance', 'payment-hold', 'payment-submits']) {
+      paymentField(id, '—');
+    }
+    const message = paymentRequest();
+    await paymentCall({ method: 'POST', url: '/reference/v1/fixtures/accounts',
+      headers: { 'Content-Type': 'application/json' },
+      body: { accountId: message.debtorAccountNumber, ledgerMinor: 100000, exclusiveControl: true, coreMode: 'SYNC' } }, true);
+    if (lost) {
+      await paymentCall({ method: 'POST',
+        url: `/reference/v1/fixtures/rail/control/${encodeURIComponent(message.messageId)}`,
+        headers: { 'Content-Type': 'application/json' }, body: { loseResponse: true } }, true);
+    }
+    const sent = await paymentCall({ method: 'POST', url: '/fednow/send',
+      headers: { 'Content-Type': 'application/json' }, body: message });
+    if (!sent.operationId) throw new Error('Guarded send did not return an operation ID. Check the non-production bridge setting.');
+    paymentRun = { flow, message, operationId: sent.operationId };
+    const snapshot = await paymentSnapshot();
+    if (lost && snapshot.local.state !== 'OUTCOME_UNKNOWN') {
+      throw new Error(`Expected OUTCOME_UNKNOWN after the dropped reply; got ${snapshot.local.state}`);
+    }
+    if (!lost && snapshot.local.state !== 'SETTLED') {
+      throw new Error(`Expected SETTLED; got ${snapshot.local.state}`);
+    }
+    feedEntry(flow, { label: lost ? 'UNKNOWN' : 'SETTLED', cls: lost ? 'acsp' : 'acsc' },
+      lost ? 'Reply lost; hold retained' : 'Normal local payment settled', `Operation ${sent.operationId}`);
+  });
+}
+
+document.getElementById('payment-repeat').addEventListener('click', () => paymentAction(async () => {
+  if (!paymentRun || paymentRun.flow !== 'payment-lost') return;
+  const duplicate = await paymentCall({ method: 'POST', url: '/fednow/send',
+    headers: { 'Content-Type': 'application/json' }, body: paymentRun.message });
+  if (duplicate.operationId !== paymentRun.operationId) throw new Error('Retry created a different operation.');
+  const snapshot = await paymentSnapshot();
+  if (snapshot.rail.submitCount !== 1) throw new Error('Rail simulator recorded a duplicate submission.');
+  feedEntry('payment-lost', { label: 'RETRY', cls: 'acsp' }, 'Same operation returned', `Rail submissions: ${snapshot.rail.submitCount}`);
+}));
+
+document.getElementById('payment-check').addEventListener('click', () => paymentAction(async () => {
+  if (!paymentRun) return;
+  let snapshot = await paymentSnapshot();
+  if (snapshot.local.state === 'OUTCOME_UNKNOWN') {
+    await paymentCall({ method: 'POST',
+      url: `/reference/v1/fixtures/payments/${encodeURIComponent(paymentRun.operationId)}/inquiry-due`, headers: {} }, true);
+    const deadline = Date.now() + 15000;
+    do {
+      await new Promise(resolve => setTimeout(resolve, 250));
+      snapshot = await paymentSnapshot();
+    } while (snapshot.local.state === 'OUTCOME_UNKNOWN' && Date.now() < deadline);
+  }
+  if (snapshot.local.state !== 'SETTLED' || snapshot.rail.submitCount !== 1 || snapshot.account.heldMinor !== 0) {
+    throw new Error('Status check did not confirm one settled submission and released hold; inspect the service response.');
+  }
+  feedEntry(paymentRun.flow, { label: 'SETTLED', cls: 'acsc' }, 'Synthetic inquiry confirmed settlement',
+    `Operation ${paymentRun.operationId}; rail submissions: 1`);
+}));
 
 // ── Status bar / polling ───────────────────────────────────────────────────
 async function refreshStatusBar() {

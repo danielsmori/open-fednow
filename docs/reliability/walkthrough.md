@@ -1,5 +1,7 @@
 # Investigate a lost confirmation in the synthetic package
 
+For an interactive presentation of the guarded `/fednow/send` path, use the [Payment Integration walkthrough](../../README.md#payment-integration-walkthrough) in the existing demo console. It shows the same local uncertainty boundary with a normal payment and a lost confirmation; the command-line evaluation below remains the broader scenario oracle.
+
 Use a clean checkout and the [reproduction workflow](reproduce.md) with JDK 17, Python and Docker. The evaluator starts the Java target, the independent SQLite-backed rail simulator, and a separate Python target. It provisions synthetic account IDs only.
 
 Run `python3 scripts/evaluate.py --integration --negative-control --external`. Open `target/evaluation/openfednow-bridge.json` and find S02. The target received a payment through the existing `/fednow/send` entry point with the controlled bridge enabled. The simulator recorded a `REMOTE_EFFECT` and discarded the reply. The local operation should first be `OUTCOME_UNKNOWN` with one HOLD, unchanged ledger balance and no RELEASE or POST. Repeating the same business request should retrieve that operation rather than send again. After the synthetic inquiry becomes due, the final trace should show one remote submission, `SETTLED`, one HOLD and one POST, ledger reduced by the payment amount, and held funds returned to zero.
