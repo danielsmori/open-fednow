@@ -99,6 +99,18 @@ mvn spring-boot:run
 
 The local health route is `http://localhost:8080/fednow/health`; `http://localhost:8080/demo/` is a synthetic browser demonstration. The optional `./demo/run-demo.sh` exercises legacy outbound and return examples and requires starting the app with `LEGACY_OUTBOUND_SANDBOX_ENABLED=true LEGACY_RETURN_SANDBOX_ENABLED=true` in a **local sandbox**. Those routes are disabled by default. The reliability bridge is a separate opt-in non-production path; see [reproduction instructions](docs/reliability/reproduce.md).
 
+### Payment Integration walkthrough
+
+From a clean checkout, with JDK 17, Maven, Python 3 and a running Docker daemon, use **one startup command**:
+
+```bash
+./demo/payment-integration.sh
+```
+
+Open `http://127.0.0.1:18080/demo/console.html` and choose **Payment Integration · synthetic**. **Normal payment** sends $100 through the guarded, non-production `/fednow/send` bridge. **Lost confirmation** makes the separate rail simulator record settlement and drop the HTTP reply. Click **Repeat same request** to retrieve the same operation, then **Check status / inquire** to advance the synthetic inquiry clock and observe resolution. The console reads the operation ID and local state from the Java service, booked balance and hold from its PostgreSQL synthetic core fixture, and submission count and rail status from the separate SQLite-backed simulator. It does not infer those figures from button clicks. The console uses the local fixture administrator credentials (`admin:changeme`) and should be used only on a trusted local machine.
+
+For a command-line check of both flows while the stack is running, use `python3 demo/verify-payment-integration.py`; it writes service and simulator observations to `target/payment-integration/verification.json`. Press Ctrl+C in the startup terminal to stop the Java service and simulator and remove the demo's disposable Docker containers. The script uses dedicated ports 18080, 18099, 55432, 56379 and 55672, checks for conflicts before startup, and deletes only this demo's container state and simulator file. **Both core and rail are synthetic.** This walkthrough does not use FedNow transport, an institution core, vendor credentials, or live settlement evidence.
+
 Default tests run without Docker; tagged integration tests require Docker:
 
 ```sh
