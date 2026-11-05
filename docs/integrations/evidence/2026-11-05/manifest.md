@@ -15,6 +15,8 @@ Recorded 2026-11-05. Evaluated implementation revision: `d8f6e12` (on `feature/f
 | `mvn -q -Dtest=OutboundCoreGateTest,FiservFixtureUrlTest,VendorReliabilityCapabilityContractTest,FiservAdapterTest test` | Pass | Local tests only; fixture network-error logs are expected negative cases. |
 | `mvn -q test` | Pass | Maven exit 0; Surefire XML totals: 624 tests, 0 failures, 0 errors, 0 skipped. Default excludes the `integration` group. |
 | Container-backed integration | Unavailable | `docker info` could not connect to the local Docker daemon. |
+| [GitHub Actions build and unit job](https://github.com/danielsmori/open-fednow/actions/runs/42062840677/job/127368903876) | Pass | Ran on PR revision `86e1f5a`; 50 seconds. |
+| [GitHub Actions Testcontainers job](https://github.com/danielsmori/open-fednow/actions/runs/42062840677/job/127369451506) | Pass | Ran on PR revision `86e1f5a`; 2 minutes 2 seconds. This is repository integration testing, not Banking Hub testing. |
 | Banking Hub authentication/balance/mutation/lookup | Not run | User confirmed no developer access or synthetic test accounts. No external runner exists until an exact contract and test workspace are selected. |
 | Core plus simulated rail | Not run | Atomic reservation, recovery, expiry, hold-consuming post, and other-channel coordination have not been established. |
 
