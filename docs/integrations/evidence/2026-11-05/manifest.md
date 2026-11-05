@@ -1,10 +1,10 @@
 # Fiserv discovery and local contract result
 
-Recorded 2026-11-05. Evaluated implementation revision: `d8f6e12` (on `feature/fiserv-banking-hub-foundation`, based on `9c7d292`). This bundle documents public-source review and local tests only. It contains no provider responses or credentials.
+Recorded 2026-11-05. Evaluated implementation revision: `d8f6e12` (on `feature/fiserv-banking-hub-foundation`, based on `9c7d292`). Discovery documentation was updated later that day after a Trial workspace was created and additional public Premier endpoints were inspected; the source checksums below reflect those documentation updates. This bundle contains no provider responses or credentials.
 
 ## Environment and provenance
 
-- Target described in public documentation: Fiserv Banking Hub, Premier API family, `Premier-Immediate` option; shared Premier sandbox trial. No workspace, test account, entitlement, or actual environment connection was available.
+- Target described in public documentation: Fiserv Banking Hub, Premier API family, `Premier-Immediate` transfer and `Premier-DDA` account details; shared Premier sandbox trial. At the time of local execution there was no workspace. A Trial workspace was created later that day, but no test account or actual environment connection was available.
 - Public sources: [getting started](https://developer.fiserv.com/product/BankingHub/docs/get-started.md) and [Add Transfer](https://developer.fiserv.com/product/BankingHub/api/post/xferservice/payments/transfers?branch=main&version=Premier&core=Premier-Immediate), read 2026-11-05. The public pages establish a token flow and describe a transfer, but not the reservation guarantees needed for the combined send.
 - Local toolchain: Maven 3.9.16 with Homebrew OpenJDK 27 on macOS 27.2, aarch64. The standalone `java` launcher did not resolve on this shell; Maven selected the Homebrew runtime.
 
@@ -17,12 +17,12 @@ Recorded 2026-11-05. Evaluated implementation revision: `d8f6e12` (on `feature/f
 | Container-backed integration | Unavailable | `docker info` could not connect to the local Docker daemon. |
 | [GitHub Actions build and unit job](https://github.com/danielsmori/open-fednow/actions/runs/42062840677/job/127368903876) | Pass | Ran on PR revision `86e1f5a`; 50 seconds. |
 | [GitHub Actions Testcontainers job](https://github.com/danielsmori/open-fednow/actions/runs/42062840677/job/127369451506) | Pass | Ran on PR revision `86e1f5a`; 2 minutes 2 seconds. This is repository integration testing, not Banking Hub testing. |
-| Banking Hub authentication/balance/mutation/lookup | Not run | User confirmed no developer access or synthetic test accounts. No external runner exists until an exact contract and test workspace are selected. |
+| Banking Hub authentication/balance/mutation/lookup | Not run | At execution time no developer access or synthetic test accounts existed. A Trial workspace was subsequently created; credentials and approved synthetic fixtures remain unconfigured. |
 | Core plus simulated rail | Not run | Atomic reservation, recovery, expiry, hold-consuming post, and other-channel coordination have not been established. |
 
 The pass criteria for the new local tests cover unsupported mutations and balance reads, unknown/expired hold gating, missing institution channel evidence, production-send denial, invalid mutation construction, and fixture host confinement. A constructed positive gate test proves only the Boolean condition of the local model, not real provider capability.
 
-`SHA256SUMS` hashes the listed source and discovery documents at the evaluated revision. The manifest and checksum file were added after the evaluated implementation commit. No source or test file changed during evidence packaging.
+`SHA256SUMS` hashes the listed source and current discovery documents. The source and test files remain those of the evaluated implementation revision; only discovery documentation changed after the Trial workspace was created.
 
 ## Next gate
 
