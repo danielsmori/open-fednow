@@ -6,12 +6,14 @@ import base64
 import json
 from pathlib import Path
 import sys
+import uuid
 from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 
 HOST_URL = "https://bankinghub-cert.fiservapis.com/banking/efx/v1"
 TOKEN_URL = "https://bankinghub-cert.fiservapis.com/fts-apim/oauth2/v2"
+ACCOUNT_DETAILS_PATH = "/acctservice/acctmgmt/accounts/secured"
 REQUIRED = (
     "FISERV_TRIAL_BASE_URL",
     "FISERV_TRIAL_TOKEN_URL",
@@ -50,7 +52,7 @@ def validate(config: dict[str, str]) -> None:
         raise ValueError("API key cannot contain a colon in Basic authentication")
 
 
-def authenticate(config: dict[str, str]) -> tuple[str, int]:
+def fetch_token(config: dict[str, str]) -> tuple[str, str, int]:
     credentials = f'{config["FISERV_TRIAL_API_KEY"]}:{config["FISERV_TRIAL_API_SECRET"]}'
     basic = base64.b64encode(credentials.encode("utf-8")).decode("ascii")
     request = Request(
@@ -70,21 +72,58 @@ def authenticate(config: dict[str, str]) -> tuple[str, int]:
     token_type = data.get("token_type")
     if token_type != "Bearer":
         raise ValueError("Unexpected token type")
-    return token_type, int(data.get("expires_in", 0))
+    return data["access_token"], token_type, int(data.get("expires_in", 0))
+
+
+def read_sample_dda(config: dict[str, str]) -> tuple[bool, int]:
+    account_id = config.get("FISERV_TRIAL_ACCOUNT_ID")
+    if not account_id or config.get("FISERV_TRIAL_ACCOUNT_TYPE") != "DDA":
+        raise ValueError("Approved Premier DDA fixture is not configured")
+    token, _, _ = fetch_token(config)
+    body = json.dumps({"AcctSel": {"AcctKeys": {"AcctId": account_id, "AcctType": "DDA"}}}).encode()
+    efx_header = json.dumps({"OrganizationId": config["FISERV_TRIAL_ORG_ID"], "TrnId": str(uuid.uuid4())})
+    request = Request(
+        HOST_URL + ACCOUNT_DETAILS_PATH,
+        data=body,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "EFXHeader": efx_header,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+        method="POST",
+    )
+    with build_opener(NoRedirect).open(request, timeout=15) as response:
+        data = json.load(response)
+    record = data.get("AcctRec") if isinstance(data, dict) else None
+    if not isinstance(record, dict):
+        raise ValueError("Account response lacks an account record")
+    keys = record.get("AcctKeys") or {}
+    details = record.get("DepositAcctInfo") or {}
+    balances = details.get("AcctBal") or []
+    if not isinstance(balances, list):
+        raise ValueError("Account balance entries are malformed")
+    return keys.get("AcctId") == account_id, len(balances)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=Path.home() / ".config/openfednow/fiserv-trial.env")
-    parser.add_argument("--authenticate", action="store_true", help="Send one token request to Banking Hub CERT")
+    actions = parser.add_mutually_exclusive_group()
+    actions.add_argument("--authenticate", action="store_true", help="Send one token request to Banking Hub CERT")
+    actions.add_argument("--read-sample-dda", action="store_true", help="Read Fiserv's published Premier Trial DDA fixture")
     args = parser.parse_args()
     try:
         config = read_config(args.config)
         validate(config)
-        if not args.authenticate:
+        if not args.authenticate and not args.read_sample_dda:
             print("trial_config=ready provider_auth=not_run")
             return 0
-        token_type, expires_in = authenticate(config)
+        if args.read_sample_dda:
+            matches, count = read_sample_dda(config)
+            print(f"sample_dda_read={'pass' if matches else 'unverified'} account_id_matches={str(matches).lower()} balance_entries={count}")
+            return 0 if matches else 1
+        _, token_type, expires_in = fetch_token(config)
         print(f"provider_auth=pass token_type={token_type} expires_in_ms={expires_in}")
         return 0
     except HTTPError as error:
