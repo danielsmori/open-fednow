@@ -1,0 +1,5 @@
+1165dec5c7756b8bf5fdbc0f827ce00a31415f1fe55d6c7c930a0cdbb0a56884  src/main/java/io/openfednow/acl/adapters/fiserv/PremierTrialAdapter.java
+d2a9bad1538c096f8a9166a4b54f24bc804234c39fe5b3374fda756ef7ffd93c  src/main/java/io/openfednow/acl/adapters/fiserv/PremierTrialProbe.java
+5c85aefb655f6e7fedabdb120b0e249fb62c745f8952a4aadf88d4ad191d66de  src/test/java/io/openfednow/acl/adapters/fiserv/PremierTrialAdapterTest.java
+a57f671a12abfcd70f8a3de6d5c13f6f670ab65f5b2094a672f8e63866777442  docs/integrations/fiserv-banking-hub.md
+6b7afc48c0d9a9e446113bd0a6e0a188eacf07d4ad8b00ca051a5c0c8472d3df  docs/integrations/fiserv-capability-assessment.md
