@@ -58,6 +58,8 @@ These are features that are not yet built. They are explicitly tracked as future
 
 `FiservAdapter`, `FisAdapter`, and `JackHenryAdapter` are vendor-shaped reference implementations. Their local WireMock suites exercise JSON/SOAP construction, authentication and response mapping. They have not been tested in an actual vendor environment and are not verified for any particular product. The [v1 reliability capability matrix](reliability/adapter-capabilities-v1.md) records fixture-only evidence and unsupported all-channel reservation, expiry, posting/reversal deduplication and outcome lookup. The guarded SQL reliability bridge does not call these adapters. A vendor-backed live send must fail closed until an institution establishes the missing capabilities and applicable specifications.
 
+The [Banking Hub Premier discovery](integrations/fiserv-banking-hub.md) found that the legacy Fiserv fixture's paths and token request are not a mapped Banking Hub contract. Public Add Transfer documentation describes possible nightly batch balance updates after memo-post failure. A Trial token request and one sample DDA account read succeeded, but the appropriate available-balance type, sandbox statefulness and durable reservation guarantee have not been established. The new outbound core port is separate from the SQL reliability workflow and defaults to unsupported; it does not enable a send.
+
 `MockVendorAdapter` has an in-memory balance ledger and configurable failures for local development. It is not a substitute for a real institution core. The existing adapter contract tests cover the narrow `CoreBankingAdapter` methods, not the stronger financial guarantees needed for live outbound payments.
 
 ---

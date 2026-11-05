@@ -13,29 +13,9 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * HTTP transport layer for the Fiserv Communicator Open REST API.
- *
- * <p>Constructs all required Fiserv request headers, delegates body
- * serialization to the DTO records, and maps HTTP responses to
- * {@link CoreBankingResponse} using {@link FiservReasonCodeMapper} and
- * {@link FiservAmountEncoder}.
- *
- * <h2>Required headers (per Fiserv Communicator Open API spec)</h2>
- * <ul>
- *   <li>{@code Authorization: Bearer {token}} — OAuth 2.0 bearer token</li>
- *   <li>{@code Api-Key: {apiKey}} — Fiserv-issued API key</li>
- *   <li>{@code Client-Request-Id: {uuid}} — unique per request, for tracing</li>
- *   <li>{@code Timestamp: {epochMs}} — millisecond epoch, used for replay protection</li>
- * </ul>
- *
- * <h2>API paths (Fiserv Communicator Open)</h2>
- * <ul>
- *   <li>{@code POST /banking/v1/transactions} — post a credit transfer</li>
- *   <li>{@code GET  /banking/v1/accounts/{accountId}/balances} — balance inquiry</li>
- *   <li>{@code GET  /banking/v1/health} — system availability check</li>
- * </ul>
- *
- * @see <a href="https://docs.fiserv.dev">Fiserv Developer Documentation</a>
+ * Transport for legacy local HTTP fixtures. The paths and headers below are
+ * fixture assumptions, not verified Banking Hub operations. Do not point this
+ * client at a provider host without a product-specific contract and review.
  */
 public class FiservHttpClient {
 
@@ -58,10 +38,10 @@ public class FiservHttpClient {
     }
 
     /**
-     * Posts a credit transfer to the Fiserv core banking system.
+     * Submits the locally modeled credit transfer request.
      *
      * <p>Translates the pacs.008 message to a {@link FiservTransactionRequest},
-     * submits it to the Fiserv transactions endpoint, and maps the response to
+     * submits it to the fixture transactions endpoint, and maps the response to
      * a {@link CoreBankingResponse}. Any {@link RestClientException} (network
      * errors, connection resets, malformed responses) is caught and returned
      * as {@link CoreBankingResponse.Status#TIMEOUT} so the circuit breaker can
@@ -97,10 +77,10 @@ public class FiservHttpClient {
     }
 
     /**
-     * Queries the available balance for an account from the Fiserv core system.
+     * Queries the locally modeled available balance endpoint.
      *
-     * @param accountId institution's internal account identifier
-     * @return available balance in USD
+     * @param accountId fixture account identifier
+     * @return fixture balance decoded as USD
      * @throws IllegalStateException if the response is empty or missing the balance field
      */
     public BigDecimal getBalance(String accountId) {
@@ -120,7 +100,7 @@ public class FiservHttpClient {
     }
 
     /**
-     * Checks whether the Fiserv system is reachable and healthy.
+     * Checks whether the locally modeled endpoint is reachable.
      *
      * @return {@code true} if the health endpoint returns 2xx; {@code false} on any error
      */

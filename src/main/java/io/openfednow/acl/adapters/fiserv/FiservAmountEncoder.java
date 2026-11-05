@@ -4,17 +4,14 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 /**
- * Encodes and decodes monetary amounts in Fiserv's fixed-point format.
- *
- * <p>Fiserv Precision, Premier, and Communicator Open represent amounts as
- * integer strings in minor currency units (cents for USD). For example:
+ * Encodes and decodes monetary amounts in the legacy local fixture format.
+ * This cent-string representation is not a verified Banking Hub amount contract.
+ * For example:
  * <ul>
  *   <li>{@code $1,000.50} → {@code "100050"}</li>
  *   <li>{@code "75000"}   → {@code $750.00}</li>
  * </ul>
  *
- * <p>This encoding is documented in the Fiserv Communicator Open API guide
- * and the Fiserv SOAP Integration Guide (docs.fiserv.dev).
  */
 public class FiservAmountEncoder {
 
@@ -24,11 +21,11 @@ public class FiservAmountEncoder {
     private FiservAmountEncoder() {}
 
     /**
-     * Encodes a {@link BigDecimal} USD amount to Fiserv's fixed-point cent string.
+     * Encodes a {@link BigDecimal} USD amount to the fixture's cent string.
      *
      * @param amount USD amount (e.g. {@code 1000.50})
      * @return fixed-point cent string (e.g. {@code "100050"})
-     * @throws ArithmeticException if the amount has more than 2 decimal places
+     * @throws ArithmeticException if an encoded result cannot be represented exactly
      */
     public static String encode(BigDecimal amount) {
         return amount
@@ -39,7 +36,7 @@ public class FiservAmountEncoder {
     }
 
     /**
-     * Decodes a Fiserv fixed-point cent string to a {@link BigDecimal} USD amount.
+     * Decodes a fixture cent string to a {@link BigDecimal} USD amount.
      *
      * @param encoded fixed-point cent string (e.g. {@code "100050"})
      * @return USD amount with scale 2 (e.g. {@code 1000.50})

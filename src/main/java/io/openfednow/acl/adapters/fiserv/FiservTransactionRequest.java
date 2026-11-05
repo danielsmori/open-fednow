@@ -3,17 +3,8 @@ package io.openfednow.acl.adapters.fiserv;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Request body for the Fiserv Communicator Open transaction posting endpoint.
- *
- * <p>Field names and structure match the Fiserv Communicator Open REST API
- * specification (docs.fiserv.dev). The {@code amount} field uses Fiserv's
- * fixed-point encoding: a cent-denominated integer string produced by
- * {@link FiservAmountEncoder#encode(java.math.BigDecimal)}.
- *
- * <p>The {@code paymentType} field is always {@code "INSTANT"} for FedNow
- * transactions to indicate real-time settlement is required.
- *
- * @see <a href="https://docs.fiserv.dev">Fiserv Developer Documentation</a>
+ * Request body for the legacy local transaction fixture. Its fields and amount
+ * encoding have not been mapped to a Banking Hub API specification.
  */
 public record FiservTransactionRequest(
 
@@ -21,11 +12,11 @@ public record FiservTransactionRequest(
         @JsonProperty("transactionId")
         String transactionId,
 
-        /** End-to-end identifier carried unchanged from pacs.008 for deduplication. */
+        /** End-to-end identifier carried from pacs.008; deduplication is unverified. */
         @JsonProperty("endToEndId")
         String endToEndId,
 
-        /** Settlement amount as a Fiserv fixed-point cent string (e.g. "100050" = $1,000.50). */
+        /** Settlement amount as a fixture cent string (e.g. "100050" = $1,000.50). */
         @JsonProperty("amount")
         String amount,
 
@@ -61,7 +52,7 @@ public record FiservTransactionRequest(
         @JsonProperty("remittanceInfo")
         String remittanceInfo,
 
-        /** Payment type — always "INSTANT" for FedNow real-time transfers. */
+        /** Locally modeled payment type; no provider settlement semantics are implied. */
         @JsonProperty("paymentType")
         String paymentType
 ) {}

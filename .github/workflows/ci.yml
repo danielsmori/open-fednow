@@ -31,6 +31,9 @@ jobs:
         # below. Run integration tests locally with: mvn test -Dgroups=integration -DexcludedGroups=
         run: mvn -B test --no-transfer-progress
 
+      - name: Run Banking Hub preflight tests
+        run: python3 -m unittest discover -s scripts -p 'test_fiserv_trial_preflight.py'
+
       - name: Upload unit test results
         if: always()
         uses: actions/upload-artifact@v7
