@@ -22,7 +22,7 @@ Recorded 2026-11-05. Evaluated implementation revision: `d8f6e12` (on `feature/f
 
 The pass criteria for the new local tests cover unsupported mutations and balance reads, unknown/expired hold gating, missing institution channel evidence, production-send denial, invalid mutation construction, and fixture host confinement. A constructed positive gate test proves only the Boolean condition of the local model, not real provider capability.
 
-`SHA256SUMS` hashes the listed source and current discovery documents. The source and test files remain those of the evaluated implementation revision; only discovery documentation changed after the Trial workspace was created.
+`SHA256SUMS` hashes the listed files at the final PR revision. The execution results above remain tied to their stated revisions; refreshing these hashes does not mean the provider scenarios were rerun.
 
 ## Next gate
 

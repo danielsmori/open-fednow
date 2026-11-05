@@ -11,4 +11,4 @@ Observed 2026-11-05 against the user-created Banking Hub Trial workspace, whose 
 
 No credential, token, full provider response, account identifier, customer data, or request header value is included here. This result establishes **token authentication only**. It does not show authorization for any specific API, account balance accuracy, a durable reservation, idempotency, or live core access. The trial may simulate API behavior; this has not been classified by observation.
 
-`SHA256SUMS` hashes the preflight code, its local tests and placeholder configuration example. The earlier local-evaluation bundle remains separate.
+`SHA256SUMS` hashes the listed files at the final PR revision. The authentication observation remains tied to the evaluated revision above; refreshing these hashes does not mean the token request was rerun. The earlier local-evaluation bundle remains separate.

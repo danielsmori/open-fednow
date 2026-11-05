@@ -11,4 +11,4 @@ Observed 2026-11-05 around 18:30 UTC. Evaluated revision: `ffdfc23` on `feature/
 
 The sample account ID, credentials, token, complete request headers, balances and complete provider response are not included here. The sample account value is held only in an owner-readable local file, not Git. This result proves access to a provider-hosted **sandbox account API** for the published sample. It does not prove connection to a live bank core, other-channel reservation, rail integration, or FedNow validation.
 
-`SHA256SUMS` hashes the runner, its local tests, and the discovery/capability documents as of the evaluated revision. Earlier evidence bundles describe earlier stages and should be checked against their stated commits.
+`SHA256SUMS` hashes the listed files at the final PR revision. The account-read observation remains tied to the evaluated revision above; refreshing these hashes does not mean the provider request was rerun. Earlier evidence bundles describe earlier stages at their stated commits.

@@ -31,6 +31,16 @@ class PreflightTest(unittest.TestCase):
             path.write_text("# local\nFISERV_TRIAL_API_SECRET=a=b=c\n")
             self.assertEqual(preflight.read_config(path)["FISERV_TRIAL_API_SECRET"], "a=b=c")
 
+    def test_account_read_requires_matching_identity_and_balance_entries(self):
+        response = {"AcctRec": {"AcctKeys": {"AcctId": "sample"},
+                                "DepositAcctInfo": {"AcctBal": [{"BalType": "example"}]}}}
+        self.assertEqual(preflight.assess_account_response(response, "sample"), (True, 1))
+        with self.assertRaisesRegex(ValueError, "identity"):
+            preflight.assess_account_response(response, "other")
+        response["AcctRec"]["DepositAcctInfo"]["AcctBal"] = []
+        with self.assertRaisesRegex(ValueError, "balance entries"):
+            preflight.assess_account_response(response, "sample")
+
 
 if __name__ == "__main__":
     unittest.main()

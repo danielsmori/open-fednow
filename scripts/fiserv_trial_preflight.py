@@ -95,15 +95,21 @@ def read_sample_dda(config: dict[str, str]) -> tuple[bool, int]:
     )
     with build_opener(NoRedirect).open(request, timeout=15) as response:
         data = json.load(response)
+    return assess_account_response(data, account_id)
+
+
+def assess_account_response(data: object, account_id: str) -> tuple[bool, int]:
     record = data.get("AcctRec") if isinstance(data, dict) else None
     if not isinstance(record, dict):
         raise ValueError("Account response lacks an account record")
-    keys = record.get("AcctKeys") or {}
-    details = record.get("DepositAcctInfo") or {}
-    balances = details.get("AcctBal") or []
-    if not isinstance(balances, list):
-        raise ValueError("Account balance entries are malformed")
-    return keys.get("AcctId") == account_id, len(balances)
+    keys = record.get("AcctKeys")
+    details = record.get("DepositAcctInfo")
+    balances = details.get("AcctBal") if isinstance(details, dict) else None
+    if not isinstance(keys, dict) or keys.get("AcctId") != account_id:
+        raise ValueError("Account response identity does not match the request")
+    if not isinstance(balances, list) or not balances:
+        raise ValueError("Account response lacks balance entries")
+    return True, len(balances)
 
 
 def main() -> int:
