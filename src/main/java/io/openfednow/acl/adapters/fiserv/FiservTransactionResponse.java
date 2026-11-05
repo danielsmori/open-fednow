@@ -3,19 +3,9 @@ package io.openfednow.acl.adapters.fiserv;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Response body from the Fiserv Communicator Open transaction posting endpoint.
- *
- * <p>The {@code status} field indicates the outcome:
- * <ul>
- *   <li>{@code "APPROVED"} — transaction accepted and posted by the core system</li>
- *   <li>{@code "REJECTED"} — transaction rejected; see {@code reasonCode} for details</li>
- *   <li>{@code "PENDING"}  — transaction accepted asynchronously; a webhook or
- *       polling call is required to retrieve the final outcome</li>
- * </ul>
- *
- * <p>When {@code status} is {@code "REJECTED"}, the {@code reasonCode} field contains
- * a Fiserv-specific code that is mapped to an ISO 20022 reason code by
- * {@link FiservReasonCodeMapper}.
+ * Response body from the legacy local transaction fixture. The statuses and
+ * reason codes have not been verified for Banking Hub; fixture acceptance is
+ * not proof of an external posting.
  */
 public record FiservTransactionResponse(
 
@@ -23,15 +13,15 @@ public record FiservTransactionResponse(
         @JsonProperty("status")
         String status,
 
-        /** Fiserv-assigned reference number for accepted transactions. Null on rejection. */
+        /** Locally modeled reference number. */
         @JsonProperty("transactionRef")
         String transactionRef,
 
-        /** Fiserv rejection code (e.g. "INSF", "INVLD_ACCT"). Null when status is "APPROVED". */
+        /** Locally modeled rejection code (e.g. "INSF", "INVLD_ACCT"). */
         @JsonProperty("reasonCode")
         String reasonCode,
 
-        /** Human-readable message from the Fiserv system. */
+        /** Human-readable fixture message. */
         @JsonProperty("message")
         String message
 ) {}

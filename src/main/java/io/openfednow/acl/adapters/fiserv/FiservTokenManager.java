@@ -11,26 +11,10 @@ import org.springframework.web.client.RestClient;
 import java.time.Instant;
 
 /**
- * Manages Fiserv OAuth 2.0 access tokens for the Communicator Open / DNA API.
- *
- * <p>Implements the OAuth 2.0 client credentials grant as documented in the
- * Fiserv Communicator Open API authentication guide (docs.fiserv.dev).
- * Tokens are cached in memory and refreshed proactively before the expiry
- * buffer window elapses.
- *
- * <p>All public methods are thread-safe via {@code synchronized}.
- *
- * <h2>Token endpoint</h2>
- * <pre>
- *   POST {fiserv-base-url}/fts-apim/oauth2/v2
- *   Content-Type: application/x-www-form-urlencoded
- *
- *   grant_type=client_credentials
- *   &amp;client_id={clientId}
- *   &amp;client_secret={clientSecret}
- * </pre>
- *
- * @see <a href="https://docs.fiserv.dev">Fiserv Developer Documentation</a>
+ * Token handling for legacy local fixtures. Public Banking Hub Premier docs
+ * describe Basic authentication with API key and secret for token acquisition;
+ * this fixture sends credentials in a form body instead and is not a verified
+ * Banking Hub client. All public methods are synchronized.
  */
 public class FiservTokenManager {
 
@@ -46,10 +30,10 @@ public class FiservTokenManager {
     private volatile Instant tokenExpiry = Instant.EPOCH;
 
     /**
-     * @param restClient          pre-configured with the Fiserv base URL
+     * @param restClient          pre-configured with the local fixture base URL
      * @param tokenPath           path of the token endpoint (e.g. {@code /fts-apim/oauth2/v2})
-     * @param clientId            OAuth client ID issued by Fiserv
-     * @param clientSecret        OAuth client secret issued by Fiserv
+     * @param clientId            fixture client ID
+     * @param clientSecret        fixture client secret
      * @param expiryBufferSeconds seconds before expiry to treat the token as stale and refresh
      */
     public FiservTokenManager(RestClient restClient, String tokenPath,
@@ -111,7 +95,7 @@ public class FiservTokenManager {
     }
 
     /**
-     * JSON response shape for the Fiserv OAuth token endpoint.
+     * JSON response shape modeled by the local OAuth fixture.
      * Field names match the OAuth 2.0 RFC 6749 specification.
      */
     record TokenResponse(

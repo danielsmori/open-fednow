@@ -14,55 +14,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
+import java.net.URI;
 
 /**
- * Layer 2 — Fiserv Core Banking Adapter
- *
- * <p>Connects OpenFedNow to Fiserv core banking platforms via the
- * Fiserv Communicator Open REST API (docs.fiserv.dev). Supports the
- * DNA, Precision, Premier, and Cleartouch platforms.
- *
- * <p>Fiserv serves approximately 42% of U.S. banks and 31% of U.S. credit
- * unions, making this the highest-priority adapter in the OpenFedNow framework
- * (Phase 1, Months 1–9).
- *
- * <h2>Authentication</h2>
- * <p>Uses OAuth 2.0 client credentials grant ({@code POST /fts-apim/oauth2/v2}).
- * Tokens are cached and refreshed proactively by {@link FiservTokenManager}.
- *
- * <h2>Amount encoding</h2>
- * <p>All monetary values are transmitted as Fiserv fixed-point cent strings
- * (e.g. {@code "100050"} = $1,000.50) and decoded on receipt.
- *
- * <h2>Rejection codes</h2>
- * <p>Fiserv-specific codes (e.g. {@code INSF}, {@code INVLD_ACCT}) are mapped
- * to ISO 20022 reason codes before being returned in pacs.002 status reports.
- *
- * <h2>Circuit breaker</h2>
- * <p>All three methods are protected by the {@code corebanking} circuit breaker
- * configured in {@code application.yml}. Fallback behaviour:
- * <ul>
- *   <li>{@link #postCreditTransfer} returns {@code TIMEOUT} — SyncAsyncBridge
- *       issues provisional FedNow acceptance backed by Shadow Ledger</li>
- *   <li>{@link #isCoreSystemAvailable} returns {@code false} — AvailabilityBridge
- *       activates Shadow Ledger bridge mode</li>
- *   <li>{@link #getAvailableBalance} throws — callers consult the Shadow Ledger</li>
- * </ul>
- *
- * <h2>Configuration (application.yml)</h2>
- * <pre>
- * openfednow:
- *   adapter: fiserv          # activates this bean
- *   adapter-fiserv:
- *     base-url: ${FISERV_BASE_URL}
- *     client-id: ${FISERV_CLIENT_ID}
- *     client-secret: ${FISERV_CLIENT_SECRET}
- *     api-key: ${FISERV_API_KEY}
- * </pre>
- *
- * @see FiservHttpClient
- * @see FiservTokenManager
- * @see <a href="https://docs.fiserv.dev">Fiserv Developer Documentation</a>
+ * Legacy Fiserv-shaped local fixture adapter. Its request paths, headers, amount
+ * encoding and response mapping have not been matched to a selected Banking Hub
+ * product/version or exercised against a Fiserv environment. Selecting this bean
+ * does not establish core authority or enable the SQL reliability send path.
+ * See docs/integrations/fiserv-banking-hub.md before using any external endpoint.
  */
 @Component("fiservAdapter")
 @ConditionalOnProperty(name = "openfednow.adapter", havingValue = "fiserv")
@@ -99,10 +58,25 @@ public class FiservAdapter implements CoreBankingAdapter {
     @PostConstruct
     void init() {
         if (httpClient != null) return; // already set via test constructor
+        if (!isLoopbackFixtureUrl(baseUrl)) {
+            throw new IllegalStateException("Legacy Fiserv fixture requires a loopback base URL");
+        }
         RestClient restClient = RestClient.builder().baseUrl(baseUrl).build();
         FiservTokenManager tokenManager = new FiservTokenManager(
                 restClient, tokenPath, clientId, clientSecret, tokenExpiryBufferSeconds);
         httpClient = new FiservHttpClient(restClient, tokenManager, apiKey);
+    }
+
+    static boolean isLoopbackFixtureUrl(String url) {
+        try {
+            URI uri = URI.create(url);
+            return ("http".equals(uri.getScheme()) || "https".equals(uri.getScheme()))
+                    && ("localhost".equalsIgnoreCase(uri.getHost())
+                    || "127.0.0.1".equals(uri.getHost())
+                    || "[::1]".equals(uri.getHost()));
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     // ── CoreBankingAdapter ────────────────────────────────────────────────────
@@ -138,17 +112,15 @@ public class FiservAdapter implements CoreBankingAdapter {
     // ── Circuit breaker fallbacks ─────────────────────────────────────────────
 
     private CoreBankingResponse fallbackPostCreditTransfer(Pacs008Message message, Throwable t) {
-        // Return TIMEOUT so SyncAsyncBridge can issue a provisional FedNow acceptance
-        // backed by Shadow Ledger validation and queue the transaction for replay.
+        // The external outcome is unknown. A caller must not infer failure or
+        // authorize a new financial mutation from this fallback.
         return new CoreBankingResponse(
                 CoreBankingResponse.Status.TIMEOUT, null, "CB_OPEN", null);
     }
 
     private BigDecimal fallbackGetAvailableBalance(String accountId, Throwable t) {
-        // The Shadow Ledger is the authoritative balance source when the core is
-        // unreachable. Signal the caller to consult it instead.
         throw new IllegalStateException(
-                "Fiserv core unreachable (circuit open) — use Shadow Ledger for balance inquiry", t);
+                "Fiserv-shaped fixture balance unavailable; no authoritative balance observation", t);
     }
 
     private boolean fallbackIsCoreSystemAvailable(Throwable t) {

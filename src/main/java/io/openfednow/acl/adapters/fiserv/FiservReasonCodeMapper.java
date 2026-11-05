@@ -3,22 +3,9 @@ package io.openfednow.acl.adapters.fiserv;
 import java.util.Map;
 
 /**
- * Maps Fiserv-specific transaction status codes to ISO 20022 reason codes.
- *
- * <p>Fiserv Communicator Open and DNA return proprietary rejection codes in the
- * {@code reasonCode} field of the transaction response. These must be translated
- * to ISO 20022 codes before being returned in a pacs.002 status report.
- *
- * <p>Mappings are derived from the Fiserv Communicator Open API documentation
- * (docs.fiserv.dev) and the FedNow ISO 20022 code set published by the
- * Federal Reserve.
- *
- * <p>Codes not present in the map fall back to {@code NARR} (narrative reason),
- * which instructs the FedNow recipient to inspect the accompanying description.
- *
- * @see <a href="https://docs.fiserv.dev">Fiserv Developer Documentation</a>
- * @see <a href="https://www.iso20022.org/catalogue-messages/additional-content-messages/external-code-sets">
- *      ISO 20022 External Code Sets</a>
+ * Maps locally modeled fixture rejection codes to ISO 20022 reason codes.
+ * These source codes and mappings have not been verified for Banking Hub.
+ * Unknown values fall back to {@code NARR} in the fixture.
  */
 public class FiservReasonCodeMapper {
 
@@ -36,9 +23,9 @@ public class FiservReasonCodeMapper {
     private FiservReasonCodeMapper() {}
 
     /**
-     * Converts a Fiserv rejection code to the corresponding ISO 20022 reason code.
+     * Converts a locally modeled rejection code to an ISO 20022 reason code.
      *
-     * @param fiservCode the proprietary Fiserv rejection code (e.g. {@code "INSF"})
+     * @param fiservCode the fixture rejection code (e.g. {@code "INSF"})
      * @return ISO 20022 reason code (e.g. {@code "AM04"}), or {@code "NARR"} if unmapped
      */
     public static String toIso20022(String fiservCode) {
@@ -49,7 +36,7 @@ public class FiservReasonCodeMapper {
     }
 
     /**
-     * Returns {@code true} if the Fiserv status string represents an accepted transaction.
+     * Returns {@code true} if the fixture status string represents acceptance.
      *
      * @param fiservStatus the {@code status} field from the Fiserv transaction response
      * @return {@code true} for {@code "APPROVED"} or {@code "ACCEPTED"}
