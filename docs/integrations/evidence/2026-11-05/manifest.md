@@ -1,6 +1,6 @@
 # Fiserv discovery and local contract result
 
-Recorded 2026-11-05. Evaluated implementation revision: `d8f6e12` (on `feature/fiserv-banking-hub-foundation`, based on `9c7d292`). Discovery documentation was updated later that day after a Trial workspace was created and additional public Premier endpoints were inspected; the source checksums below reflect those documentation updates. This bundle contains no provider responses or credentials.
+Recorded 2026-11-05. Evaluated implementation revision: `d8f6e12` (on `feature/fiserv-banking-hub-foundation`, based on `9c7d292`). Discovery documentation was updated later that day after a Trial workspace was created, additional public Premier endpoints were inspected, and token authentication succeeded; the source checksums below reflect those documentation updates. This bundle covers the earlier local checks. The separate Trial-auth bundle records the later provider authentication result. Neither bundle contains credentials or tokens.
 
 ## Environment and provenance
 
