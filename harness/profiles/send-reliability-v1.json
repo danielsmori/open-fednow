@@ -1,0 +1,35 @@
+{
+  "profile_id": "send-reliability",
+  "profile_version": "1.0.0",
+  "scenario_manifest": "scenarios-v1.json",
+  "cases": [
+    {
+      "id": "S01",
+      "name": "Normal settlement and rejection",
+      "required_driver_operations": ["seed", "submit", "effects", "account"],
+      "expected": {"local": "One HOLD and POST for settlement, or HOLD and RELEASE for rejection; final hold zero", "rail": "One submission per payment with matching final status"},
+      "basis": {"public_guidance": "No FedNow-specific assertion is made by this local normal-path check", "engineering_invariant": "One financial effect per operation", "fixture_boundary": "Synthetic SQL account and simulated rail"}
+    },
+    {
+      "id": "S02",
+      "name": "Lost confirmation",
+      "required_driver_operations": ["seed", "submit", "lookup", "effects", "account", "inquiry_due"],
+      "expected": {"local": "OUTCOME_UNKNOWN keeps the hold and original ledger; repeat returns same operation; inquiry yields one POST, final hold zero", "rail": "Simulator settles, drops reply, and records one submission"},
+      "basis": {"public_guidance": "FedNow Operating Procedures v3.7 section 13.d advises status inquiry before another message when status is uncertain after timeout", "public_source": "https://www.frbservices.org/wp-content/uploads/101326-fednow-service-operating-procedures.pdf", "engineering_invariant": "A repeat at the local API retrieves the existing operation and never creates a second debit; this is distinct from duplicate FedNow-message handling", "fixture_boundary": "Synthetic inquiry clock and simulator-controlled lost response"}
+    },
+    {
+      "id": "S06",
+      "name": "Concurrent duplicate business request",
+      "required_driver_operations": ["seed", "submit", "lookup", "effects", "account", "inquiry_due"],
+      "expected": {"local": "Concurrent identical requests return one operation, one HOLD and one POST", "rail": "One submission during a controlled barrier"},
+      "basis": {"public_guidance": "None claimed", "engineering_invariant": "Business identity is claimed once under concurrency", "fixture_boundary": "Simulator barrier and synthetic account"}
+    },
+    {
+      "id": "S16",
+      "name": "Competing payments",
+      "required_driver_operations": ["seed", "submit", "effects", "account"],
+      "expected": {"local": "Of two distinct payments that fit alone, one is admitted and one refused; final ledger and hold match one debit", "rail": "Winner has one submission; refused payment has none"},
+      "basis": {"public_guidance": "None claimed", "engineering_invariant": "Competing reservations cannot overspend the declared account boundary", "fixture_boundary": "Only the target's synthetic exclusive-account fixture is covered"}
+    }
+  ]
+}
