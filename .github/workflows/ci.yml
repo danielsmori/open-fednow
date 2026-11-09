@@ -34,6 +34,12 @@ jobs:
       - name: Run Banking Hub preflight tests
         run: python3 -m unittest discover -s scripts -p 'test_fiserv_trial_preflight.py'
 
+      - name: Run portable reliability profile tests
+        run: python3 -m unittest discover -s harness -p 'test_portable_profile.py'
+
+      - name: Smoke test portable send profile
+        run: python3 harness/smoke_profile.py --case S02 --output target/portable/ci-smoke.json
+
       - name: Upload unit test results
         if: always()
         uses: actions/upload-artifact@v7
