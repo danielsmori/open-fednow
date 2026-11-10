@@ -1,12 +1,12 @@
 # S02 ledger and rail comparison evidence
 
-Evaluated harness commit: `5151d48cca3c8731eff21f90bac2d0ad969bd955`, based on `2d467144ca4bfa73689fd6bc823dd4e6850432bc` (`origin/main` when the branch was created). The [machine-readable report](report.json) pins the runner, comparator, shared oracle, portable profile, scenario manifest, and Python target hashes. The Java service is the main-branch baseline. All targets, accounts, balances, rail events, and faults are synthetic and local.
+Evaluated harness commit: `f61e997f01e407a2947574fbbef6a0b47d958b12`, based on `2d467144ca4bfa73689fd6bc823dd4e6850432bc` (`origin/main` when the branch was created). The [machine-readable report](report.json) pins the runner, comparator, shared oracle, portable profile, scenario manifest, and Python target hashes. The Java service is the main-branch baseline. All targets, accounts, balances, rail events, and faults are synthetic and local.
 
 ## Exact verification
 
 | Check | Command | Result |
 | --- | --- | --- |
-| Independent comparator tests | `python3 -m unittest discover -s harness -p 'test_s02_comparison.py'` | 3 passed |
+| Independent comparator tests | `python3 -m unittest discover -s harness -p 'test_s02_comparison.py'` | 4 passed, including a forced clean false alarm retained in the summary |
 | Portable evaluator tests | `python3 -m unittest discover -s harness -p 'test_portable_profile.py'` | 8 passed |
 | Existing S02 smoke | `python3 harness/smoke_profile.py --case S02 --output target/s02-comparison/default-smoke.json` | S02 passed |
 | Paired comparison | Start `./demo/payment-integration.sh` in one terminal; in another run `python3 harness/compare_s02.py --mode both --trials 3 --output target/s02-comparison/full.json` | 3 fresh Java/PostgreSQL and 3 fresh Python/SQLite S02 trials; 0 execution problems |

@@ -1,11 +1,11 @@
 {
   "schema": "s02-ledger-rail-comparison-v1",
-  "source_revision": "5151d48cca3c8731eff21f90bac2d0ad969bd955",
+  "source_revision": "f61e997f01e407a2947574fbbef6a0b47d958b12",
   "base_revision": "2d467144ca4bfa73689fd6bc823dd4e6850432bc",
   "environment": "project-built synthetic local",
   "requested_trials_per_target": 3,
   "revisions": {
-    "runner_sha256": "067ea4fc70119ff5de591fd5b0e3804558e58e395a703cf298910b2b4315fe10",
+    "runner_sha256": "9b40f1ec5ac5a300c6d8d8577e7d4df3f71cb8204cbde7649ffb44f955d588f0",
     "comparator_sha256": "714a45355634b93a244c9942300887a2ce81f83c4017acc49c635f1ca5f9d2b0",
     "shared_oracle_sha256": "f379672418cc6938d6e1ce05a5bfba36217a23c93c759561e1da72c86bda0a74",
     "profile_sha256": "b264e4b94a7cdbf782947faa4ed339a7f8f8507f0c3993f7a8c7e13c0d77992a",
@@ -1037,6 +1037,7 @@
       "valid_faults_eligible": 12,
       "clean_false_alarms": 0,
       "clean_trials": 6,
+      "clean_unavailable": 0,
       "unavailable_cases": 0
     },
     "ledger_rail_comparator": {
@@ -1044,6 +1045,7 @@
       "valid_faults_eligible": 12,
       "clean_false_alarms": 0,
       "clean_trials": 6,
+      "clean_unavailable": 0,
       "unavailable_cases": 6
     },
     "portable_evaluator": {
@@ -1051,6 +1053,7 @@
       "valid_faults_eligible": 12,
       "clean_false_alarms": 0,
       "clean_trials": 6,
+      "clean_unavailable": 0,
       "unavailable_cases": 6
     }
   },
