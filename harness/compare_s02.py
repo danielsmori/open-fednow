@@ -139,9 +139,8 @@ def trial_records(target, trial, driver, rail):
     message_id = payment["messageId"]
     clean_events = events_for(rail, message_id)
     clean_snapshot = {key: trace[key] for key in ("local", "account", "effects", "remote")}
-    clean = normalize(trace, clean_snapshot, clean_events)
-    if evaluate(clean)["result"] != "PASS" or portable_decision(trace, clean_snapshot)["result"] != "PASS":
-        raise RuntimeError("clean S02 fixture did not satisfy predeclared checks")
+    # run_case validates the target's clean S02 behavior. Keep each evaluator's
+    # verdict even when it disagrees, so the report can count a false alarm.
     records = [score("clean", target, trial, trace, clean_snapshot, clean_events)]
 
     code, _ = rail.call("POST", "/control/" + message_id, {"status": "SETTLED"})
@@ -189,9 +188,35 @@ def summarize(records):
         "clean_false_alarms": sum(r["workflows"][name]["result"] == "DETECT"
             for r in records if r["condition"] == "clean"),
         "clean_trials": sum(r["condition"] == "clean" for r in records),
+        "clean_unavailable": sum(r["workflows"][name]["result"] == "UNAVAILABLE"
+            for r in records if r["condition"] == "clean"),
         "unavailable_cases": sum(r["workflows"][name]["result"] == "UNAVAILABLE"
             for r in records if r["condition"] == "missing_rail_evidence"),
     } for name in names}
+
+
+def scoring_valid(records):
+    methods = ("historical_status_only", "ledger_rail_comparator", "portable_evaluator")
+    clean_passed = all(
+        record["workflows"][method]["result"] == "PASS"
+        for record in records if record["condition"] == "clean"
+        for method in methods
+    )
+    fault_results = all(
+        record["workflows"][method]["result"] == expected
+        for record in records
+        for method, expected in (
+            ("historical_status_only", "PASS"),
+            ("ledger_rail_comparator", "DETECT"),
+            ("portable_evaluator", "DETECT"),
+        ) if record["condition"] in ("extra_submission", "missing_local_post")
+    )
+    missing_evidence_unavailable = all(
+        record["workflows"][method]["result"] == "UNAVAILABLE"
+        for record in records if record["condition"] == "missing_rail_evidence"
+        for method in ("ledger_rail_comparator", "portable_evaluator")
+    )
+    return clean_passed and fault_results and missing_evidence_unavailable
 
 
 def main(argv=None):
@@ -283,21 +308,8 @@ def main(argv=None):
     print(f'Valid S02 trials: {report["valid_clean_trials"]}; execution problems: '
           f'{len(report["execution_problems"])}; report: {output}')
     expected_trials = args.trials * (2 if args.mode == "both" else 1)
-    valid_scoring = all(
-        record["workflows"][method]["result"] == expected
-        for record in report["records"]
-        for method, expected in (
-            ("historical_status_only", "PASS"),
-            ("ledger_rail_comparator", "DETECT"),
-            ("portable_evaluator", "DETECT"),
-        ) if record["condition"] in ("extra_submission", "missing_local_post")
-    ) and all(
-        record["workflows"][method]["result"] == "UNAVAILABLE"
-        for record in report["records"] if record["condition"] == "missing_rail_evidence"
-        for method in ("ledger_rail_comparator", "portable_evaluator")
-    )
     return 0 if (report["valid_clean_trials"] == expected_trials and
-                 not report["execution_problems"] and valid_scoring) else 1
+                 not report["execution_problems"] and scoring_valid(report["records"])) else 1
 
 
 if __name__ == "__main__":
