@@ -84,3 +84,40 @@ jobs:
         with:
           name: integration-test-results
           path: target/surefire-reports/
+
+  tigerbeetle-s16:
+    name: TigerBeetle Synthetic S16
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install pinned local experiment dependencies
+        run: |
+          python -m venv target/tigerbeetle/.venv
+          target/tigerbeetle/.venv/bin/python -m pip install -r harness/requirements-tigerbeetle.txt
+          curl -fL -o target/tigerbeetle/tigerbeetle-x86_64-linux.zip \
+            https://github.com/tigerbeetle/tigerbeetle/releases/download/0.17.9/tigerbeetle-x86_64-linux.zip
+          unzip -q target/tigerbeetle/tigerbeetle-x86_64-linux.zip -d target/tigerbeetle
+
+      - name: Check ledger result handling
+        run: target/tigerbeetle/.venv/bin/python -m unittest discover -s harness -p 'test_tigerbeetle_ledger.py'
+
+      - name: Run unchanged S16 and pending contention
+        run: target/tigerbeetle/.venv/bin/python harness/smoke_tigerbeetle.py --binary target/tigerbeetle/tigerbeetle --output target/tigerbeetle/ci-s16.json
+
+      - name: Check settlement and rejection
+        run: target/tigerbeetle/.venv/bin/python harness/smoke_tigerbeetle.py --binary target/tigerbeetle/tigerbeetle --case S01 --output target/tigerbeetle/ci-s01.json
+
+      - name: Upload synthetic reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: tigerbeetle-synthetic-reports
+          path: target/tigerbeetle/ci-*.json
