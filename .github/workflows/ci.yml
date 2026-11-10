@@ -37,6 +37,11 @@ jobs:
       - name: Run portable reliability profile tests
         run: python3 -m unittest discover -s harness -p 'test_portable_profile.py'
 
+      - name: Check S02 comparison and smoke run
+        run: |
+          python3 -m unittest discover -s harness -p 'test_s02_comparison.py'
+          python3 harness/compare_s02.py --mode python --trials 1 --output target/s02-comparison/ci-quick.json
+
       - name: Check reference target guards
         run: python3 -m unittest discover -s harness -p 'test_reference_target_guards.py'
 
