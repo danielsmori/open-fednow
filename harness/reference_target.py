@@ -4,6 +4,7 @@ import argparse
 import base64
 import hashlib
 import json
+import re
 import sqlite3
 import threading
 import uuid
@@ -18,6 +19,22 @@ def now():
     return datetime.now(timezone.utc).isoformat()
 
 
+def local_tigerbeetle_address(value):
+    """Allow exactly one IPv4 loopback replica endpoint for this experiment."""
+    match = re.fullmatch(r"127\.0\.0\.1:([1-9][0-9]{0,4})", value)
+    if match is None or int(match.group(1)) > 65535:
+        raise ValueError("TigerBeetle experiment requires one loopback address and valid port")
+    return value
+
+
+def prior_payment_status(previous_fingerprint, fingerprint, state, tigerbeetle_mode):
+    if previous_fingerprint != fingerprint:
+        return 409
+    if tigerbeetle_mode and state == "RESERVING":
+        return 503
+    return 200
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8100)
@@ -27,10 +44,12 @@ def main():
     args = parser.parse_args()
     ledger = None
     if args.tigerbeetle_address:
-        if not args.tigerbeetle_address.startswith("127.0.0.1:"):
-            parser.error("TigerBeetle experiment requires a loopback address")
+        try:
+            address = local_tigerbeetle_address(args.tigerbeetle_address)
+        except ValueError as error:
+            parser.error(str(error))
         from tigerbeetle_ledger import Ledger
-        ledger = Ledger(args.tigerbeetle_address)
+        ledger = Ledger(address)
     db = sqlite3.connect(args.db, check_same_thread=False)
     db.execute("PRAGMA journal_mode=WAL")
     db.execute("""CREATE TABLE IF NOT EXISTS accounts
@@ -221,10 +240,9 @@ def main():
                                  (request["debtorAgentRoutingNumber"], request["endToEndId"])).fetchone()
                 if old:
                     old_view = view(old[0])
-                    if ledger and old_view["state"] == "RESERVING":
-                        return self.respond(503, {"error": "reservation confirmation pending"})
-                    return self.respond(200 if old[1] == fingerprint else 409,
-                                        old_view if old[1] == fingerprint else {"error": "payload conflict"})
+                    code = prior_payment_status(old[1], fingerprint, old_view["state"], bool(ledger))
+                    return self.respond(code, old_view if code == 200 else {
+                        "error": "payload conflict" if code == 409 else "reservation confirmation pending"})
                 account = account_view(request["debtorAccountNumber"])
                 if account is None or not account["exclusiveControl"] or (
                         not ledger and account["ledgerMinor"] - account["heldMinor"] < amount):
