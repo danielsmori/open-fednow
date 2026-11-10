@@ -1,6 +1,6 @@
 # TigerBeetle-backed synthetic S16: local evidence
 
-Evaluated source revision: `9a22e85b4c95799a868bc68146533f0051479509` on `feature/tigerbeetle-s16-portability`, based on main `cf449895eb38bacdf21369405f441c75940900a5`. The server was **TigerBeetle 0.17.9+cc1c06a** (macOS universal release binary); the Python SDK was **tigerbeetle 0.17.9** in a disposable local virtual environment. One self-hosted development replica ran on loopback with fresh temporary data for each invocation. The target and rail were both project-built; accounts and payments were synthetic.
+Evaluated source revision: `59d7593a644492d1bbf8f5bb07ec8b04baa8edeb` on `feature/tigerbeetle-s16-portability`, based on main `cf449895eb38bacdf21369405f441c75940900a5`. The initial implementation commit was `9a22e85b4c95799a868bc68146533f0051479509`; the evaluated revision includes the address and pending-retry guard fixes. The server was **TigerBeetle 0.17.9+cc1c06a** (macOS universal release binary); the Python SDK was **tigerbeetle 0.17.9** in a disposable local virtual environment. One self-hosted development replica ran on loopback with fresh temporary data for each invocation. The target and rail were both project-built; accounts and payments were synthetic.
 
 ## Observed runs
 
@@ -12,6 +12,7 @@ Evaluated source revision: `9a22e85b4c95799a868bc68146533f0051479509` on `featur
 | Default SQLite reference smoke | `python3 harness/smoke_profile.py --all --output target/tigerbeetle/sqlite-regression.json` | S01, S02, S06, S16 **PASS** without the optional SDK or server. |
 | Portable runner unit checks | `python3 -m unittest discover -s harness -p 'test_portable_profile.py'` | 8 PASS. |
 | TigerBeetle result checks | `target/tigerbeetle/.venv/bin/python -m unittest discover -s harness -p 'test_tigerbeetle_ledger.py'` | 3 PASS: explicit insufficient funds, duplicate-ID mismatch, and ambiguous-result lookup behavior. |
+| Local address and pending-retry guards | `python3 -m unittest discover -s harness -p 'test_reference_target_guards.py'` | 2 PASS. A replica list containing a non-loopback address and invalid ports are rejected before SDK connection. A changed payload gets 409 while the existing reservation is pending; an identical retry gets 503. |
 
 The first exploratory S01 run **failed** after TigerBeetle voided the hold: the target marked the operation `INVESTIGATION` because the SDK's looked-up void transfer contained the original hold amount while the request had sent zero. The final implementation sends the full pending amount on the void operation and checks the returned immutable record. The subsequent S01 run passed. The initial failed run preceded the source commit above and is not represented as a passing result.
 

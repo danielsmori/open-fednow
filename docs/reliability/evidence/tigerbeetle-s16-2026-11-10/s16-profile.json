@@ -7,7 +7,7 @@
   "runner_sha256": "76666b2fa35e18bdf4d12cc72b6f62d7c66b554fce40702cd2156a1747830fb1",
   "oracle_sha256": "f379672418cc6938d6e1ce05a5bfba36217a23c93c759561e1da72c86bda0a74",
   "scenario_manifest_sha256": "19b935e949696ed9459d743f5bb25ebbaddec3db4de602fbebbc2d8b7c1fe98b",
-  "target_revision": "reference_target.py:sha256:e783fa34ba3bbb74",
+  "target_revision": "reference_target.py:sha256:f4d88048cf5ea875",
   "driver": "openfednow-http-v1",
   "environment_type": "synthetic-local",
   "cases": [
