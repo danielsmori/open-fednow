@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Independent minimal synthetic payment target for harness portability checks."""
+"""Synthetic payment target with default SQLite or opt-in TigerBeetle ledger."""
 import argparse
 import base64
 import hashlib
 import json
+import re
 import sqlite3
 import threading
 import uuid
@@ -18,12 +19,37 @@ def now():
     return datetime.now(timezone.utc).isoformat()
 
 
+def local_tigerbeetle_address(value):
+    """Allow exactly one IPv4 loopback replica endpoint for this experiment."""
+    match = re.fullmatch(r"127\.0\.0\.1:([1-9][0-9]{0,4})", value)
+    if match is None or int(match.group(1)) > 65535:
+        raise ValueError("TigerBeetle experiment requires one loopback address and valid port")
+    return value
+
+
+def prior_payment_status(previous_fingerprint, fingerprint, state, tigerbeetle_mode):
+    if previous_fingerprint != fingerprint:
+        return 409
+    if tigerbeetle_mode and state == "RESERVING":
+        return 503
+    return 200
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8100)
     parser.add_argument("--db", required=True)
     parser.add_argument("--rail-url", required=True)
+    parser.add_argument("--tigerbeetle-address", help="Opt-in local ledger at a loopback address")
     args = parser.parse_args()
+    ledger = None
+    if args.tigerbeetle_address:
+        try:
+            address = local_tigerbeetle_address(args.tigerbeetle_address)
+        except ValueError as error:
+            parser.error(str(error))
+        from tigerbeetle_ledger import Ledger
+        ledger = Ledger(address)
     db = sqlite3.connect(args.db, check_same_thread=False)
     db.execute("PRAGMA journal_mode=WAL")
     db.execute("""CREATE TABLE IF NOT EXISTS accounts
@@ -37,6 +63,10 @@ def main():
     db.execute("""CREATE TABLE IF NOT EXISTS effects
         (payment_id TEXT, kind TEXT, account_id TEXT, amount INTEGER,
          PRIMARY KEY(payment_id,kind))""")
+    if ledger:
+        db.execute("""CREATE TABLE IF NOT EXISTS tigerbeetle_operations
+            (payment_id TEXT PRIMARY KEY, pending_id TEXT NOT NULL,
+             post_id TEXT NOT NULL, void_id TEXT NOT NULL)""")
     db.commit()
     lock = threading.RLock()
 
@@ -65,8 +95,15 @@ def main():
         row = db.execute("SELECT * FROM accounts WHERE id=?", (account_id,)).fetchone()
         if row is None:
             return None
-        return {"accountId": row[0], "ledgerMinor": row[1], "heldMinor": row[2],
+        booked, held = ledger.account(account_id) if ledger else (row[1], row[2])
+        return {"accountId": row[0], "ledgerMinor": booked, "heldMinor": held,
                 "exclusiveControl": bool(row[3]), "version": row[4]}
+
+    def confirm_mapping(payment_id):
+        row = db.execute("SELECT pending_id,post_id,void_id FROM tigerbeetle_operations "
+                         "WHERE payment_id=?", (payment_id,)).fetchone()
+        if row is None or tuple(row) != tuple(map(str, ledger.payment_ids(payment_id))):
+            raise ValueError("persisted ledger operation mapping unavailable")
 
     def apply(payment_id, observation):
         with lock:
@@ -93,15 +130,25 @@ def main():
                     db.commit()
                 return view(payment_id)
             kind = "POST" if state == "SETTLED" else "RELEASE"
-            inserted = db.execute("INSERT OR IGNORE INTO effects VALUES (?,?,?,?)",
-                                  (payment_id, kind, payment["accountId"], payment["amountMinor"]))
-            if inserted.rowcount:
-                if kind == "POST":
-                    db.execute("UPDATE accounts SET held=held-?,ledger=ledger-?,version=version+1 WHERE id=?",
-                               (payment["amountMinor"], payment["amountMinor"], payment["accountId"]))
-                else:
-                    db.execute("UPDATE accounts SET held=held-?,version=version+1 WHERE id=?",
-                               (payment["amountMinor"], payment["accountId"]))
+            if ledger:
+                try:
+                    confirm_mapping(payment_id)
+                    ledger.finalize(payment_id, payment["accountId"], payment["amountMinor"], state)
+                except Exception:
+                    db.execute("UPDATE payments SET state='INVESTIGATION',updated=? WHERE id=?",
+                               (now(), payment_id))
+                    db.commit()
+                    return view(payment_id)
+            else:
+                inserted = db.execute("INSERT OR IGNORE INTO effects VALUES (?,?,?,?)",
+                                      (payment_id, kind, payment["accountId"], payment["amountMinor"]))
+                if inserted.rowcount:
+                    if kind == "POST":
+                        db.execute("UPDATE accounts SET held=held-?,ledger=ledger-?,version=version+1 WHERE id=?",
+                                   (payment["amountMinor"], payment["amountMinor"], payment["accountId"]))
+                    else:
+                        db.execute("UPDATE accounts SET held=held-?,version=version+1 WHERE id=?",
+                                   (payment["amountMinor"], payment["accountId"]))
             db.execute("UPDATE payments SET state=?,updated=? WHERE id=?", (state, now(), payment_id))
             db.commit()
             return view(payment_id)
@@ -136,11 +183,18 @@ def main():
                         db.execute("INSERT INTO accounts VALUES (?,?,?,?,0)",
                                    (request["accountId"], request["ledgerMinor"], 0,
                                     int(request["exclusiveControl"])))
+                        if ledger:
+                            ledger.seed(request["accountId"], request["ledgerMinor"])
                         db.commit()
                     except sqlite3.IntegrityError:
                         return self.respond(409, {"error": "account already exists"})
+                    except Exception:
+                        db.rollback()
+                        return self.respond(503, {"error": "ledger fixture unavailable"})
                     return self.respond(200, account_view(request["accountId"]))
             if path.endswith("/external-debits"):
+                if ledger:
+                    return self.respond(503, {"error": "external debit unavailable in this experiment"})
                 account_id = path.split("/")[-2]
                 amount = self.read_json()["amountMinor"]
                 with lock:
@@ -185,24 +239,52 @@ def main():
                 old = db.execute("SELECT id,fingerprint FROM payments WHERE institution=? AND business_key=?",
                                  (request["debtorAgentRoutingNumber"], request["endToEndId"])).fetchone()
                 if old:
-                    return self.respond(200 if old[1] == fingerprint else 409,
-                                        view(old[0]) if old[1] == fingerprint else {"error": "payload conflict"})
+                    old_view = view(old[0])
+                    code = prior_payment_status(old[1], fingerprint, old_view["state"], bool(ledger))
+                    return self.respond(code, old_view if code == 200 else {
+                        "error": "payload conflict" if code == 409 else "reservation confirmation pending"})
                 account = account_view(request["debtorAccountNumber"])
-                if account is None or not account["exclusiveControl"] or account["ledgerMinor"] - account["heldMinor"] < amount:
+                if account is None or not account["exclusiveControl"] or (
+                        not ledger and account["ledgerMinor"] - account["heldMinor"] < amount):
                     return self.respond(409, {"error": "no enforceable reservation"})
                 try:
                     db.execute("INSERT INTO payments VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                                (payment_id, request["debtorAgentRoutingNumber"], request["endToEndId"],
                                 fingerprint, request["transactionId"], request["messageId"],
-                                request["debtorAccountNumber"], amount, "SUBMITTING", attempt_id, now(), now()))
-                    db.execute("UPDATE accounts SET held=held+?,version=version+1 WHERE id=?",
-                               (amount, request["debtorAccountNumber"]))
-                    db.execute("INSERT INTO effects VALUES (?,?,?,?)",
-                               (payment_id, "HOLD", request["debtorAccountNumber"], amount))
+                                request["debtorAccountNumber"], amount,
+                                "RESERVING" if ledger else "SUBMITTING", attempt_id, now(), now()))
+                    if ledger:
+                        pending, post, void = ledger.payment_ids(payment_id)
+                        db.execute("INSERT INTO tigerbeetle_operations VALUES (?,?,?,?)",
+                                   (payment_id, str(pending), str(post), str(void)))
+                    else:
+                        db.execute("UPDATE accounts SET held=held+?,version=version+1 WHERE id=?",
+                                   (amount, request["debtorAccountNumber"]))
+                        db.execute("INSERT INTO effects VALUES (?,?,?,?)",
+                                   (payment_id, "HOLD", request["debtorAccountNumber"], amount))
                     db.commit()
                 except sqlite3.IntegrityError:
                     db.rollback()
                     return self.respond(409, {"error": "identifier collision"})
+            if ledger:
+                try:
+                    reserved = ledger.reserve(payment_id, request["debtorAccountNumber"], amount)
+                except Exception:
+                    with lock:
+                        db.execute("UPDATE payments SET state='INVESTIGATION',updated=? WHERE id=?",
+                                   (now(), payment_id))
+                        db.commit()
+                    return self.respond(503, {"error": "reservation outcome unconfirmed"})
+                if not reserved:
+                    with lock:
+                        db.execute("DELETE FROM tigerbeetle_operations WHERE payment_id=?", (payment_id,))
+                        db.execute("DELETE FROM payments WHERE id=?", (payment_id,))
+                        db.commit()
+                    return self.respond(409, {"error": "insufficient funds"})
+                with lock:
+                    db.execute("UPDATE payments SET state='SUBMITTING',updated=? WHERE id=?",
+                               (now(), payment_id))
+                    db.commit()
             try:
                 observation = rail("POST", "/submit", {"message": request, "attemptId": attempt_id})
                 apply(payment_id, observation)
@@ -216,7 +298,7 @@ def main():
 
         def do_GET(self):
             if self.path == "/health":
-                return self.respond(200, {"ok": True, "mode": "minimal-reference"})
+                return self.respond(200, {"ok": True, "mode": "tigerbeetle-synthetic" if ledger else "minimal-reference"})
             if not self.authorized():
                 return
             parts = self.path.split("/")
@@ -225,9 +307,16 @@ def main():
                     value = account_view(parts[-1])
                 elif self.path.endswith("/effects"):
                     payment_id = parts[-2]
-                    value = [{"operationId": r[0], "effectType": r[1], "accountId": r[2],
-                              "amountMinor": r[3]} for r in db.execute(
-                                  "SELECT * FROM effects WHERE payment_id=? ORDER BY kind", (payment_id,))]
+                    payment = view(payment_id)
+                    if ledger and payment:
+                        confirm_mapping(payment_id)
+                        value = [{"operationId": payment_id, "effectType": kind,
+                                  "accountId": payment["accountId"], "amountMinor": payment["amountMinor"]}
+                                 for kind in ledger.effects(payment_id, payment["accountId"], payment["amountMinor"])]
+                    else:
+                        value = [{"operationId": r[0], "effectType": r[1], "accountId": r[2],
+                                  "amountMinor": r[3]} for r in db.execute(
+                                      "SELECT * FROM effects WHERE payment_id=? ORDER BY kind", (payment_id,))]
                 elif self.path.startswith("/reference/v1/payments/"):
                     value = view(parts[-1])
                 else:
@@ -242,6 +331,8 @@ def main():
         server.serve_forever()
     finally:
         db.close()
+        if ledger:
+            ledger.close()
 
 
 if __name__ == "__main__":

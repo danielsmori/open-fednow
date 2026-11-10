@@ -1,0 +1,28 @@
+{
+  "experiment_schema": "tigerbeetle-s16-v1",
+  "server_version": "TigerBeetle version 0.17.9+cc1c06a",
+  "sdk_version": "0.17.9",
+  "ledger_module_sha256": "f96927fdb3d38d72e85c89b5edfeb0d817f94339835ed8a1e6e9d49f48f8aedf",
+  "contention": {
+    "result": "PASS",
+    "first_hold_pending_at_second_reservation": true,
+    "second_reservation_refused_by_ledger": true,
+    "before_second": {
+      "ledger_minor": 100000,
+      "held_minor": 70000
+    },
+    "after_second": {
+      "ledger_minor": 100000,
+      "held_minor": 70000
+    },
+    "loser_effect_types": [],
+    "final": {
+      "ledger_minor": 30000,
+      "held_minor": 0
+    },
+    "winner_effect_types": [
+      "HOLD",
+      "POST"
+    ]
+  }
+}
