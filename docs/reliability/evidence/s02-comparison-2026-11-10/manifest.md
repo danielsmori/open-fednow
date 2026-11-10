@@ -1,6 +1,6 @@
 # S02 ledger and rail comparison evidence
 
-Evaluated harness commit: `1541704f1314e4b39bc98c8428bd7b5adb98db57`, based on `2d467144ca4bfa73689fd6bc823dd4e6850432bc` (`origin/main` when the branch was created). The [machine-readable report](report.json) pins the runner, comparator, shared oracle, portable profile, scenario manifest, and Python target hashes. The Java service is the main-branch baseline. All targets, accounts, balances, rail events, and faults are synthetic and local.
+Evaluated harness commit: `5151d48cca3c8731eff21f90bac2d0ad969bd955`, based on `2d467144ca4bfa73689fd6bc823dd4e6850432bc` (`origin/main` when the branch was created). The [machine-readable report](report.json) pins the runner, comparator, shared oracle, portable profile, scenario manifest, and Python target hashes. The Java service is the main-branch baseline. All targets, accounts, balances, rail events, and faults are synthetic and local.
 
 ## Exact verification
 

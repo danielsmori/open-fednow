@@ -1,11 +1,11 @@
 {
   "schema": "s02-ledger-rail-comparison-v1",
-  "source_revision": "1541704f1314e4b39bc98c8428bd7b5adb98db57",
+  "source_revision": "5151d48cca3c8731eff21f90bac2d0ad969bd955",
   "base_revision": "2d467144ca4bfa73689fd6bc823dd4e6850432bc",
   "environment": "project-built synthetic local",
   "requested_trials_per_target": 3,
   "revisions": {
-    "runner_sha256": "589009551ae0c9cd9d5db292d87297ec9ef3653543c3dc28858fa280441edc2a",
+    "runner_sha256": "067ea4fc70119ff5de591fd5b0e3804558e58e395a703cf298910b2b4315fe10",
     "comparator_sha256": "714a45355634b93a244c9942300887a2ce81f83c4017acc49c635f1ca5f9d2b0",
     "shared_oracle_sha256": "f379672418cc6938d6e1ce05a5bfba36217a23c93c759561e1da72c86bda0a74",
     "profile_sha256": "b264e4b94a7cdbf782947faa4ed339a7f8f8507f0c3993f7a8c7e13c0d77992a",
