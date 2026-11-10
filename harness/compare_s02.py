@@ -205,8 +205,13 @@ def main(argv=None):
     if not 1 <= args.trials <= 10:
         parser.error("--trials must be between 1 and 10")
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
-    baseline = subprocess.check_output(["git", "merge-base", "HEAD", "origin/main"],
-                                       cwd=ROOT, text=True).strip()
+    try:
+        baseline = subprocess.check_output(["git", "merge-base", "HEAD", "origin/main"],
+                                           cwd=ROOT, text=True,
+                                           stderr=subprocess.DEVNULL).strip()
+    except subprocess.CalledProcessError:
+        # CI's shallow pull-request checkout may not include origin/main.
+        baseline = None
     report = {"schema": "s02-ledger-rail-comparison-v1", "source_revision": revision,
               "base_revision": baseline, "environment": "project-built synthetic local",
               "requested_trials_per_target": args.trials,
