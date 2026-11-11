@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use OpenFedNow, please cite it using the metadata below."
+title: "OpenFedNow: open-source failure tests and reference code for U.S. instant-payment integration"
+type: software
+authors:
+  - family-names: "Stelzer Mori"
+    given-names: "Daniel"
+repository-code: "https://github.com/danielsmori/open-fednow"
+license: Apache-2.0
+doi: 10.5281/zenodo.21114113
+keywords:
+  - instant payments
+  - FedNow
+  - RTP
+  - core banking
+  - payment reliability
+  - software testing
