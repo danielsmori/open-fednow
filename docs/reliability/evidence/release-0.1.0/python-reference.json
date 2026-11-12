@@ -1,0 +1,136 @@
+{
+  "report_schema": "portable-send-result-v1",
+  "profile_id": "send-reliability",
+  "profile_version": "1.0.0",
+  "profile_sha256": "b264e4b94a7cdbf782947faa4ed339a7f8f8507f0c3993f7a8c7e13c0d77992a",
+  "runner_version": "1.0.0",
+  "runner_sha256": "76666b2fa35e18bdf4d12cc72b6f62d7c66b554fce40702cd2156a1747830fb1",
+  "oracle_sha256": "f379672418cc6938d6e1ce05a5bfba36217a23c93c759561e1da72c86bda0a74",
+  "scenario_manifest_sha256": "19b935e949696ed9459d743f5bb25ebbaddec3db4de602fbebbc2d8b7c1fe98b",
+  "target_revision": "reference_target.py:sha256:f4d88048cf5ea875",
+  "driver": "openfednow-http-v1",
+  "environment_type": "synthetic-local",
+  "cases": [
+    {
+      "id": "S01",
+      "result": "PASS",
+      "expected": {
+        "local": "One HOLD and POST for settlement, or HOLD and RELEASE for rejection; final hold zero",
+        "rail": "One submission per payment with matching final status"
+      },
+      "observed": {
+        "settled": {
+          "local": {
+            "state": "SETTLED",
+            "ledger_minor": 90000,
+            "held_minor": 0,
+            "effect_types": [
+              "HOLD",
+              "POST"
+            ]
+          },
+          "rail": {
+            "status": "SETTLED",
+            "submission_count": 1
+          }
+        },
+        "rejected": {
+          "local": {
+            "state": "REJECTED",
+            "ledger_minor": 100000,
+            "held_minor": 0,
+            "effect_types": [
+              "HOLD",
+              "RELEASE"
+            ]
+          },
+          "rail": {
+            "status": "REJECTED",
+            "submission_count": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "S02",
+      "result": "PASS",
+      "expected": {
+        "local": "OUTCOME_UNKNOWN keeps the hold and original ledger; repeat returns same operation; inquiry yields one POST, final hold zero",
+        "rail": "Simulator settles, drops reply, and records one submission"
+      },
+      "observed": {
+        "local": {
+          "state": "SETTLED",
+          "ledger_minor": 90000,
+          "held_minor": 0,
+          "effect_types": [
+            "HOLD",
+            "POST"
+          ],
+          "before_inquiry_state": "OUTCOME_UNKNOWN",
+          "before_inquiry_ledger_minor": 100000,
+          "before_inquiry_held_minor": 10000,
+          "repeat_same_operation": true
+        },
+        "rail": {
+          "status": "SETTLED",
+          "submission_count": 1
+        }
+      }
+    },
+    {
+      "id": "S06",
+      "result": "PASS",
+      "expected": {
+        "local": "Concurrent identical requests return one operation, one HOLD and one POST",
+        "rail": "One submission during a controlled barrier"
+      },
+      "observed": {
+        "local": {
+          "state": "SETTLED",
+          "ledger_minor": 90000,
+          "held_minor": 0,
+          "effect_types": [
+            "HOLD",
+            "POST"
+          ],
+          "duplicate_same_operation": true
+        },
+        "rail": {
+          "status": "SETTLED",
+          "submission_count": 1
+        }
+      }
+    },
+    {
+      "id": "S16",
+      "result": "PASS",
+      "expected": {
+        "local": "Of two distinct payments that fit alone, one is admitted and one refused; final ledger and hold match one debit",
+        "rail": "Winner has one submission; refused payment has none"
+      },
+      "observed": {
+        "local": {
+          "state": "SETTLED",
+          "ledger_minor": 30000,
+          "held_minor": 0,
+          "effect_types": [
+            "HOLD",
+            "POST"
+          ],
+          "refused_http": 409
+        },
+        "rail": {
+          "status": "SETTLED",
+          "submission_count": 1,
+          "refused_payment_http": 404
+        }
+      }
+    }
+  ],
+  "summary": {
+    "pass": 4,
+    "fail": 0,
+    "blocked": 0
+  }
+}
