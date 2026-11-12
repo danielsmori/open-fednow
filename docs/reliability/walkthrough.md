@@ -1,6 +1,6 @@
 # Investigate a lost confirmation in the synthetic package
 
-For an interactive presentation of the guarded `/fednow/send` path, use the [Payment Integration walkthrough](../../README.md#payment-integration-walkthrough) in the existing demo console. It shows the same local uncertainty boundary with a normal payment and a lost confirmation; the command-line evaluation below remains the broader scenario oracle.
+For an interactive presentation of the guarded `/fednow/send` path, use the [Payment Integration walkthrough](../../README.md#see-it-in-a-browser) in the existing demo console. It shows the same local uncertainty boundary with a normal payment and a lost confirmation; the command-line evaluation below remains the broader scenario oracle.
 
 Use a clean checkout and the [reproduction workflow](reproduce.md) with JDK 17, Python and Docker. The evaluator starts the Java target, the independent SQLite-backed rail simulator, and a separate Python target. It provisions synthetic account IDs only.
 

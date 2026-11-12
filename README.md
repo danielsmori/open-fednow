@@ -10,7 +10,7 @@
 [![Status](https://img.shields.io/badge/Status-Sandbox%20%2F%20Reference%20Implementation-blue)]()
 [![Java](https://img.shields.io/badge/Java-17%2B-orange)]()
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue)]()
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21114113.svg)](https://doi.org/10.5281/zenodo.21114113)
+[![Preprint DOI](https://img.shields.io/badge/Preprint%20DOI-10.5281%2Fzenodo.21114113-blue)](https://doi.org/10.5281/zenodo.21114113)
 
 > **Independent project.** OpenFedNow is not affiliated with, endorsed by, or connected to the Federal Reserve Banks, the FedNow Service, The Clearing House, or any core banking provider. It does not connect to a live payment network. See [Trademarks and affiliation](#trademarks-and-affiliation).
 
@@ -54,6 +54,8 @@ python3 harness/smoke_profile.py --all
 4. Report what happened, including failures and anything you could not reproduce. Open a **Reproduction report** issue or use the [evaluator feedback form](docs/reliability/evaluator-feedback-form.md).
 
 The [evaluator guide](docs/reliability/evaluator-guide.md) explains each step in more detail.
+
+<a id="payment-integration-walkthrough"></a>
 
 ## See it in a browser
 
@@ -185,7 +187,9 @@ Please also read the [Code of Conduct](CODE_OF_CONDUCT.md), the [governance note
 
 ## Citing
 
-If you use OpenFedNow in research or a report, cite the archived record: [doi.org/10.5281/zenodo.21114113](https://doi.org/10.5281/zenodo.21114113). Citation metadata is in [CITATION.cff](CITATION.cff). The DOI links an archive record; use the commit-specific [evaluation report](docs/reliability/evaluation-report.md) to assess a particular checkout.
+**The software.** Cite the repository, https://github.com/danielsmori/open-fednow, with the commit hash you used, or the release tag once a tagged release exists. Citation metadata is in [CITATION.cff](CITATION.cff), and GitHub's **Cite this repository** button reads it. The software does not have its own DOI. Use the commit-specific [evaluation report](docs/reliability/evaluation-report.md) to assess a particular checkout.
+
+**The paper.** The architecture preprint, *Bridging Legacy Core Banking to Both U.S. Instant Payment Rails: FedNow and RTP*, has its own DOI: [10.5281/zenodo.21114113](https://doi.org/10.5281/zenodo.21114113). That DOI identifies the preprint posted on May 13, 2026, not this repository. The revised version of November 9, 2026 is in [docs/whitepaper.pdf](docs/whitepaper.pdf).
 
 ## License
 

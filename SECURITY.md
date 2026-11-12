@@ -7,7 +7,7 @@ OpenFedNow is a sandbox and reference implementation. It uses synthetic accounts
 Please do not open a public issue for a security problem.
 
 1. Use GitHub's private reporting: open the repository's **Security** tab and choose **Report a vulnerability**.
-2. If private reporting is unavailable, open an issue titled "Security contact request" with no technical details. The maintainer will arrange a private channel.
+2. If the **Report a vulnerability** button is not shown, private reporting is not enabled for the repository. In that case, open an issue titled "Security contact request" with no technical details. The maintainer will arrange a private channel.
 
 Include the affected file or endpoint, the version or commit, the steps to reproduce, and the effect you observed.
 

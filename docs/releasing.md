@@ -25,8 +25,9 @@ Versions follow [Semantic Versioning](https://semver.org/). Until 1.0.0, a minor
 ## What a release contains
 
 - `openfednow-<version>.jar`: the Java reference service.
-- `openfednow-test-kit-<version>.zip`: the `harness/` directory, the profile guide and the driver contract. It runs with Python 3.9 or later and no other packages.
-- `SHA256SUMS.txt`: checksums for both files.
+- `openfednow-test-kit-<version>.zip`: the `harness/` directory (which includes the driver contract), the profile guide, `LICENSE` and `NOTICE`. From the extracted folder, `python3 harness/smoke_profile.py --all` runs the four portable tests with Python 3.9 or later and no other packages. The zip does not contain `scripts/evaluate.py` or the Java service; the full evaluation needs a repository checkout.
+- `smoke-report-<version>.json`: the report from the four portable tests, as run by the release workflow.
+- `SHA256SUMS.txt`: checksums for the files above.
 
 ## What a release does not mean
 

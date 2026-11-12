@@ -13,6 +13,7 @@ Notable changes to OpenFedNow, newest first. The project has not yet published a
 ### Changed
 - The full component table moved from the README to [docs/status.md](docs/status.md), and the development phases to [docs/roadmap.md](docs/roadmap.md).
 - `docs/whitepaper.pdf` replaced by the revised November 9, 2026 preprint.
+- The README DOI badge is now labelled as the preprint's DOI. The DOI identifies the architecture preprint; the software is cited by repository and commit or release tag.
 
 ## 2026-11-10
 
