@@ -2,94 +2,96 @@
   <img src="docs/assets/logo.png" alt="OpenFedNow" width="520">
 </p>
 
-# OpenFedNow — Legacy Core to U.S. Instant Payment Rails
+# OpenFedNow
 
-**Open-source reference integration for studying legacy-core and U.S. instant-payment failure handling with synthetic FedNow and RTP fixtures.**
+**Open-source failure tests and reference code for sending U.S. instant payments from an existing bank core.**
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Sandbox%20%2F%20Reference%20Implementation-blue)]()
 [![Java](https://img.shields.io/badge/Java-17%2B-orange)]()
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-green)]()
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21114113.svg)](https://doi.org/10.5281/zenodo.21114113)
+[![Python](https://img.shields.io/badge/Python-3.9%2B-blue)]()
+[![Preprint DOI](https://img.shields.io/badge/Preprint%20DOI-10.5281%2Fzenodo.21114113-blue)](https://doi.org/10.5281/zenodo.21114113)
 
-OpenFedNow explores integration between legacy core banking systems and instant payment workflows. It is a reference implementation with synthetic tests; live compatibility and operational benefit remain to be evaluated.
+> **Independent project.** OpenFedNow is not affiliated with, endorsed by, or connected to the Federal Reserve Banks, the FedNow Service, The Clearing House, or any core banking provider. It does not connect to a live payment network. See [Trademarks and affiliation](#trademarks-and-affiliation).
 
-The DOI badge links an archive record; use the commit-specific [evaluation report](docs/reliability/evaluation-report.md) to assess this checkout's behavior.
+## What it does
 
-> **Evaluation scope: synthetic FedNow routing.** Outbound RTP is disabled; screening failures reject by default; downtime sends default to disabled. On the legacy path, an unknown outbound rail outcome keeps the reservation and requires review. The separate SQL reliability path adds synthetic status inquiry and recovery; live status authority remains unverified. See the [capability matrix](docs/capability-matrix.md), [current practical evaluation](docs/reliability/practical-evaluation-2026-10-01.md), and [September candidate report](docs/reliability/evaluation-report.md).
+An instant payment moves money between banks in seconds, and settlement is final. The software between a bank's core system and the payment service has to stay correct when something fails in the middle of a payment. OpenFedNow tests three sending-side failures:
 
-> **Sandbox / reference implementation.** Routing, vendor-shaped adapters, saga lifecycle, idempotency, reconciliation, screening, cancellation, rate limiting, and admin audit have synthetic test coverage. Passing tests do not establish atomic money movement across Redis and SQL, live rail connectivity, vendor compatibility, or production readiness. See [reliability scope](docs/reliability/scope.md), [docs/known-limitations.md](docs/known-limitations.md), and [Production Boundaries](#production-boundaries).
+| Situation | What can go wrong | What the test checks |
+|---|---|---|
+| **Lost confirmation** (S02). The bank sends a payment and no reply comes back. | Sending again pays twice. Assuming success hides a payment that never settled. | The funds stay on hold, the status is checked, and exactly one debit is recorded. |
+| **Repeated request** (S06). The same payment instruction arrives twice. | Two payments leave for one instruction. | The repeat returns the original payment, with one submission. |
+| **Competing payments** (S16). Two payments draw on the same balance at once. | Both are approved against money that covers only one. | The first payment reserves the funds and the second is refused. |
 
----
+The repository contains three things:
 
-## What works today
+- **A test kit.** The [Portable Send Reliability Profile v1](docs/reliability/portable-send-profile.md) defines the scenarios and the results a correct system must produce. You connect it to your own test system through a small [driver](harness/contract-v1.md).
+- **Reference code.** A Java service and a separate Python implementation that pass the tests, so you can read and run one working answer.
+- **Published evidence.** For each evaluation, the [commands, source version and raw results](docs/reliability/evidence/).
+
+## Try it in five minutes
+
+You need Python 3.9 or later. No Java build, Docker or third-party packages are required.
+
+```sh
+git clone https://github.com/danielsmori/open-fednow.git
+cd open-fednow
+python3 harness/smoke_profile.py --case S02
+```
+
+The command prints `S02: PASS` and writes a report to `target/portable/send-v1-smoke.json`. It starts a reference target and a separate payment-service simulator on local ports, runs the lost-confirmation test and stops both. Run all four cases with:
+
+```sh
+python3 harness/smoke_profile.py --all
+```
+
+## Run the tests against your own system
+
+1. Read the [driver contract](harness/contract-v1.md) and copy [`harness/example_target_driver.py`](harness/example_target_driver.py).
+2. Implement the driver methods for your test system. Use synthetic accounts only.
+3. Run the profile as described in the [profile guide](docs/reliability/portable-send-profile.md).
+4. Report what happened, including failures and anything you could not reproduce. Open a **Reproduction report** issue or use the [evaluator feedback form](docs/reliability/evaluator-feedback-form.md).
+
+The [evaluator guide](docs/reliability/evaluator-guide.md) explains each step in more detail.
+
+<a id="payment-integration-walkthrough"></a>
+
+## See it in a browser
+
+From a clean checkout, with JDK 17, Maven, Python 3 and a running Docker daemon, use **one startup command**:
+
+```bash
+./demo/payment-integration.sh
+```
+
+Open `http://127.0.0.1:18080/demo/console.html` and choose **Payment Integration · synthetic**. **Normal payment** sends $100 through the guarded, non-production `/fednow/send` bridge. **Lost confirmation** makes the separate rail simulator record settlement and drop the HTTP reply. Click **Repeat same request** to retrieve the same operation, then **Check status / inquire** to advance the synthetic inquiry clock and observe resolution. The console reads the operation ID and local state from the Java service, booked balance and hold from its PostgreSQL synthetic core fixture, and submission count and rail status from the separate SQLite-backed simulator. It does not infer those figures from button clicks. The console uses the local fixture administrator credentials (`admin:changeme`) and should be used only on a trusted local machine.
+
+For a command-line check of both flows while the stack is running, use `python3 demo/verify-payment-integration.py`; it writes service and simulator observations to `target/payment-integration/verification.json`. Press Ctrl+C in the startup terminal to stop the Java service and simulator and remove the demo's disposable Docker containers. The script uses dedicated ports 18080, 18099, 55432, 56379 and 55672, checks for conflicts before startup, and deletes only this demo's container state and simulator file. **Both core and rail are synthetic.** This walkthrough does not use FedNow transport, an institution core, vendor credentials, or live settlement evidence.
+
+## Current status
 
 | Component | Status |
-|-----------|--------|
-| Five-layer architecture | ✅ Implemented |
-| ISO 20022 message models (pacs.008, pacs.002, pacs.004, camt.056/029) | ✅ Implemented |
-| Cancellation handling — inbound camt.056 → camt.029 with state-keyed decision matrix | ✅ Implemented on both rails; CNCL reverses Shadow Ledger credit and terminates saga. See [ADR-0007](docs/adr/0007-camt056-cancellation-lifecycle.md) |
-| Fraud pre-screening — `FraudScreeningPort` with rule-based default (amount cap, debtor velocity, denylist) | ✅ Disabled by default; opt-in via `openfednow.fraud.enabled=true`. BLOCK returns RJCT before financial effects; screening timeout/error returns TS01 by default. Institutions swap in their own port for production. See [ADR-0008](docs/adr/0008-fraud-screening.md) |
-| SandboxAdapter — all scenarios: ACSC, RJCT, ACSP, timeout | ✅ Implemented |
-| MockVendorAdapter — in-memory balance ledger, configurable failure modes | ✅ Implemented; `CoreBankingAdapterContractTest` enforces adapter contract |
-| `CoreBankingAdapter` contract | ✅ Implemented |
-| Shadow Ledger — Redis-backed, WATCH/MULTI/EXEC optimistic locking | ✅ Implemented + tested |
-| Shadow Ledger endpoint wiring (inbound + outbound) | ✅ Implemented |
-| Maintenance-window bridge fixture | ✅ Local queue/reconciliation behavior tested; continuous live availability unverified |
-| Reconciliation — local replay and comparison after fixture core returns | ✅ Implemented and tested with synthetic dependencies |
-| Reconciliation pagination — keyset-paginated account scan | ✅ Configurable batch size (default 500); institution-scale memory behavior not benchmarked |
-| Saga orchestration — compensation on core rejection | ✅ Implemented + tested |
-| Idempotency — Redis + PostgreSQL dual-write, 48h window | ✅ Implemented + tested in legacy sandbox; cross-store effect atomicity unproven |
-| Local Redis concurrent debit guard | ✅ Race tests cover watched-key updates; cross-channel overdraft prevention unverified |
-| Send-side (outbound) payment flow | SQL synthetic reference slice and opt-in non-production `/fednow/send` bridge implemented; legacy Redis/SQL gateway path disabled by default; no live rail/core authorization established |
-| Payment returns (pacs.004 outbound) | Synthetic client shape exists, but `/fednow/return` is disabled by default; no durable return outcome lifecycle is established. HTTP return submission makes one attempt and propagates uncertainty. |
-| Admin auth — HTTP Basic on `/admin/*` | ✅ Implemented as reference configuration |
-| Admin audit log — every `/admin/**` access recorded to PostgreSQL | ✅ Implemented; both GRANTED and DENIED captured, surfaced via `GET /admin/audit-log`. Sensitive query parameters (`token`, `apikey`, `password`, …) are rewritten to `REDACTED` before persistence by `PiiRedactor` |
-| PII redaction in structured logs | ✅ Account numbers masked to last 4 in `MessageRouter` insufficient-funds log, `ShadowLedger` / `ReconciliationService` discrepancy log; single policy source in `io.openfednow.security.pii.PiiRedactor` |
-| Rotatable admin credentials — file-backed source | ✅ Set `openfednow.admin.credential-file` to a two-line file; re-read on every login (mtime-cached). A K8s Secret mount can be rotated in place without a pod restart |
-| Bridge-mode send policy — receive-only on-ramp | ✅ `openfednow.bridge-mode.allow-sends` (default `false` in every shipped profile). When off, outbound sends during a maintenance window are rejected with ISO 20022 `TS01` (SystemUnavailable) and increment `bridge_mode.sends.blocked` |
-| Currency guard — reject non-USD at ingress | ✅ Inbound and outbound sends in a currency the rail cannot settle (currently USD-only for both FedNow and RTP) are rejected with ISO 20022 `AM03` before any saga init, fraud screen, or ledger touch |
-| Correlate saga_state ↔ admin_audit_log via request-id | ✅ V7 migration adds `request_id` to `saga_state` and `reconciliation_run`; `SagaOrchestrator.initiate` and `ReconciliationService.reconcile` stamp `MDC[requestId]` so any admin-initiated saga is one JOIN from its audit row |
-| Admin query endpoints — saga state, balances, reconciliation history | ✅ `GET /admin/sagas[/{txId}]`, `/admin/accounts/{id}/balance`, `/admin/reconciliation-runs[/{id}]`, `/admin/audit-log` |
-| Saga recovery on application restart | ✅ `ApplicationReadyEvent` listener; unknown legacy rail outcomes remain quarantined for review |
-| Saga timeout monitor — auto-compensate stalled sagas | ✅ `@Scheduled` sweep; ISO 20022 `XPIR` reason; `saga.timeout` Micrometer counter |
-| Balance seeding from core on startup | ✅ Configurable account list seeded via SETNX; `POST /admin/shadow-ledger/seed` for on-demand re-seed |
-| Idempotency cleanup — scheduled sweep of expired Postgres rows | ✅ Configurable TTL (default 48h) and sweep cadence (default 60min) |
-| Rate limiting — per-client on `/fednow/**` and `/rtp/**` POSTs | ✅ Resilience4j `RateLimiter` per IP / X-Forwarded-For; 429 + Retry-After; `gateway.rate_limited` counter |
-| Saga compensation retry — sweeps FAILED sagas with missing REVERSAL rows | ✅ `@Scheduled` retry; idempotent reversal primitives; `saga.compensation.retry.succeeded` and `.failed` counters |
-| Admin audit log retention — scheduled cleanup of `admin_audit_log` | ✅ Configurable retention (default 365 days) and sweep cadence |
-| Transactional boundaries — multi-statement writes commit atomically | ✅ `@Transactional` on `SagaOrchestrator.compensate` / `cancelInboundSaga`; `TransactionTemplate`-wrapped per-account reconciliation |
-| Idempotent Shadow Ledger reversals — safe under retry | ✅ `reverseDebit` and `reverseCredit` skip on existing REVERSAL row; one-call semantics from any caller |
-| Default-credential startup guard | ✅ `@PostConstruct` check refuses to start the `prod` profile if admin credentials are still the sandbox defaults |
-| HTTP security headers — HSTS, X-Content-Type-Options, X-Frame-Options, Cache-Control | ✅ Configured in `SecurityConfig`; verified end-to-end via `SecurityHeadersTest` |
-| CORS — deny-by-default for server-to-server API | ✅ Explicit empty `CorsConfigurationSource`; institutions registering a browser-origin allow-list override the bean |
-| Graceful shutdown — drain in-flight requests on SIGTERM | ✅ `server.shutdown=graceful` + 30s drain window; Helm `terminationGracePeriodSeconds: 60` |
-| HikariCP pool configuration | ✅ Pool 50 / min-idle 10 / 5s connection timeout in the production profile; no capacity benchmark or live sizing validation |
-| Outbound FedNow transfer uncertainty | ✅ Legacy credit transfer attempts once and quarantines a missing status; the SQL reference slice adds durable holds and inquiry. Return submissions attempt once but have no durable lifecycle, so the return gateway stays disabled. |
-| Fraud screening timeout — hard cap on port calls | ✅ `CompletableFuture` deadline (default 1500ms); rejects on timeout / exception by default |
-| Atomic velocity counter — single Redis Lua script | ✅ `INCR` + `EXPIRE` in one round-trip; sliding window matching the documented semantic |
-| Reconcile concurrency guard — same-JVM serialization | ✅ `ReentrantLock` with tryLock; second concurrent call returns "Skipped" report rather than racing |
-| Saga source-rail tracking — dual-rail dispatch foundation | ✅ `source_rail` column on `saga_state` (V5); both gateways thread `Rail` through `MessageRouter` |
-| Dependency scanning — Dependabot + Trivy | ✅ Weekly Maven + Actions updates; Trivy scan fails the build on HIGH/CRITICAL findings |
-| CI — unit + integration test jobs | ✅ Unit and Testcontainers-backed integration jobs passed for [merged PR #87](https://github.com/danielsmori/open-fednow/pull/87); the reliability slice is now on `main` |
-| Dual-rail inbound reference routing | ✅ Shared legacy router with persisted source rail; RTP outbound disabled and live rail parity unverified |
-| RTP Layer 1 — inbound XML, outbound XML, TCH cert validation hook, sandbox + HTTP client | Inbound reference routing and transport utilities implemented; `/rtp/send` disabled pending financial-control parity |
-| Optional Kafka event bus — `PaymentEventPublisher`, 6 event types | ✅ Implemented (disabled by default; no Kafka required) |
-| Kafka publish DLQ — failed publishes routed to a dead-letter topic | ✅ `<topic>.dlq` (configurable) with `X-DLQ-Original-Topic` + `X-DLQ-Reason` headers; `events.publish.failed` / `events.publish.dlq_failed` counters |
-| Event schema versioning — `schemaVersion` field + `X-Schema-Version` / `X-Event-Type` headers | ✅ Implemented; JSON Schema in `docs/event-schemas/`; strategy documented in [ADR-0006](docs/adr/0006-event-schema-versioning.md) |
-| Vendor-shaped adapters (Fiserv, FIS, Jack Henry) | Local REST/JSON or SOAP construction, authentication and response-mapping tests against WireMock fixtures. No vendor-environment or product-compatibility validation; see [capability contract](docs/reliability/adapter-capabilities-v1.md). |
-| Banking Hub Premier read-only adapter | [Premier assessment](docs/integrations/fiserv-banking-hub.md) and a fail-closed [capability assessment](docs/integrations/fiserv-capability-assessment.md). A separate Java adapter authenticated to the shared Trial sandbox and read Fiserv's published sample DDA; available funds and all money mutations remain unsupported. No Banking Hub send integration has been performed. |
-| TigerBeetle S16 portability experiment | Opt-in [local Python target mode](docs/reliability/tigerbeetle-s16.md) uses a pinned TigerBeetle development ledger for synthetic reservations, postings and independent effect reads. The unchanged S16 profile and separate rail simulator evaluate it; production and vendor paths are unaffected. |
-| S02 ledger and rail comparison | The [reproducible local comparison](docs/reliability/s02-ledger-rail-comparison.md) evaluates a status-only check, an independent effect comparator, and the portable evaluator against synthetic Java/PostgreSQL and Python/SQLite targets. |
-| FedNow JWS message signing — outbound RS256 detached signature + inbound verification | ✅ Implemented per RFC 7515 + RFC 7797 with `b64=false`; opt-in via `openfednow.fednow.signing.enabled=true`. See [ADR-0009](docs/adr/0009-fednow-jws-message-signing.md) |
-| Live FedNow connectivity (Fed PKI, mTLS) | 🔲 Credential/certification-dependent; simulator-compatible HTTP client implemented |
-| Live RTP connectivity (TCH network, TCH PKI certificates) | 🔲 TCH onboarding, applicable specifications and certification required; local XML and HTTP utilities do not establish a live pipeline |
+|---|---|
+| Test kit | [Portable Send Reliability Profile v1](docs/reliability/portable-send-profile.md): ordinary payment, lost confirmation, repeated request and competing payments. |
+| Reference code | Java service with durable payment records, fund holds, duplicate-request controls and recovery by status inquiry. A separate Python implementation follows the same rules. |
+| Evaluations | [October 1, 2026 practical evaluation](docs/reliability/practical-evaluation-2026-10-01.md) and the dated bundles in [`docs/reliability/evidence/`](docs/reliability/evidence/). |
+| Independent ledger | The unchanged competing-payments test runs against [TigerBeetle](docs/reliability/tigerbeetle-s16.md). |
+| Check comparison | A [reproducible comparison](docs/reliability/s02-ledger-rail-comparison.md) runs the lost-confirmation test against two synthetic targets and scores a status-only check, an independent ledger-and-rail checklist and the test kit's evaluator. |
+| Provider interface | A [read-only adapter](docs/integrations/fiserv-banking-hub.md) for Fiserv's Banking Hub trial environment. |
 
-See [docs/known-limitations.md](docs/known-limitations.md) for the full gap analysis.
+The full list of components is in [docs/status.md](docs/status.md). Development history and open work are in [docs/roadmap.md](docs/roadmap.md) and [CHANGELOG.md](CHANGELOG.md).
 
----
+## Scope and limits
 
-## Quick start
+OpenFedNow is a sandbox and reference implementation. Its results come from synthetic accounts and a simulated payment service.
+
+- **Evaluation scope: synthetic FedNow routing.** Outbound RTP is disabled; screening failures reject by default; downtime sends default to disabled. On the legacy path, an unknown outbound rail outcome keeps the reservation and requires review. The separate SQL reliability path adds synthetic status inquiry and recovery; live status authority remains unverified. See the [capability matrix](docs/capability-matrix.md), [current practical evaluation](docs/reliability/practical-evaluation-2026-10-01.md), and [September candidate report](docs/reliability/evaluation-report.md).
+- **Sandbox / reference implementation.** Routing, vendor-shaped adapters, saga lifecycle, idempotency, reconciliation, screening, cancellation, rate limiting, and admin audit have synthetic test coverage. Passing tests do not establish atomic money movement across Redis and SQL, live rail connectivity, vendor compatibility, or production readiness. See [reliability scope](docs/reliability/scope.md), [docs/known-limitations.md](docs/known-limitations.md), and [Production Boundaries](#production-boundaries).
+
+Passing these tests does not certify an institution for the FedNow Service or any other network. FedNow's own participant testing and certification process applies to every participant.
+
+## Quick start: the full Java service
 
 Requires JDK 17+, Maven and Docker with Compose. The default application profile uses PostgreSQL, Redis and RabbitMQ from `docker-compose.yml`:
 
@@ -102,18 +104,6 @@ mvn spring-boot:run
 
 The local health route is `http://localhost:8080/fednow/health`; `http://localhost:8080/demo/` is a synthetic browser demonstration. The optional `./demo/run-demo.sh` exercises legacy outbound and return examples and requires starting the app with `LEGACY_OUTBOUND_SANDBOX_ENABLED=true LEGACY_RETURN_SANDBOX_ENABLED=true` in a **local sandbox**. Those routes are disabled by default. The reliability bridge is a separate opt-in non-production path; see [reproduction instructions](docs/reliability/reproduce.md).
 
-### Payment Integration walkthrough
-
-From a clean checkout, with JDK 17, Maven, Python 3 and a running Docker daemon, use **one startup command**:
-
-```bash
-./demo/payment-integration.sh
-```
-
-Open `http://127.0.0.1:18080/demo/console.html` and choose **Payment Integration · synthetic**. **Normal payment** sends $100 through the guarded, non-production `/fednow/send` bridge. **Lost confirmation** makes the separate rail simulator record settlement and drop the HTTP reply. Click **Repeat same request** to retrieve the same operation, then **Check status / inquire** to advance the synthetic inquiry clock and observe resolution. The console reads the operation ID and local state from the Java service, booked balance and hold from its PostgreSQL synthetic core fixture, and submission count and rail status from the separate SQLite-backed simulator. It does not infer those figures from button clicks. The console uses the local fixture administrator credentials (`admin:changeme`) and should be used only on a trusted local machine.
-
-For a command-line check of both flows while the stack is running, use `python3 demo/verify-payment-integration.py`; it writes service and simulator observations to `target/payment-integration/verification.json`. Press Ctrl+C in the startup terminal to stop the Java service and simulator and remove the demo's disposable Docker containers. The script uses dedicated ports 18080, 18099, 55432, 56379 and 55672, checks for conflicts before startup, and deletes only this demo's container state and simulator file. **Both core and rail are synthetic.** This walkthrough does not use FedNow transport, an institution core, vendor credentials, or live settlement evidence.
-
 Default tests run without Docker; tagged integration tests require Docker:
 
 ```sh
@@ -122,8 +112,6 @@ mvn test -Dgroups=integration -DexcludedGroups=
 ```
 
 The [September 29 evaluation report](docs/reliability/evaluation-report.md) records the exact tested source and results. Its full external evaluator runs with `python3 scripts/evaluate.py --integration --negative-control --external` after starting the Compose dependencies.
-
----
 
 ## Architecture
 
@@ -144,13 +132,9 @@ Neither branch represents a certified live rail integration. See [current archit
 
 The repository contains selected `pacs.008`, `pacs.002`, `pacs.004`, `camt.056` and `camt.029` Java models. Local fields and serialization tests do not establish a complete FedNow, RTP or PIX message profile. The SQL reliability harness uses a smaller JSON protocol that is not a FedNow transport or pacs.028 mapping. See [message mapping boundaries](docs/iso20022-mapping.md).
 
----
-
 ## Architectural Background
 
 PIX, FedNow, and RTP all raise legacy-to-real-time integration questions, but their rules, messages, access, and controls differ. This repository is an independent synthetic implementation; it does not disclose or verify any person's work on a proprietary PIX platform.
-
----
 
 ## Repository map
 
@@ -177,8 +161,6 @@ The repository contains reference implementations and synthetic tests. Remaining
 
 See [capability matrix](docs/capability-matrix.md) for the boundary of each claim.
 
----
-
 ## Known Limitations
 
 See [docs/known-limitations.md](docs/known-limitations.md) for the full analysis. Key architectural boundaries:
@@ -188,61 +170,9 @@ See [docs/known-limitations.md](docs/known-limitations.md) for the full analysis
 - **Post-reconciliation returns remain an unverified design.** The sandbox models a return after a provisionally accepted transaction, but the deployed/live effect and legal or customer-visible outcome have not been established. The return gateway is disabled by default; see [ADR-0003](docs/adr/0003-provisional-acceptance-acsp.md).
 - **Outbound camt.056 not yet implemented.** Inbound cancellation handling is complete (camt.056 → camt.029 with state-keyed decision matrix). Initiating a cancellation against our own outbound payment is tracked as future work.
 
----
-
 ## Roadmap
 
-**Phase 1 — Core reference framework implemented**
-- Five-layer architecture: Shadow Ledger, SyncAsyncBridge, Saga orchestration, idempotency, reconciliation
-- ISO 20022 message models — pacs.008 / pacs.002 / pacs.004 / camt.056 / camt.029
-- `MockVendorAdapter` + `CoreBankingAdapterContractTest` baseline; sandbox scenario routing
-
-**Phase 2 — Fiserv + FIS reference adapters implemented; vendor validation open**
-- Fiserv and FIS reference adapter request/response shapes, tested locally with mocks; institution-specific products and compatibility remain unverified
-
-**Phase 3 — Jack Henry reference adapter implemented; vendor validation open**
-- Jack Henry jXchange-shaped reference SOAP adapter, locally tested; product-specific compatibility remains unverified
-- Three vendor-shaped reference adapters implemented; the repo does not establish coverage of any percentage of U.S. institutions
-
-**Phase 3b — RTP reference transport utilities implemented; live validation open**
-- RTP reference transport utilities (outbound gateway initiation disabled): `RtpXmlParser`, `RtpXmlSerializer`, `RtpClient` with sandbox + HTTP implementations, TCH certificate-validation hook
-- `RtpGateway` inbound XML route and outbound transport utilities present; `/rtp/send` remains disabled ([ADR-0005](docs/adr/0005-dual-rail-architecture-fednow-rtp.md))
-
-**Phase 4 — Sandbox operational tooling implemented; institution validation open**
-- Saga lifecycle: source-rail tracking, restart-time recovery, timeout monitor with `XPIR` compensation, compensation retry for failed reversals
-- Admin endpoints: saga state queries, account balance views, reconciliation history, audit log; all under HTTP Basic + `ADMIN` role
-- Admin access auditing with retention sweep; idempotency TTL cleanup; balance seeding from core on startup
-- Cancellation handling — camt.056 → camt.029 with state-keyed decision matrix ([ADR-0007](docs/adr/0007-camt056-cancellation-lifecycle.md))
-- Fraud screening port with rule-based default ([ADR-0008](docs/adr/0008-fraud-screening.md))
-- Per-client rate limiting on `/fednow/**` and `/rtp/**`; reconciliation pagination for large institutions
-- Event schema versioning ([ADR-0006](docs/adr/0006-event-schema-versioning.md))
-
-**Phase 5 — Reference hardening controls implemented; production validation open**
-- Transactional boundaries on multi-statement writes; idempotent Shadow Ledger reversals; atomic Lua velocity counter; same-JVM reconcile concurrency guard
-- HSTS, deny-by-default CORS, default-credential startup guard in prod profile
-- Graceful shutdown with bounded drain window; configurable HikariCP pool (no FedNow capacity benchmark)
-- Outbound FedNow credit transfers make one HTTP attempt and quarantine unknown outcomes; hard timeout on `FraudScreeningPort` calls (fail-closed by default; explicit fail-open option)
-- Dependabot + Trivy workflow; GitHub Actions CI with both unit and integration test jobs
-
-**Phase 6 — Reference signing components implemented; live profile unverified**
-- RS256 detached JWS message signing implemented per RFC 7515 + RFC 7797 ([ADR-0009](docs/adr/0009-fednow-jws-message-signing.md))
-- Outbound: `FedNowJwsSigner` + RestTemplate interceptor attaches a locally defined `X-JWS-Signature` when enabled
-- Inbound: `JwsInboundVerificationFilter` verifies locally shaped signatures when enabled
-- Opt-in via `openfednow.fednow.signing.enabled=true`; sandbox / demo flow unchanged
-- Live mapping also requires applicable restricted message and transport specifications, status authority verification, inquiry behavior, institutional controls, and certification; a certificate and URL alone are insufficient.
-
-**Phase 7 — Synthetic SQL reliability evaluation merged in [PR #87](https://github.com/danielsmori/open-fednow/pull/87)**
-- SQL-scoped operation ownership, holds, possible-send intent, inquiry and final effect tracking for synthetic accounts
-- Controlled non-production bridge from `/fednow/send`; legacy Redis/SQL and return paths remain disabled by default
-- External scenario oracle across four configurations, with separate fault, restart and two-process cases; [measured report](docs/reliability/evaluation-report.md) and [evidence bundle](docs/reliability/evidence/candidate-2026-09-29/README.md)
-
-**Open work**
-- Live FedNow / RTP connectivity (institutional credentials — see Production Boundaries)
-- Cross-process, cross-store and other-channel funds correctness for the legacy Shadow Ledger ([#40](https://github.com/danielsmori/open-fednow/issues/40))
-- Distributed tracing across MDC, RabbitMQ, and Kafka boundaries
-- Operational runbooks for the standard incident-response scenarios
-
----
+Completed phases and open work are listed in [docs/roadmap.md](docs/roadmap.md). Release notes are in [CHANGELOG.md](CHANGELOG.md).
 
 ## Contributing
 
@@ -254,7 +184,13 @@ Areas where contributions are especially valuable:
 - Test coverage for Saga compensation logic
 - Documentation and integration guides
 
----
+Please also read the [Code of Conduct](CODE_OF_CONDUCT.md), the [governance notes](GOVERNANCE.md) and the [security policy](SECURITY.md).
+
+## Citing
+
+**The software.** Cite the repository, https://github.com/danielsmori/open-fednow, with the commit hash you used, or the release tag once a tagged release exists. Citation metadata is in [CITATION.cff](CITATION.cff), and GitHub's **Cite this repository** button reads it. The software does not have its own DOI. Use the commit-specific [evaluation report](docs/reliability/evaluation-report.md) to assess a particular checkout.
+
+**The paper.** The architecture preprint, *Bridging Legacy Core Banking to Both U.S. Instant Payment Rails: FedNow and RTP*, has its own DOI: [10.5281/zenodo.21114113](https://doi.org/10.5281/zenodo.21114113). That DOI identifies the preprint dated May 13, 2026, not this repository. The revised version of November 9, 2026 is in [docs/whitepaper.pdf](docs/whitepaper.pdf).
 
 ## License
 
@@ -262,7 +198,11 @@ This project is licensed under the **Apache License 2.0**. See [LICENSE](LICENSE
 
 Apache 2.0 permits reuse under its stated terms; it does not establish suitability for any institution's payment operations.
 
----
+## Trademarks and affiliation
+
+OpenFedNow is an independent open-source project maintained by Daniel Stelzer Mori. It is not affiliated with, sponsored by, or endorsed by the Federal Reserve Banks, the Board of Governors of the Federal Reserve System, The Clearing House, Fiserv, FIS, Jack Henry, TigerBeetle or any other organization named in this repository.
+
+"FedNow" is a service mark of the Federal Reserve Banks. "RTP" is a service mark of The Clearing House Payments Company L.L.C. Other names are the property of their respective owners and are used only to describe the systems this project studies. See [NOTICE](NOTICE).
 
 ## References
 

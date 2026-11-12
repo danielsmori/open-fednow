@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Test, package and publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run unit tests
+        run: mvn -B test --no-transfer-progress
+
+      - name: Run harness tests
+        run: |
+          python3 -m unittest discover -s harness -p 'test_portable_profile.py'
+          python3 -m unittest discover -s harness -p 'test_reference_target_guards.py'
+          python3 -m unittest discover -s harness -p 'test_s02_comparison.py'
+          python3 harness/smoke_profile.py --all --output target/portable/release-smoke.json
+
+      - name: Build service jar
+        run: mvn -B package -DskipTests --no-transfer-progress
+
+      - name: Assemble release files
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="${TAG#v}"
+          mkdir -p dist
+          JAR="$(ls target/openfednow-*.jar | grep -v original | head -n 1)"
+          cp "$JAR" "dist/openfednow-${VERSION}.jar"
+          zip -r "dist/openfednow-test-kit-${VERSION}.zip" \
+            harness docs/reliability/portable-send-profile.md LICENSE NOTICE \
+            -x 'harness/__pycache__/*'
+          cp target/portable/release-smoke.json "dist/smoke-report-${VERSION}.json"
+          (cd dist && sha256sum * > SHA256SUMS.txt)
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" dist/* --title "OpenFedNow ${TAG#v}" --generate-notes --verify-tag

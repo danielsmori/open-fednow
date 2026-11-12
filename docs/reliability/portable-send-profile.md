@@ -4,7 +4,7 @@ This is an engineering evaluation of selected **bank-side send reliability** in 
 
 ## One-command smoke run
 
-From a clean checkout with Python 3.9+ and no Java build or third-party Python packages:
+From a clean checkout, or from the extracted test-kit zip of a release, with Python 3.9+ and no Java build or third-party Python packages:
 
 ```sh
 python3 harness/smoke_profile.py --case S02
@@ -23,6 +23,8 @@ python3 harness/portable_profile.py \
 ```
 
 The Java target needs the non-production fixture API, PostgreSQL, Redis, RabbitMQ and the configured synthetic rail, as described in [driver contract v1](../../harness/contract-v1.md). The existing full evaluation remains `python3 scripts/evaluate.py --integration --negative-control --external`; this profile does not replace that path.
+
+**If you are working from the release test-kit zip:** the zip holds the `harness/` directory and this guide. The smoke run above and `harness/portable_profile.py` work from the extracted folder. The full evaluation and the Java reference service are not in the zip. `scripts/evaluate.py` needs a checkout of the [repository](https://github.com/danielsmori/open-fednow), with JDK 17, Maven and Docker.
 
 ## A third target
 
