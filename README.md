@@ -77,6 +77,7 @@ For a command-line check of both flows while the stack is running, use `python3 
 | Reference code | Java service with durable payment records, fund holds, duplicate-request controls and recovery by status inquiry. A separate Python implementation follows the same rules. |
 | Evaluations | [October 1, 2026 practical evaluation](docs/reliability/practical-evaluation-2026-10-01.md) and the dated bundles in [`docs/reliability/evidence/`](docs/reliability/evidence/). |
 | Independent ledger | The unchanged competing-payments test runs against [TigerBeetle](docs/reliability/tigerbeetle-s16.md). |
+| Check comparison | A [reproducible comparison](docs/reliability/s02-ledger-rail-comparison.md) runs the lost-confirmation test against two synthetic targets and scores a status-only check, an independent ledger-and-rail checklist and the test kit's evaluator. |
 | Provider interface | A [read-only adapter](docs/integrations/fiserv-banking-hub.md) for Fiserv's Banking Hub trial environment. |
 
 The full list of components is in [docs/status.md](docs/status.md). Development history and open work are in [docs/roadmap.md](docs/roadmap.md) and [CHANGELOG.md](CHANGELOG.md).

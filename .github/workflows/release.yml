@@ -31,6 +31,7 @@ jobs:
         run: |
           python3 -m unittest discover -s harness -p 'test_portable_profile.py'
           python3 -m unittest discover -s harness -p 'test_reference_target_guards.py'
+          python3 -m unittest discover -s harness -p 'test_s02_comparison.py'
           python3 harness/smoke_profile.py --all --output target/portable/release-smoke.json
 
       - name: Build service jar

@@ -15,6 +15,11 @@ Notable changes to OpenFedNow, newest first. The project has not yet published a
 - `docs/whitepaper.pdf` replaced by the revised November 9, 2026 preprint.
 - The README DOI badge is now labelled as the preprint's DOI. The DOI identifies the architecture preprint; the software is cited by repository and commit or release tag.
 
+## 2026-11-12
+
+### Added
+- Lost-confirmation (S02) comparison: a status-only check, an independent ledger-and-rail checklist and the portable evaluator scored on the same runs against two synthetic targets, with an evidence bundle ([#112](https://github.com/danielsmori/open-fednow/pull/112)).
+
 ## 2026-11-10
 
 ### Added
