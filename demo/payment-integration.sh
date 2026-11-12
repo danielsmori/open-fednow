@@ -38,6 +38,11 @@ trap cleanup EXIT INT TERM
 
 "${compose[@]}" up -d --wait
 mvn -B --no-transfer-progress -DskipTests package
+# The jar name follows the project version in pom.xml, so a release or a new
+# snapshot version needs no change here.
+project_version="$(python3 -c "import xml.etree.ElementTree as E; print(E.parse('pom.xml').getroot().findtext('{http://maven.apache.org/POM/4.0.0}version'))")"
+app_jar="target/openfednow-${project_version}.jar"
+[[ -f "$app_jar" ]] || { echo "Built jar not found: $app_jar" >&2; exit 1; }
 mkdir -p target/payment-integration
 rm -f target/payment-integration/rail.sqlite{,-wal,-shm}
 python3 harness/rail_simulator.py --port 18099 --db target/payment-integration/rail.sqlite \
@@ -58,7 +63,7 @@ RABBITMQ_HOST=127.0.0.1 RABBITMQ_PORT=55672 \
 RELIABILITY_LEGACY_ENTRY_BRIDGE_ENABLED=true \
 RELIABILITY_FIXTURE_API_ENABLED=true \
 RELIABILITY_SYNTHETIC_RAIL_URL=http://127.0.0.1:18099 \
-  "$java_cmd" -jar target/openfednow-0.1.0-SNAPSHOT.jar \
+  "$java_cmd" -jar "$app_jar" \
   >target/payment-integration/java.log 2>&1 &
 app_pid=$!
 for _ in {1..150}; do

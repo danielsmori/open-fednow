@@ -5,12 +5,16 @@ import os
 import subprocess
 import sys
 import time
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from urllib.request import urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "target" / "evaluation"
-JAR = ROOT / "target" / "openfednow-0.1.0-SNAPSHOT.jar"
+# The jar name follows the project version in pom.xml.
+VERSION = ET.parse(ROOT / "pom.xml").getroot().findtext(
+    "{http://maven.apache.org/POM/4.0.0}version")
+JAR = ROOT / "target" / f"openfednow-{VERSION}.jar"
 
 
 def wait(url, process):

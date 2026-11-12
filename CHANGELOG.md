@@ -1,8 +1,14 @@
 # Changelog
 
-Notable changes to OpenFedNow, newest first. The project has not yet published a tagged release; entries before the first tag are grouped by the date they were merged to `main`. From the first tag onward, versions follow [Semantic Versioning](https://semver.org/) and each release publishes its evidence under [`docs/reliability/evidence/`](docs/reliability/evidence/). See [docs/releasing.md](docs/releasing.md).
+Notable changes to OpenFedNow, newest first. The first tagged release is 0.1.0. Entries before it are grouped by the date they were merged to `main`. From 0.1.0 onward, versions follow [Semantic Versioning](https://semver.org/) and each release publishes its evidence under [`docs/reliability/evidence/`](docs/reliability/evidence/). See [docs/releasing.md](docs/releasing.md).
 
 ## Unreleased
+
+Nothing yet.
+
+## 0.1.0 - 2026-11-12
+
+First tagged release. It contains everything listed under the dated headings below, plus the changes in this section. The commands, source version and raw results for this release are in [`docs/reliability/evidence/release-0.1.0/`](docs/reliability/evidence/release-0.1.0/manifest.md).
 
 ### Added
 - README now leads with the one-command test run and a plain description of the three failures tested.
@@ -13,6 +19,7 @@ Notable changes to OpenFedNow, newest first. The project has not yet published a
 ### Changed
 - The full component table moved from the README to [docs/status.md](docs/status.md), and the development phases to [docs/roadmap.md](docs/roadmap.md).
 - `docs/whitepaper.pdf` replaced by the revised November 9, 2026 preprint.
+- Project version set to `0.1.0`. `demo/payment-integration.sh` and `harness/evaluate_external.py` now read the jar name from `pom.xml` instead of a fixed `0.1.0-SNAPSHOT` name.
 - The README DOI badge is now labelled as the preprint's DOI. The DOI identifies the architecture preprint; the software is cited by repository and commit or release tag.
 
 ## 2026-11-12

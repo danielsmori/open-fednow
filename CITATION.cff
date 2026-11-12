@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite the repository using the metadata below, with the commit hash or release tag you used. The architecture preprint is a separate work and is listed under references."
+message: "If you use this software, please cite the repository using the metadata below, with the release tag or commit hash you used. The architecture preprint is a separate work and is listed under references."
 title: "OpenFedNow: open-source failure tests and reference code for U.S. instant-payment integration"
 type: software
 authors:
@@ -8,6 +8,8 @@ authors:
 repository-code: "https://github.com/danielsmori/open-fednow"
 url: "https://github.com/danielsmori/open-fednow"
 license: Apache-2.0
+version: 0.1.0
+date-released: 2026-11-12
 keywords:
   - instant payments
   - FedNow

@@ -13,7 +13,7 @@
 
     <groupId>io.openfednow</groupId>
     <artifactId>openfednow</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.1.0</version>
     <name>OpenFedNow</name>
     <description>
         Open-source middleware framework for connecting legacy core banking systems
