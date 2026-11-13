@@ -7,6 +7,7 @@ import io.openfednow.security.audit.AdminAuditLogService;
 import io.openfednow.shadowledger.AccountBalanceView;
 import io.openfednow.shadowledger.BalanceSeedReport;
 import io.openfednow.shadowledger.BalanceSeedService;
+import io.openfednow.shadowledger.BridgeAggregateView;
 import io.openfednow.shadowledger.ReconciliationRunSummary;
 import io.openfednow.shadowledger.ReconciliationService;
 import io.openfednow.shadowledger.ShadowLedger;
@@ -18,6 +19,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -172,6 +174,62 @@ public class AdminController {
                        example = "ACC-001")
             @PathVariable String accountId) {
         return ResponseEntity.ok(shadowLedger.getBalanceView(accountId));
+    }
+
+    // ── Bridge-mode aggregate send cap (issue #68) ────────────────────────────
+
+    /**
+     * Returns the account's open bridge-mode aggregate send window, or 404 when
+     * none is open.
+     */
+    @GetMapping("/accounts/{accountId}/bridge-aggregate")
+    @Operation(
+        summary = "Get the bridge-mode aggregate send window for an account",
+        description = """
+            Returns the counted total, the number of counted sends and when the \
+            window opened. A window stays open until reconciliation confirms its \
+            sends with the core online; sends whose rail outcome is unresolved \
+            stay counted until they resolve. 404 when no window is open."""
+    )
+    @ApiResponse(responseCode = "200", description = "Open aggregate window",
+        content = @Content(mediaType = "application/json",
+                           schema = @Schema(implementation = BridgeAggregateView.class)))
+    @ApiResponse(responseCode = "404", description = "No open aggregate window for the account")
+    public ResponseEntity<BridgeAggregateView> getBridgeAggregate(
+            @Parameter(description = "Institution-internal account identifier", example = "ACC-001")
+            @PathVariable String accountId) {
+        BridgeAggregateView view = shadowLedger.getAggregateView(accountId);
+        return view == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(view);
+    }
+
+    /**
+     * Operator override: deletes the account's aggregate send window, lifting
+     * the bridge-mode cap for that account immediately.
+     *
+     * <p>Reconciliation never needs this — it releases sends as the core
+     * confirms them. This exists for the case reconciliation cannot resolve:
+     * a send whose rail outcome stays unknown keeps the window open until the
+     * saga resolves, and resolving it may take manual investigation. Use it
+     * only after independently establishing the account's position. The call
+     * is recorded in the admin audit log like every {@code /admin/**} access.
+     */
+    @DeleteMapping("/accounts/{accountId}/bridge-aggregate")
+    @Operation(
+        summary = "Clear the bridge-mode aggregate send window for an account (override)",
+        description = """
+            Deletes the account's aggregate window, discarding every counted send \
+            and lifting the cap for the account. Intended only for windows held \
+            open by sends whose outcome has been resolved out of band. Audited. \
+            204 when a window was cleared, 404 when none was open."""
+    )
+    @ApiResponse(responseCode = "204", description = "Window cleared")
+    @ApiResponse(responseCode = "404", description = "No open aggregate window for the account")
+    public ResponseEntity<Void> clearBridgeAggregate(
+            @Parameter(description = "Institution-internal account identifier", example = "ACC-001")
+            @PathVariable String accountId) {
+        return shadowLedger.clearAggregate(accountId)
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.notFound().build();
     }
 
     // ── Reconciliation audit (issue #41) ──────────────────────────────────────

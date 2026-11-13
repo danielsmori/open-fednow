@@ -35,6 +35,10 @@ import static org.mockito.Mockito.when;
  */
 class ShadowLedgerReversalIdempotencyTest {
 
+    /** Aggregate cap is irrelevant to reversal idempotency; keep it disabled. */
+    private static final io.openfednow.bridgemode.BridgeAggregateCapPolicy DISABLED_CAP =
+            new io.openfednow.bridgemode.BridgeAggregateCapPolicy("", 6, false);
+
     private static DataSource dataSource;
     private static JdbcTemplate jdbc;
 
@@ -75,7 +79,7 @@ class ShadowLedgerReversalIdempotencyTest {
         seedDebit("TXN-D2", "ACC-X", new BigDecimal("100.00"));
 
         StringRedisTemplate redis = newRedisMock();
-        ShadowLedger ledger = new ShadowLedger(redis, jdbc);
+        ShadowLedger ledger = new ShadowLedger(redis, jdbc, DISABLED_CAP);
 
         ledger.reverseDebit("TXN-D2");
         ledger.reverseDebit("TXN-D2");
@@ -129,7 +133,7 @@ class ShadowLedgerReversalIdempotencyTest {
         seedCredit("TXN-C2", "ACC-Y", new BigDecimal("50.00"));
 
         StringRedisTemplate redis = newRedisMock();
-        ShadowLedger ledger = new ShadowLedger(redis, jdbc);
+        ShadowLedger ledger = new ShadowLedger(redis, jdbc, DISABLED_CAP);
 
         ledger.reverseCredit("TXN-C2");
         ledger.reverseCredit("TXN-C2");
@@ -160,7 +164,7 @@ class ShadowLedgerReversalIdempotencyTest {
         // Neither a DEBIT nor a REVERSAL exists. The method warns and returns
         // without inserting anything spurious, and never touches Redis.
         StringRedisTemplate redis = newRedisMock();
-        ShadowLedger ledger = new ShadowLedger(redis, jdbc);
+        ShadowLedger ledger = new ShadowLedger(redis, jdbc, DISABLED_CAP);
 
         ledger.reverseDebit("TXN-GHOST");
 
@@ -181,7 +185,7 @@ class ShadowLedgerReversalIdempotencyTest {
     }
 
     private ShadowLedger newLedger() {
-        return new ShadowLedger(newRedisMock(), jdbc);
+        return new ShadowLedger(newRedisMock(), jdbc, DISABLED_CAP);
     }
 
     private void seedDebit(String transactionId, String accountId, BigDecimal amount) {

@@ -433,4 +433,46 @@ class AdminControllerTest {
                 Instant.parse("2026-05-19T10:00:05Z"),
                 null);
     }
+
+    // ── /admin/accounts/{accountId}/bridge-aggregate (issue #68) ──────────────
+
+    @Test
+    void getBridgeAggregate_returnsTheOpenWindow() throws Exception {
+        when(shadowLedger.getAggregateView("ACC-AGG")).thenReturn(new io.openfednow.shadowledger.BridgeAggregateView(
+                "ACC-AGG", new java.math.BigDecimal("400.00"),
+                java.time.Instant.parse("2026-11-13T02:00:00Z"), 2));
+
+        mockMvc.perform(get("/admin/accounts/ACC-AGG/bridge-aggregate"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accountId").value("ACC-AGG"))
+                .andExpect(jsonPath("$.totalCounted").value(400.00))
+                .andExpect(jsonPath("$.countedSends").value(2));
+    }
+
+    @Test
+    void getBridgeAggregate_returns404WhenNoWindowIsOpen() throws Exception {
+        when(shadowLedger.getAggregateView("ACC-NONE")).thenReturn(null);
+
+        mockMvc.perform(get("/admin/accounts/ACC-NONE/bridge-aggregate"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void clearBridgeAggregate_returns204AndClearsTheWindow() throws Exception {
+        when(shadowLedger.clearAggregate("ACC-AGG")).thenReturn(true);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/admin/accounts/ACC-AGG/bridge-aggregate"))
+                .andExpect(status().isNoContent());
+        verify(shadowLedger).clearAggregate("ACC-AGG");
+    }
+
+    @Test
+    void clearBridgeAggregate_returns404WhenNoWindowIsOpen() throws Exception {
+        when(shadowLedger.clearAggregate("ACC-NONE")).thenReturn(false);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/admin/accounts/ACC-NONE/bridge-aggregate"))
+                .andExpect(status().isNotFound());
+    }
 }

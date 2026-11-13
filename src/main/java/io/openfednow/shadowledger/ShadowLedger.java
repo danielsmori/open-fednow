@@ -1,9 +1,12 @@
 package io.openfednow.shadowledger;
 
+import io.openfednow.bridgemode.BridgeAggregateCapPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisOperations;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -14,8 +17,11 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Layer 4 — Shadow Ledger
@@ -48,9 +54,10 @@ public class ShadowLedger {
      * aggregate in integer cents, {@code opened_at} the epoch second the window
      * opened, and one {@code txn:<transactionId>} field per counted send holds
      * that send's amount in cents so a reversal can release exactly what was
-     * counted. The key carries <strong>no TTL</strong> — the cap fails closed
-     * and only {@link #clearAggregate(String)} (called by reconciliation once
-     * the core has confirmed the account's balance) removes it.
+     * counted. The key carries <strong>no TTL</strong> — the cap fails closed.
+     * Sends leave the window only by reversal ({@link #reverseDebit}) or by
+     * core confirmation ({@link #closeConfirmedAggregate}, called by
+     * reconciliation); the key disappears once no counted send remains.
      */
     static final String AGGREGATE_KEY_PREFIX = "bridge:aggregate:";
 
@@ -82,10 +89,71 @@ public class ShadowLedger {
             "local amt = redis.call('HGET', KEYS[1], ARGV[1])\n" +
                     "if amt then\n" +
                     "  redis.call('HDEL', KEYS[1], ARGV[1])\n" +
-                    "  redis.call('HINCRBY', KEYS[1], ARGV[2], -tonumber(amt))\n" +
+                    "  redis.call('HINCRBY', KEYS[1], ARGV[2], '-' .. amt)\n" +
                     "  return tonumber(amt)\n" +
                     "end\n" +
                     "return nil",
+            Long.class);
+
+    /** {@link #CAPPED_DEBIT_SCRIPT} result code: insufficient funds. */
+    private static final long CAPPED_DEBIT_INSUFFICIENT_FUNDS = -1L;
+    /** {@link #CAPPED_DEBIT_SCRIPT} result code: aggregate cap would be exceeded. */
+    private static final long CAPPED_DEBIT_CAP_EXCEEDED = -2L;
+
+    /**
+     * Atomic capped debit. KEYS[1] = balance key, KEYS[2] = aggregate hash.
+     * ARGV: [1] amount cents, [2] cap cents, [3] the send's {@code txn:<id>}
+     * field, [4] {@code total} field, [5] {@code opened_at} field, [6] now
+     * (epoch seconds).
+     *
+     * <p>Returns {@code {-1, balance}} on insufficient funds,
+     * {@code {-2, aggregate}} when the cap would be exceeded, and
+     * {@code {0, balanceBefore, aggregateAfter}} when applied. Amounts are
+     * formatted with {@code %d} so large values never switch to exponent
+     * notation.
+     */
+    private static final RedisScript<List> CAPPED_DEBIT_SCRIPT = new DefaultRedisScript<>(
+            "local bal = tonumber(redis.call('GET', KEYS[1]) or '0')\n" +
+                    "local amt = tonumber(ARGV[1])\n" +
+                    "if bal < amt then return {-1, bal} end\n" +
+                    "local total = tonumber(redis.call('HGET', KEYS[2], ARGV[4]) or '0')\n" +
+                    "if total + amt > tonumber(ARGV[2]) then return {-2, total} end\n" +
+                    "redis.call('SET', KEYS[1], string.format('%d', bal - amt))\n" +
+                    "redis.call('HINCRBY', KEYS[2], ARGV[4], ARGV[1])\n" +
+                    "redis.call('HSETNX', KEYS[2], ARGV[5], ARGV[6])\n" +
+                    "redis.call('HSET', KEYS[2], ARGV[3], ARGV[1])\n" +
+                    "return {0, bal, total + amt}",
+            List.class);
+
+    /**
+     * Releases the given counted sends from an aggregate window and closes the
+     * window if no counted send remains. KEYS[1] = aggregate hash. ARGV:
+     * [1] {@code total} field, [2] the {@code txn:} prefix, [3..] the send
+     * fields to release.
+     *
+     * <p>Returns 1 if the window was closed (deleted), 0 if sends that were not
+     * released keep it open — those were counted after the confirmation or
+     * belong to unresolved sends, and stay counted (fail-closed). A window
+     * left open keeps its original {@code opened_at}, so a window held open
+     * indefinitely (e.g. by an unresolved send) keeps aging and surfaces in
+     * the overdue-window alert instead of looking fresh after every cycle.
+     */
+    private static final RedisScript<Long> AGGREGATE_CLOSE_SCRIPT = new DefaultRedisScript<>(
+            "for i = 3, #ARGV do\n" +
+                    "  local amt = redis.call('HGET', KEYS[1], ARGV[i])\n" +
+                    "  if amt then\n" +
+                    "    redis.call('HDEL', KEYS[1], ARGV[i])\n" +
+                    "    redis.call('HINCRBY', KEYS[1], ARGV[1], '-' .. amt)\n" +
+                    "  end\n" +
+                    "end\n" +
+                    "local prefixLen = string.len(ARGV[2])\n" +
+                    "for _, k in ipairs(redis.call('HKEYS', KEYS[1])) do\n" +
+                    "  if string.sub(k, 1, prefixLen) == ARGV[2] then\n" +
+                    "    return 0\n" +
+                    "  end\n" +
+                    "end\n" +
+                    "redis.call('DEL', KEYS[1])\n" +
+                    "return 1",
             Long.class);
 
     /** Outcome of {@link #applyDebitCapped}. */
@@ -100,10 +168,21 @@ public class ShadowLedger {
 
     private final StringRedisTemplate redis;
     private final JdbcTemplate jdbc;
+    private final BridgeAggregateCapPolicy aggregateCapPolicy;
 
-    public ShadowLedger(StringRedisTemplate redis, JdbcTemplate jdbc) {
+    public ShadowLedger(StringRedisTemplate redis, JdbcTemplate jdbc,
+                        BridgeAggregateCapPolicy aggregateCapPolicy) {
         this.redis = redis;
         this.jdbc = jdbc;
+        this.aggregateCapPolicy = aggregateCapPolicy;
+    }
+
+    /**
+     * Whether a bridge-mode aggregate send cap is configured (#68). Callers use
+     * this to decide whether to route a send through {@link #applyDebitCapped}.
+     */
+    public boolean isAggregateCapEnabled() {
+        return aggregateCapPolicy.isEnabled();
     }
 
     /**
@@ -225,11 +304,16 @@ public class ShadowLedger {
      * send window, enforcing the aggregate cap — issue #68.
      *
      * <p>Both checks (sufficient balance, aggregate within cap) and both writes
-     * (balance decrement, aggregate increment plus the per-send field) run in a
-     * single Redis WATCH/MULTI/EXEC transaction over the balance key and the
-     * aggregate hash, extending the optimistic-locking approach of ADR-0001.
-     * Either everything commits or nothing does; a send can never be debited
-     * without being counted, and never counted without being debited.
+     * (balance decrement, aggregate increment plus the per-send field) run in
+     * one Lua script, which Redis executes atomically. Either everything
+     * applies or nothing does: a send can never be debited without being
+     * counted, or counted without being debited. A script is used instead of
+     * the WATCH/MULTI/EXEC retry loop of {@link #applyDebit} because it cannot
+     * run out of retries under contention — losing a race yields a clean
+     * rejection value, never an exception after the saga already exists.
+     * Concurrent {@link #applyDebit} calls still see the script's write to the
+     * balance key through their WATCH. Both keys must live on the same node;
+     * this ledger targets a single Redis primary (not Redis Cluster).
      *
      * <p>The caller decides <em>when</em> a send must be counted (in bridge
      * mode, or while a not-yet-reconciled window is still open); whenever this
@@ -237,95 +321,61 @@ public class ShadowLedger {
      * not exceptions, because the caller must map them to a clean ISO 20022
      * {@code AM04} response rather than an error path.
      *
-     * @param aggregateCapCents the configured ceiling in integer cents
-     *                          ({@code BridgeAggregateCapPolicy.getMaxAggregateSendCents()})
+     * <p>The ceiling comes from {@link BridgeAggregateCapPolicy}; the ledger
+     * does not accept a caller-supplied cap, so no call site can enforce a
+     * different number than the one the operator configured.
+     *
      * @return the outcome; on {@link CappedDebitResult#APPLIED} a DEBIT audit
      *         row has been written like {@link #applyDebit}
-     * @throws IllegalStateException if optimistic lock conflicts persist after retries
+     * @throws IllegalStateException if the cap is disabled (check
+     *         {@link #isAggregateCapEnabled()} first)
      */
     public CappedDebitResult applyDebitCapped(String accountId, BigDecimal amount,
-                                              String transactionId, long aggregateCapCents) {
-        String balanceKey = BALANCE_KEY_PREFIX + accountId;
-        String aggregateKey = AGGREGATE_KEY_PREFIX + accountId;
-        String txnField = AGGREGATE_TXN_FIELD_PREFIX + transactionId;
+                                              String transactionId) {
+        // Throws IllegalStateException when the cap is disabled.
+        long aggregateCapCents = aggregateCapPolicy.getMaxAggregateSendCents();
         long amountCents = dollarsToCents(amount);
 
-        for (int attempt = 0; attempt < MAX_RETRY_ATTEMPTS; attempt++) {
-            final long[] capturedBalance = new long[1];
-            final long[] capturedAggregate = new long[1];
-            final CappedDebitResult[] rejection = new CappedDebitResult[1];
+        List<?> result = redis.execute(CAPPED_DEBIT_SCRIPT,
+                List.of(BALANCE_KEY_PREFIX + accountId, AGGREGATE_KEY_PREFIX + accountId),
+                String.valueOf(amountCents),
+                String.valueOf(aggregateCapCents),
+                AGGREGATE_TXN_FIELD_PREFIX + transactionId,
+                AGGREGATE_TOTAL_FIELD,
+                AGGREGATE_OPENED_AT_FIELD,
+                String.valueOf(Instant.now().getEpochSecond()));
+        if (result == null || result.isEmpty()) {
+            throw new IllegalStateException(
+                    "Shadow Ledger capped debit returned no result: account=" + accountId);
+        }
+        long code = ((Number) result.get(0)).longValue();
+        long observed = result.size() > 1 ? ((Number) result.get(1)).longValue() : 0L;
 
-            List<Object> txResult = redis.execute(new SessionCallback<List<Object>>() {
-                @Override
-                @SuppressWarnings("unchecked")
-                public List<Object> execute(RedisOperations ops) throws DataAccessException {
-                    ops.watch(List.of(balanceKey, aggregateKey));
-
-                    String rawBalance = (String) ops.opsForValue().get(balanceKey);
-                    long currentCents = rawBalance != null ? Long.parseLong(rawBalance) : 0L;
-                    capturedBalance[0] = currentCents;
-
-                    Object rawTotal = ops.opsForHash().get(aggregateKey, AGGREGATE_TOTAL_FIELD);
-                    long aggregateCents = rawTotal != null ? Long.parseLong((String) rawTotal) : 0L;
-                    capturedAggregate[0] = aggregateCents;
-
-                    if (currentCents < amountCents) {
-                        ops.unwatch();
-                        rejection[0] = CappedDebitResult.INSUFFICIENT_FUNDS;
-                        return null;
-                    }
-                    if (aggregateCents + amountCents > aggregateCapCents) {
-                        ops.unwatch();
-                        rejection[0] = CappedDebitResult.AGGREGATE_CAP_EXCEEDED;
-                        return null;
-                    }
-
-                    ops.multi();
-                    ops.opsForValue().set(balanceKey, String.valueOf(currentCents - amountCents));
-                    ops.opsForHash().increment(aggregateKey, AGGREGATE_TOTAL_FIELD, amountCents);
-                    ops.opsForHash().putIfAbsent(aggregateKey, AGGREGATE_OPENED_AT_FIELD,
-                            String.valueOf(Instant.now().getEpochSecond()));
-                    ops.opsForHash().put(aggregateKey, txnField, String.valueOf(amountCents));
-                    return ops.exec();
-                }
-            });
-
-            if (rejection[0] == CappedDebitResult.INSUFFICIENT_FUNDS) {
-                log.info("Shadow Ledger capped debit rejected: insufficient funds account={} "
-                                + "balance={} requested={}",
-                        io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
-                        centsToDollars(capturedBalance[0]), amount);
-                return rejection[0];
-            }
-            if (rejection[0] == CappedDebitResult.AGGREGATE_CAP_EXCEEDED) {
-                log.warn("Shadow Ledger capped debit rejected: aggregate cap would be exceeded "
-                                + "account={} aggregate={} requested={} cap={}",
-                        io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
-                        centsToDollars(capturedAggregate[0]), amount,
-                        centsToDollars(aggregateCapCents));
-                return rejection[0];
-            }
-
-            if (txResult != null && !txResult.isEmpty()) {
-                long balanceBeforeCents = capturedBalance[0];
-                long balanceAfterCents = balanceBeforeCents - amountCents;
-                logTransaction(transactionId, transactionId, accountId, "DEBIT",
-                        amount, centsToDollars(balanceBeforeCents), centsToDollars(balanceAfterCents));
-                log.info("Shadow Ledger capped debit applied account={} amount={} balanceAfter={} "
-                                + "aggregateAfter={}",
-                        io.openfednow.security.pii.PiiRedactor.maskAccount(accountId), amount,
-                        centsToDollars(balanceAfterCents),
-                        centsToDollars(capturedAggregate[0] + amountCents));
-                return CappedDebitResult.APPLIED;
-            }
-
-            log.debug("Shadow Ledger capped debit conflict, retrying attempt={} account={}",
-                    attempt + 1, accountId);
+        if (code == CAPPED_DEBIT_INSUFFICIENT_FUNDS) {
+            log.info("Shadow Ledger capped debit rejected: insufficient funds account={} "
+                            + "balance={} requested={}",
+                    io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
+                    centsToDollars(observed), amount);
+            return CappedDebitResult.INSUFFICIENT_FUNDS;
+        }
+        if (code == CAPPED_DEBIT_CAP_EXCEEDED) {
+            log.warn("Shadow Ledger capped debit rejected: aggregate cap would be exceeded "
+                            + "account={} aggregate={} requested={} cap={}",
+                    io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
+                    centsToDollars(observed), amount, centsToDollars(aggregateCapCents));
+            return CappedDebitResult.AGGREGATE_CAP_EXCEEDED;
         }
 
-        throw new IllegalStateException(
-                "Shadow Ledger capped debit failed after " + MAX_RETRY_ATTEMPTS
-                        + " retries: account=" + accountId);
+        long balanceBeforeCents = observed;
+        long balanceAfterCents = balanceBeforeCents - amountCents;
+        long aggregateAfterCents = ((Number) result.get(2)).longValue();
+        logTransaction(transactionId, transactionId, accountId, "DEBIT",
+                amount, centsToDollars(balanceBeforeCents), centsToDollars(balanceAfterCents));
+        log.info("Shadow Ledger capped debit applied account={} amount={} balanceAfter={} "
+                        + "aggregateAfter={}",
+                io.openfednow.security.pii.PiiRedactor.maskAccount(accountId), amount,
+                centsToDollars(balanceAfterCents), centsToDollars(aggregateAfterCents));
+        return CappedDebitResult.APPLIED;
     }
 
     /**
@@ -393,10 +443,13 @@ public class ShadowLedger {
                 accountId, amount, centsToDollars(newCents));
 
         // Release the send from the bridge-mode aggregate window last, so a
-        // crash between the balance credit and this release leaves the window
-        // overcounted — the fail-closed direction for a risk cap (#68). The
-        // script no-ops when the send was never counted (online-mode debit) or
-        // was already released (duplicate compensation, cleared window).
+        // crash — or a Redis error — between the balance credit and this
+        // release leaves the window overcounted: the fail-closed direction for
+        // a risk cap (#68). Retries will not re-attempt it (the REVERSAL row
+        // already exists); the send stays counted until reconciliation
+        // confirms it. The script no-ops when the send was never counted
+        // (online-mode debit) or was already released (duplicate compensation,
+        // closed window).
         releaseFromAggregate(accountId, transactionId);
     }
 
@@ -557,16 +610,16 @@ public class ShadowLedger {
     }
 
     /**
-     * Closes an account's bridge-mode aggregate send window — issue #68.
+     * Unconditionally deletes an account's aggregate send window, discarding
+     * every counted send — an operator-level primitive, issue #68.
      *
-     * <p>Must be called only after the core is back online <em>and</em> the
-     * account's authoritative balance has been confirmed (the reconciliation
-     * cycle calls this after its per-account database transaction commits).
-     * Nothing else closes a window: there is no TTL, so an unexpectedly long
-     * maintenance window keeps the cap in force rather than silently resetting
-     * it.
+     * <p>Reconciliation does <em>not</em> use this: it calls
+     * {@link #closeConfirmedAggregate}, which only releases sends the core has
+     * confirmed and so can never erase a send counted concurrently. Use this
+     * only when an operator has independently established the account's
+     * position.
      *
-     * @return {@code true} if a window existed and was cleared
+     * @return {@code true} if a window existed and was deleted
      */
     public boolean clearAggregate(String accountId) {
         Boolean deleted = redis.delete(AGGREGATE_KEY_PREFIX + accountId);
@@ -576,6 +629,132 @@ public class ShadowLedger {
                     io.openfednow.security.pii.PiiRedactor.maskAccount(accountId));
         }
         return cleared;
+    }
+
+    /**
+     * Releases every counted send the core has confirmed and closes the
+     * account's aggregate window if nothing else remains counted — issue #68.
+     * This is what reconciliation calls; unlike {@link #clearAggregate} it
+     * never discards a send it has not verified.
+     *
+     * <p>A counted send is released here only when both hold:
+     * <ul>
+     *   <li>its DEBIT row is {@code core_confirmed} — reconciliation confirmed
+     *       it against the core; and</li>
+     *   <li>its payment saga, if one exists, is final ({@code COMPLETED} or
+     *       {@code FAILED}). Sends whose rail outcome is still unresolved
+     *       ({@code SUBMITTING}, {@code OUTCOME_UNKNOWN}, or any other
+     *       in-flight state) stay counted until they resolve.</li>
+     * </ul>
+     *
+     * <p>Sends counted after this method reads the window, or whose DEBIT row
+     * is not written or confirmed yet, are not touched and keep the window
+     * open. The release itself is one atomic script, so a send counted
+     * concurrently can never be erased. The caller is responsible for only
+     * invoking this once the core is online.
+     *
+     * @return {@code true} if the account has no open window afterwards
+     */
+    public boolean closeConfirmedAggregate(String accountId) {
+        String aggregateKey = AGGREGATE_KEY_PREFIX + accountId;
+        Set<Object> fields = redis.opsForHash().keys(aggregateKey);
+        if (fields == null || fields.isEmpty()) {
+            return true;
+        }
+        List<String> countedTxnIds = fields.stream()
+                .map(String.class::cast)
+                .filter(f -> f.startsWith(AGGREGATE_TXN_FIELD_PREFIX))
+                .map(f -> f.substring(AGGREGATE_TXN_FIELD_PREFIX.length()))
+                .toList();
+        List<String> releasable = countedTxnIds.isEmpty()
+                ? List.of()
+                : confirmedAndResolved(accountId, countedTxnIds);
+
+        List<String> args = new ArrayList<>();
+        args.add(AGGREGATE_TOTAL_FIELD);
+        args.add(AGGREGATE_TXN_FIELD_PREFIX);
+        releasable.forEach(id -> args.add(AGGREGATE_TXN_FIELD_PREFIX + id));
+
+        Long closed = redis.execute(AGGREGATE_CLOSE_SCRIPT, List.of(aggregateKey), args.toArray());
+        boolean windowClosed = closed != null && closed == 1L;
+        if (windowClosed) {
+            log.info("Bridge aggregate window closed after core confirmation account={} released={}",
+                    io.openfednow.security.pii.PiiRedactor.maskAccount(accountId), releasable.size());
+        } else {
+            log.info("Bridge aggregate window stays open account={} released={} stillCounted={}",
+                    io.openfednow.security.pii.PiiRedactor.maskAccount(accountId), releasable.size(),
+                    countedTxnIds.size() - releasable.size());
+        }
+        return windowClosed;
+    }
+
+    /**
+     * Of the given counted transaction IDs, those whose DEBIT row is
+     * core-confirmed and whose saga (if any) is final.
+     */
+    private List<String> confirmedAndResolved(String accountId, List<String> transactionIds) {
+        String placeholders = String.join(",", java.util.Collections.nCopies(transactionIds.size(), "?"));
+        List<Object> params = new ArrayList<>();
+        params.add(accountId);
+        params.addAll(transactionIds);
+        return jdbc.queryForList(
+                "SELECT DISTINCT l.transaction_id FROM shadow_ledger_transaction_log l "
+                        + "WHERE l.account_id = ? AND l.transaction_type = 'DEBIT' "
+                        + "AND l.core_confirmed = TRUE "
+                        + "AND l.transaction_id IN (" + placeholders + ") "
+                        + "AND NOT EXISTS (SELECT 1 FROM saga_state s "
+                        + "WHERE s.transaction_id = l.transaction_id "
+                        + "AND s.state NOT IN ('COMPLETED', 'FAILED'))",
+                String.class, params.toArray());
+    }
+
+    /**
+     * Whether the account has an open aggregate send window. A window stays
+     * open after the core returns until reconciliation confirms the balance,
+     * and sends during that interval stay subject to the cap (#68).
+     */
+    public boolean hasOpenAggregate(String accountId) {
+        return Boolean.TRUE.equals(redis.hasKey(AGGREGATE_KEY_PREFIX + accountId));
+    }
+
+    /**
+     * Non-atomic pre-check: would counting {@code amount} push the account's
+     * aggregate window over the configured cap? Lets the dispatch path reject
+     * the common case before any saga or debit exists. It is advisory only —
+     * {@link #applyDebitCapped} re-checks atomically and is the enforcement
+     * point. Uses the same cents rounding as the ledger. Returns {@code false}
+     * when the cap is disabled.
+     */
+    public boolean wouldExceedAggregateCap(String accountId, BigDecimal amount) {
+        if (!aggregateCapPolicy.isEnabled()) {
+            return false;
+        }
+        Object rawTotal = redis.opsForHash()
+                .get(AGGREGATE_KEY_PREFIX + accountId, AGGREGATE_TOTAL_FIELD);
+        long countedCents = rawTotal != null ? Long.parseLong((String) rawTotal) : 0L;
+        return countedCents + dollarsToCents(amount) > aggregateCapPolicy.getMaxAggregateSendCents();
+    }
+
+    /**
+     * Account IDs with an open aggregate window, found by an incremental
+     * {@code SCAN} (never {@code KEYS}). Reconciliation uses this to close
+     * windows whose accounts no longer have unconfirmed ledger rows — for
+     * example when a previous cycle committed the confirmation but failed to
+     * clear the window — so no window is left open indefinitely.
+     */
+    public List<String> openAggregateAccountIds() {
+        // SCAN may return a key more than once; de-duplicate, keep scan order.
+        Set<String> accountIds = new LinkedHashSet<>();
+        ScanOptions options = ScanOptions.scanOptions()
+                .match(AGGREGATE_KEY_PREFIX + "*")
+                .count(500)
+                .build();
+        try (Cursor<String> cursor = redis.scan(options)) {
+            while (cursor.hasNext()) {
+                accountIds.add(cursor.next().substring(AGGREGATE_KEY_PREFIX.length()));
+            }
+        }
+        return new ArrayList<>(accountIds);
     }
 
     /**
