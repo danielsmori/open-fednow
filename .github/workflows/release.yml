@@ -65,7 +65,7 @@ jobs:
         run: mvn -B package -DskipTests --no-transfer-progress
 
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       # One OCI layout per platform. Trivy cannot pick a platform out of a
       # multi-platform layout; it scans the first image it finds, so a single
