@@ -11,9 +11,9 @@ This page lists every component in the repository and what has been implemented 
 | SandboxAdapter — all scenarios: ACSC, RJCT, ACSP, timeout | ✅ Implemented |
 | MockVendorAdapter — in-memory balance ledger, configurable failure modes | ✅ Implemented; `CoreBankingAdapterContractTest` enforces adapter contract |
 | `CoreBankingAdapter` contract | ✅ Implemented |
-| Shadow Ledger — Redis-backed, WATCH/MULTI/EXEC optimistic locking | ✅ Implemented + tested |
+| Shadow Ledger — Redis-backed, WATCH/MULTI/EXEC optimistic locking | ✅ Implemented + tested; capped debits and reconciliation corrections use atomic Lua scripts, and every balance write bumps a per-account version |
 | Shadow Ledger endpoint wiring (inbound + outbound) | ✅ Implemented |
-| Maintenance-window bridge fixture | ✅ Local queue/reconciliation behavior tested; continuous live availability unverified |
+| Maintenance-window bridge fixture | ✅ Local reconciliation behavior tested; inbound payments are queued for core replay but nothing consumes the queue ([#151](https://github.com/danielsmori/open-fednow/issues/151)); continuous live availability unverified |
 | Reconciliation — local replay and comparison after fixture core returns | ✅ Implemented and tested with synthetic dependencies |
 | Reconciliation pagination — keyset-paginated account scan | ✅ Configurable batch size (default 500); institution-scale memory behavior not benchmarked |
 | Saga orchestration — compensation on core rejection | ✅ Implemented + tested |
@@ -47,6 +47,10 @@ This page lists every component in the repository and what has been implemented 
 | Fraud screening timeout — hard cap on port calls | ✅ `CompletableFuture` deadline (default 1500ms); rejects on timeout / exception by default |
 | Atomic velocity counter — single Redis Lua script | ✅ `INCR` + `EXPIRE` in one round-trip; sliding window matching the documented semantic |
 | Reconcile concurrency guard — same-JVM serialization | ✅ `ReentrantLock` with tryLock; second concurrent call returns "Skipped" report rather than racing |
+| Reconcile concurrency guard — across instances | ✅ PostgreSQL session-level advisory lock held for the cycle and re-checked during it; released if the holder dies. Narrows, but does not fence, overlap after a lost session; needs session pooling |
+| Reconciliation safe against concurrent payments | ✅ Corrections are a compare-and-set on the balance version; only rows covered by the read are confirmed; busy accounts retried, then deferred ([#144](https://github.com/danielsmori/open-fednow/issues/144)) |
+| Automatic reconciliation on core recovery | ✅ Durable Redis marker + per-instance trigger; clears only on a fully settled cycle; exponential backoff; `reconciliation.auto.*` metrics. Default on |
+| Bridge-mode aggregate send cap — per account | ✅ Optional (unset by default); counted atomically with the debit, fail-closed, released on reversal or confirmed reconciliation (unknown outcomes need the admin override until [#98](https://github.com/danielsmori/open-fednow/issues/98)); `AM04` on rejection; window gauges and `pct_of_cap` metric; admin inspect/override. Legacy path only; does not see other channels ([guide](bridge-mode-aggregate-cap.md)) |
 | Saga source-rail tracking — dual-rail dispatch foundation | ✅ `source_rail` column on `saga_state` (V5); both gateways thread `Rail` through `MessageRouter` |
 | Dependency scanning — Dependabot + Trivy | ✅ Weekly Maven + Actions updates; Trivy scan fails the build on HIGH/CRITICAL findings |
 | CI — unit + integration test jobs | ✅ Unit and Testcontainers-backed integration jobs passed for [merged PR #87](https://github.com/danielsmori/open-fednow/pull/87); the reliability slice is now on `main` |

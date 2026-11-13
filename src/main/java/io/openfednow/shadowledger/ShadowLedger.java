@@ -427,11 +427,18 @@ public class ShadowLedger {
     /**
      * Outcome of {@link #applyDebitCappedDetailed}.
      *
-     * @param openedWindow {@code true} when this send created the account's
-     *                     aggregate window (there was none before it) — the
-     *                     caller must then record that a reconciliation is owed
+     * @param openedWindow   {@code true} when this send created the account's
+     *                       aggregate window (there was none before it) — the
+     *                       caller must then record that a reconciliation is owed
+     * @param pctOfCapAfter  the window's counted total as a percentage of the cap
+     *                       after this send; 0 unless {@code result} is
+     *                       {@link CappedDebitResult#APPLIED}
      */
-    public record CappedDebit(CappedDebitResult result, boolean openedWindow) { }
+    public record CappedDebit(CappedDebitResult result, boolean openedWindow, double pctOfCapAfter) {
+        public CappedDebit(CappedDebitResult result, boolean openedWindow) {
+            this(result, openedWindow, 0.0);
+        }
+    }
 
     /**
      * {@link #applyDebitCapped}, also reporting whether the send opened a new
@@ -496,7 +503,8 @@ public class ShadowLedger {
                         + "aggregateAfter={}",
                 io.openfednow.security.pii.PiiRedactor.maskAccount(accountId), amount,
                 centsToDollars(balanceAfterCents), centsToDollars(aggregateAfterCents));
-        return new CappedDebit(CappedDebitResult.APPLIED, openedWindow);
+        return new CappedDebit(CappedDebitResult.APPLIED, openedWindow,
+                aggregateAfterCents * 100.0 / aggregateCapCents);
     }
 
     /**

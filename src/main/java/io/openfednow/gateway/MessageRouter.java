@@ -79,6 +79,13 @@ public class MessageRouter {
     static final String AGGREGATE_CAP_EXCEEDED_METRIC = "bridge_mode.aggregate.cap_exceeded";
 
     /**
+     * Distribution of how full a debtor's aggregate window is after each counted
+     * send, as a percentage of the cap (#68). No account tag: per-account series
+     * would be unbounded and would put account ids in metrics.
+     */
+    static final String AGGREGATE_PCT_OF_CAP_METRIC = "bridge_mode.aggregate.pct_of_cap";
+
+    /**
      * Controls whether outbound FedNow sends are allowed while
      * {@link AvailabilityBridge#isInBridgeMode()} is {@code true}.
      * Defaults to {@code false}: an offline core must not authorize sends
@@ -88,6 +95,7 @@ public class MessageRouter {
     private final boolean bridgeSendsAllowed;
     private final Counter bridgeSendsBlockedCounter;
     private final Counter aggregateCapExceededCounter;
+    private final io.micrometer.core.instrument.DistributionSummary aggregatePctOfCap;
 
     public MessageRouter(FedNowClient fedNowClient,
                          CoreBankingAdapter coreBankingAdapter,
@@ -122,6 +130,12 @@ public class MessageRouter {
         this.screeningFailOpen = screeningFailOpen;
         this.bridgeSendsBlockedCounter = Counter.builder(BRIDGE_SENDS_BLOCKED_METRIC)
                 .description("Outbound FedNow sends rejected by the bridge-mode allow-sends guard")
+                .register(meterRegistry);
+        this.aggregatePctOfCap = io.micrometer.core.instrument.DistributionSummary
+                .builder(AGGREGATE_PCT_OF_CAP_METRIC)
+                .description("Debtor aggregate window as a percentage of the bridge-mode cap after each counted send")
+                // no baseUnit: Prometheus would append "_percent" and rename the metric
+                .serviceLevelObjectives(50, 80, 90, 100)
                 .register(meterRegistry);
         this.aggregateCapExceededCounter = Counter.builder(AGGREGATE_CAP_EXCEEDED_METRIC)
                 .description("Outbound FedNow sends rejected by the bridge-mode aggregate send cap")
@@ -458,6 +472,9 @@ public class MessageRouter {
                     message.getInterbankSettlementAmount(),
                     message.getTransactionId());
             ShadowLedger.CappedDebitResult debit = capped.result();
+            if (debit == ShadowLedger.CappedDebitResult.APPLIED) {
+                aggregatePctOfCap.record(capped.pctOfCapAfter());
+            }
             if (debit != ShadowLedger.CappedDebitResult.APPLIED) {
                 // Lost a race after the pre-checks: a concurrent send used up
                 // the cap or the balance. Nothing was debited or counted, so

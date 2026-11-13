@@ -26,6 +26,8 @@ Redis WATCH detects changes to watched keys by **other clients**, including clie
 
 `ShadowLedger.applyDebit` checks and decrements inside WATCH/MULTI/EXEC, then writes its SQL audit record separately. Crashes between these operations, duplicate delivery, retries, and concurrent reversals need cross-store validation. The repository does not establish deployment correctness for either one pod or multiple pods merely by using WATCH. A distributed lock alone would not make Redis and SQL commits atomic.
 
+The capped debit used by the bridge-mode aggregate cap, and reconciliation's balance correction, use single atomic Lua scripts instead ([#68](https://github.com/danielsmori/open-fednow/issues/68)). Every balance write also bumps a per-account version in the same atomic step, which reconciliation uses to avoid overwriting concurrent updates ([#144](https://github.com/danielsmori/open-fednow/issues/144)). A capped debit whose SQL audit row fails to insert is undone in Redis. None of this makes the Redis and SQL writes one transaction: a crash between them is still possible. The plain debit still uses the WATCH loop and can return a 500 when it loses a race ([#143](https://github.com/danielsmori/open-fednow/issues/143)).
+
 ---
 
 ### 3. Reconciliation ordering depends on NTP accuracy
@@ -46,7 +48,13 @@ Redis WATCH detects changes to watched keys by **other clients**, including clie
 
 **The unbounded institution-specific risk:** The Shadow Ledger's balance is initialized from the core and updated atomically within Redis on each transaction, but other systems may change the bank's true available balance. Documented sources of divergence include: a core-side rejection of a provisionally accepted payment (see limitation #1 above), and card-processor STIP activity that authorizes debits on the same account outside the Shadow Ledger during the window — the "STIP gap." Other sources of drift, including cross-store crash windows and concurrent external activity, have not been excluded by this evaluation.
 
-**Why this is documented:** The sandbox design temporarily authorizes from a cached balance during a simulated maintenance window. It does not transfer legal or operational authority from an institution's core to this software. The full analysis of the STIP gap and the four-step mitigation roadmap (kill switch, aggregate cap, real-time card authorization port, and configuration postures from receive-only through STIP-aware) is in [ADR-0010](adr/0010-bridge-mode-fraud-risk.md). This should be disclosed in the institution's internal control documentation.
+**Why this is documented:** The sandbox design temporarily authorizes from a cached balance during a simulated maintenance window. It does not transfer legal or operational authority from an institution's core to this software. The STIP gap is recorded in [ADR-0010](adr/0010-bridge-mode-fraud-risk.md). This should be disclosed in the institution's internal control documentation.
+
+**Controls available in the sandbox:**
+- `openfednow.bridge-mode.allow-sends` (default `false`) rejects outbound sends during the window with `TS01`.
+- When sends are enabled, an optional per-account aggregate send cap (`openfednow.bridge-mode.max-aggregate-send-amount`, unset by default) bounds the total this system sends from one account until reconciliation confirms those sends. Sends that would exceed it get `AM04`. See the [bridge-mode aggregate cap operator guide](bridge-mode-aggregate-cap.md).
+
+The cap counts only sends made through this system. It does not see card or other channels, so worst-case exposure is the cap plus whatever those channels authorize. It does not make sends against a cached balance safe.
 
 ---
 
@@ -61,6 +69,22 @@ These are features that are not yet built. They are explicitly tracked as future
 The [Banking Hub Premier discovery](integrations/fiserv-banking-hub.md) found that the legacy Fiserv fixture's paths and token request are not a mapped Banking Hub contract. Public Add Transfer documentation describes possible nightly batch balance updates after memo-post failure. The separate Premier Java adapter authenticated and read a published sample DDA in the shared Trial sandbox, but the appropriate available-balance type, sandbox statefulness and durable reservation guarantee have not been established. The new outbound core port is separate from the SQL reliability workflow and returns unsupported for financial mutations; it does not enable a send.
 
 `MockVendorAdapter` has an in-memory balance ledger and configurable failures for local development. It is not a substitute for a real institution core. The existing adapter contract tests cover the narrow `CoreBankingAdapter` methods, not the stronger financial guarantees needed for live outbound payments.
+
+---
+
+### 6. The legacy outbound path never posts sends to the core
+
+`CoreBankingAdapter` can post an inbound credit transfer, read a balance and report availability. It has no operation to post an outbound debit. The legacy outbound route debits the Redis Shadow Ledger and submits to FedNow, but never tells the core.
+
+Reconciliation treats the core's balance as authoritative. It sets the shadow balance to the core's figure (once nothing was written during the read) and confirms the ledger rows. The shadow balance after reconciliation therefore reflects outbound sends only if the core does, through the institution's own FedNow settlement posting. The sandbox and vendor-shaped adapters do not model that. An institution must establish what its core's available balance includes before relying on reconciliation results.
+
+---
+
+### 7. Bridge-mode inbound payments are queued but never replayed
+
+While the core is offline, an inbound payment gets a provisional Shadow Ledger credit and is published to the `maintenance-window-transactions` queue for replay. Nothing consumes that queue, so the core never receives these payments.
+
+Reconciliation, which treats the core balance as authoritative (see #6), can then remove the provisional credit from the shadow balance. The durable queue also grows without bound. Tracked in [#151](https://github.com/danielsmori/open-fednow/issues/151).
 
 ---
 
@@ -96,6 +120,19 @@ Inbound cancellation handling is now implemented — see "Cancellation handling"
 
 ---
 
+### 11. Reconciliation coordination across instances has limits
+
+Since [#146](https://github.com/danielsmori/open-fednow/pull/146), reconciliation starts automatically when the core comes back, and a PostgreSQL session-level advisory lock keeps it to one cycle at a time across instances. Limits:
+
+- **Overlap is narrowed, not fenced.** If the lock's database session is lost mid-cycle, the cycle stops once it notices: after up to about 15 seconds plus the slowest single account, longer if the database stops responding (the liveness check's network timeout is 30 seconds), and not bounded at all if PostgreSQL itself is slow to notice a dead session. Until then, a second cycle could overlap.
+- **Pooling.** The lock requires session pooling; PgBouncer in transaction mode breaks it. On a non-PostgreSQL database there is no cross-instance lock at all.
+- **Socket timeouts.** Without a pgjdbc `socketTimeout`, a dead database connection can block a cycle indefinitely on that instance. The lock's own connection has a 30-second network timeout.
+- **Uncapped short outages.** With the cap disabled, an outbound send during an outage shorter than one availability poll does not mark reconciliation as owed.
+
+See the [bridge-mode aggregate cap operator guide](bridge-mode-aggregate-cap.md).
+
+---
+
 ### Kafka event bus (optional, available)
 
 An optional Kafka event bus is available via the `PaymentEventPublisher` interface. When Kafka is configured, `KafkaPaymentEventPublisher` is activated; otherwise `NoOpPaymentEventPublisher` is used by default. Six event types are published: `INBOUND_CREDIT_APPLIED`, `INBOUND_PAYMENT_REJECTED`, `INBOUND_QUEUED_FOR_BRIDGE`, `OUTBOUND_PAYMENT_COMPLETED`, `OUTBOUND_PAYMENT_REJECTED`, and `OUTBOUND_PAYMENT_PENDING`. No Kafka dependency is required to run the framework.
@@ -117,14 +154,20 @@ All `/admin/**` endpoints require HTTP Basic with the `ADMIN` role (`SecurityCon
 
 | Endpoint | Purpose |
 | --- | --- |
-| `POST /admin/reconcile` and `POST /admin/reconciliation-runs` | Trigger a manual reconciliation cycle (resource-style alias) |
+| `POST /admin/reconcile` and `POST /admin/reconciliation-runs` | Trigger a manual reconciliation cycle (resource-style alias). Skipped (reported successful, "Skipped:" summary) if a cycle is already running on any instance. A run is successful only if it found no discrepancy and no account was deferred or failed. |
 | `GET /admin/reconciliation-runs[?limit=&offset=]` | Paginated reconciliation history; cap 200 per page |
 | `GET /admin/reconciliation-runs/{runId}` | Single reconciliation run; 404 if missing |
 | `GET /admin/sagas` | List non-terminal sagas (oldest first) |
 | `GET /admin/sagas/{transactionId}` | Saga snapshot by ISO 20022 transaction ID |
 | `GET /admin/accounts/{accountId}/balance` | Live Redis balance + unconfirmed-DEBIT total + last transaction timestamp |
+| `GET /admin/accounts/{accountId}/bridge-aggregate` | The account's open bridge-mode aggregate window (counted total, sends, opened at); 404 if none |
+| `DELETE /admin/accounts/{accountId}/bridge-aggregate` | Override: clear the window and lift the cap for the account (audited); 404 if none |
 | `POST /admin/shadow-ledger/seed` | Re-seed configured accounts from the core (unconditional overwrite) |
 | `GET /admin/audit-log[?limit=&offset=]` | Paginated admin access history; cap 500 per page |
+
+### Automatic reconciliation
+
+When the core comes back online after bridge-mode activity, reconciliation runs automatically (`openfednow.reconciliation.auto-on-core-recovery`, default `true`). One cycle runs at a time across instances. A cycle that leaves accounts deferred, failed or still capped is retried with exponential backoff. Metrics: `reconciliation.auto.cycles{result}` and `reconciliation.auto.consecutive_unsettled`. See the [bridge-mode aggregate cap operator guide](bridge-mode-aggregate-cap.md).
 
 ### Throughput controls
 

@@ -22,8 +22,9 @@ import org.springframework.stereotype.Component;
  *       Ledger is continuously updated.</li>
  *   <li><strong>Bridge mode</strong>: Core system is offline. Inbound payments
  *       are queued via async messaging and processed against the Shadow Ledger.
- *       Outbound payment authorization uses Shadow Ledger balances. All queued
- *       transactions are replayed when the core comes back online.</li>
+ *       Outbound payment authorization uses Shadow Ledger balances. Queued
+ *       inbound payments are meant to be replayed to the core when it returns,
+ *       but nothing consumes the queue yet (#151).</li>
  * </ul>
  */
 @Component
@@ -76,8 +77,9 @@ public class AvailabilityBridge {
      * Queues a transaction for processing when the core system returns online.
      *
      * <p>Publishes the serialized transaction payload to the
-     * {@code maintenance-window-transactions} RabbitMQ queue. The
-     * {@link ReconciliationService} consumes this queue after the core returns.
+     * {@code maintenance-window-transactions} RabbitMQ queue. Nothing consumes
+     * this queue yet, so the core never receives these payments (#151); the
+     * provisional Shadow Ledger credit is the only effect.
      *
      * @param transactionId the FedNow end-to-end transaction identifier
      * @param payload       the serialized pacs.008 transaction payload
