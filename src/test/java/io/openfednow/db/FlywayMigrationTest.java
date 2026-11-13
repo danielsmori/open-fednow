@@ -68,13 +68,13 @@ class FlywayMigrationTest {
     }
 
     @Test
-    void exactlyTwelveMigrationsArePresent() {
+    void exactlyFourteenMigrationsArePresent() {
         Flyway flyway = Flyway.configure()
                 .dataSource(dataSource)
                 .locations("classpath:db/migration")
                 .load();
 
-        assertThat(flyway.info().all()).hasSize(12);
+        assertThat(flyway.info().all()).hasSize(14);
     }
 
     // --- V1: shadow_ledger_transaction_log ---
@@ -392,5 +392,28 @@ class FlywayMigrationTest {
         Integer count = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM " + tableName, Integer.class);
         return count != null ? count : 0;
+    }
+
+    // --- V13: reconciliation_lease ---
+
+    @Test
+    void v13_reconciliationLeaseExistsAndIsSeededWithItsSingleFreeRow() {
+        assertThat(tableExists("reconciliation_lease")).isTrue();
+        Integer rows = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM reconciliation_lease", Integer.class);
+        assertThat(rows).isEqualTo(1);
+        String holder = jdbc.queryForObject(
+                "SELECT holder FROM reconciliation_lease WHERE id = 1", String.class);
+        assertThat(holder).isNull();
+    }
+
+    @Test
+    void v13_reconciliationLeaseRejectsASecondRow() {
+        try {
+            jdbc.update("INSERT INTO reconciliation_lease (id, holder) VALUES (2, 'x')");
+            assertThat(false).as("Expected constraint violation for a second lease row").isTrue();
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            assertThat(e.getMessage()).containsIgnoringCase("constraint");
+        }
     }
 }

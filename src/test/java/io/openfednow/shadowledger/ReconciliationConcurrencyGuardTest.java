@@ -78,8 +78,7 @@ class ReconciliationConcurrencyGuardTest {
             return BigDecimal.ZERO;
         });
 
-        ReconciliationService service = new ReconciliationService(
-                ledger, jdbc, adapter, txManager, 100);
+        ReconciliationService service = new ReconciliationService(ledger, jdbc, adapter, txManager, new ReconciliationLease(jdbc, 900), 100);
 
         // Two threads, gated on a latch so they fire as close to simultaneously as possible
         ExecutorService executor = Executors.newFixedThreadPool(2);
@@ -135,8 +134,7 @@ class ReconciliationConcurrencyGuardTest {
         CoreBankingAdapter adapter = mock(CoreBankingAdapter.class);
         when(adapter.getAvailableBalance(any())).thenReturn(BigDecimal.ZERO);
 
-        ReconciliationService service = new ReconciliationService(
-                ledger, jdbc, adapter, txManager, 100);
+        ReconciliationService service = new ReconciliationService(ledger, jdbc, adapter, txManager, new ReconciliationLease(jdbc, 900), 100);
 
         // Run twice sequentially — both must execute, the lock releases between calls
         ReconciliationService.ReconciliationReport first = service.reconcile();
@@ -159,7 +157,7 @@ class ReconciliationConcurrencyGuardTest {
         // hold the lock on a different thread while the main thread calls reconcile().
         ReconciliationService service = new ReconciliationService(
                 mock(ShadowLedger.class), jdbc, mock(CoreBankingAdapter.class),
-                txManager, 100);
+                txManager, new ReconciliationLease(jdbc, 900), 100);
 
         java.util.concurrent.locks.ReentrantLock lock = readLock(service);
 

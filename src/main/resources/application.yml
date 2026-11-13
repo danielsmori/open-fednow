@@ -277,6 +277,25 @@ openfednow:
   # throughput on well-resourced JVMs; decrease for tighter heap budgets.
   reconciliation:
     batch-size: ${RECONCILIATION_BATCH_SIZE:500}
+    # Start a reconciliation cycle automatically when the core transitions back
+    # online, and on startup when unconfirmed entries (or open bridge-mode
+    # aggregate windows, #68) are waiting. With the aggregate cap enabled this
+    # is what lifts the cap after a maintenance window; disable only when
+    # reconciliation timing is managed externally — capped accounts then stay
+    # capped until POST /admin/reconcile.
+    auto-on-core-recovery: ${RECONCILIATION_AUTO_ON_CORE_RECOVERY:true}
+    # Cross-instance lease (reconciliation_lease table) so exactly one instance
+    # reconciles at a time: every pod sees the same core-recovery transition.
+    # The lease is renewed between batches and expires on its own if the
+    # holding instance crashes. Keep it longer than a batch could plausibly
+    # take; expiry comparisons mix application and database clocks, so keep
+    # NTP healthy (known-limitations #3).
+    lease-seconds: ${RECONCILIATION_LEASE_SECONDS:900}
+    # While the core is online and unconfirmed entries remain (a recovery-time
+    # cycle failed or partially failed), the availability poll retriggers a
+    # cycle — at most once per this many seconds, so a persistent failure does
+    # not write an audit row every poll.
+    auto-retry-interval-seconds: ${RECONCILIATION_AUTO_RETRY_INTERVAL_SECONDS:300}
 
   # Shadow Ledger settings
   shadow-ledger:

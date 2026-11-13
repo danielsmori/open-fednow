@@ -60,6 +60,13 @@ openfednow:
     max-aggregate-send-amount: ${BRIDGE_MODE_MAX_AGGREGATE_SEND_AMOUNT:}
     expected-window-hours: ${BRIDGE_MODE_EXPECTED_WINDOW_HOURS:6}
 
+  # Reconciliation runs automatically when the core comes back online (and on
+  # startup with pending work); a cross-instance lease keeps it to one pod.
+  # Leave auto on when the aggregate cap is enabled — it is what lifts the cap.
+  reconciliation:
+    auto-on-core-recovery: ${RECONCILIATION_AUTO_ON_CORE_RECOVERY:true}
+    lease-seconds: ${RECONCILIATION_LEASE_SECONDS:900}
+
 spring:
   datasource:
     url: ${DB_URL}

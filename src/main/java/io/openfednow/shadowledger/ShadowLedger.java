@@ -661,11 +661,7 @@ public class ShadowLedger {
         if (fields == null || fields.isEmpty()) {
             return true;
         }
-        List<String> countedTxnIds = fields.stream()
-                .map(String.class::cast)
-                .filter(f -> f.startsWith(AGGREGATE_TXN_FIELD_PREFIX))
-                .map(f -> f.substring(AGGREGATE_TXN_FIELD_PREFIX.length()))
-                .toList();
+        List<String> countedTxnIds = countedTxnIds(fields);
         List<String> releasable = countedTxnIds.isEmpty()
                 ? List.of()
                 : confirmedAndResolved(accountId, countedTxnIds);
@@ -686,6 +682,42 @@ public class ShadowLedger {
                     countedTxnIds.size() - releasable.size());
         }
         return windowClosed;
+    }
+
+    /** Extracts the counted transaction IDs from an aggregate hash's field names. */
+    private static List<String> countedTxnIds(Set<Object> fields) {
+        return fields.stream()
+                .map(String.class::cast)
+                .filter(f -> f.startsWith(AGGREGATE_TXN_FIELD_PREFIX))
+                .map(f -> f.substring(AGGREGATE_TXN_FIELD_PREFIX.length()))
+                .toList();
+    }
+
+    /**
+     * Whether any open aggregate window has work a reconciliation cycle could
+     * release right now: a counted send whose DEBIT row is confirmed and whose
+     * saga is final (a previous release failed, or a saga resolved since), or
+     * a window with no counted sends left (everything reversed) that just
+     * needs closing. Windows waiting on an unresolved send are NOT releasable —
+     * no cycle can hurry them. Used by the automatic-reconciliation retry to
+     * decide whether another cycle is worth starting, so it never spins on
+     * windows only an event or an operator can move.
+     */
+    public boolean hasReleasableAggregate() {
+        for (String accountId : openAggregateAccountIds()) {
+            Set<Object> fields = redis.opsForHash().keys(AGGREGATE_KEY_PREFIX + accountId);
+            if (fields == null || fields.isEmpty()) {
+                continue; // closed concurrently
+            }
+            List<String> countedTxnIds = countedTxnIds(fields);
+            if (countedTxnIds.isEmpty()) {
+                return true; // empty window: closing it is releasable work
+            }
+            if (!confirmedAndResolved(accountId, countedTxnIds).isEmpty()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

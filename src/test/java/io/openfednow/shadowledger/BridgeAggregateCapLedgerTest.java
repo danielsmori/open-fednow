@@ -422,6 +422,35 @@ class BridgeAggregateCapLedgerTest extends AbstractInfrastructureIntegrationTest
         assertThat(shadowLedger.hasOpenAggregate("ACC-AGG-EMPTY")).isFalse();
     }
 
+    @Test
+    void releasableWorkIsDetectedExactlyWhenACycleCouldHelp() {
+        // nothing open: no releasable work
+        assertThat(shadowLedger.hasReleasableAggregate()).isFalse();
+
+        // a window whose send is unresolved: a cycle cannot help
+        seed("ACC-AGG-RTRY", 100_000);
+        shadowLedger.applyDebitCapped("ACC-AGG-RTRY", new BigDecimal("100.00"), "TXN-RTRY-1");
+        saga("TXN-RTRY-1", "OUTCOME_UNKNOWN");
+        confirmAll("ACC-AGG-RTRY");
+        assertThat(shadowLedger.hasReleasableAggregate()).isFalse();
+
+        // the saga resolves: now a cycle could release it
+        jdbc.update("UPDATE saga_state SET state = 'COMPLETED' WHERE transaction_id = 'TXN-RTRY-1'");
+        assertThat(shadowLedger.hasReleasableAggregate()).isTrue();
+
+        shadowLedger.closeConfirmedAggregate("ACC-AGG-RTRY");
+        assertThat(shadowLedger.hasReleasableAggregate()).isFalse();
+    }
+
+    @Test
+    void emptyWindowCountsAsReleasableWork() {
+        seed("ACC-AGG-RTRY2", 100_000);
+        shadowLedger.applyDebitCapped("ACC-AGG-RTRY2", new BigDecimal("100.00"), "TXN-RTRY2-1");
+        shadowLedger.reverseDebit("TXN-RTRY2-1"); // window stays open, zero counted
+
+        assertThat(shadowLedger.hasReleasableAggregate()).isTrue();
+    }
+
     private void confirmAll(String accountId) {
         jdbc.update("UPDATE shadow_ledger_transaction_log SET core_confirmed = TRUE WHERE account_id = ?",
                 accountId);

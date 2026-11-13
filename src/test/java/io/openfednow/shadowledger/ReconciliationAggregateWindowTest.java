@@ -180,7 +180,7 @@ class ReconciliationAggregateWindowTest {
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static ReconciliationService service(ShadowLedger ledger, CoreBankingAdapter core) {
-        return new ReconciliationService(ledger, jdbc, core, txManager, 100);
+        return new ReconciliationService(ledger, jdbc, core, txManager, new ReconciliationLease(jdbc, 900), 100);
     }
 
     private static ShadowLedger ledger(boolean capEnabled) {

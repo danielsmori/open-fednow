@@ -47,13 +47,14 @@ public class ReconciliationService {
     private final CoreBankingAdapter coreBankingAdapter;
     private final int batchSize;
     private final TransactionTemplate perAccountTx;
+    private final ReconciliationLease lease;
     /**
      * Guards against concurrent reconcile() invocations within the same JVM. The
      * realistic concern is "operator triggers /admin/reconcile while the scheduled
      * trigger is already running" — a non-fair lock with tryLock semantics surfaces
      * the collision immediately rather than queuing the second call behind a
-     * potentially long-running cycle. Cross-pod coordination is institution-specific
-     * deployment work (see ADR-0001 / known-limitations on the multi-pod constraint).
+     * potentially long-running cycle. Kept as a cheap fast path in front of the
+     * cross-instance {@link ReconciliationLease}, which covers the multi-pod case.
      */
     private final ReentrantLock reconcileLock = new ReentrantLock();
 
@@ -61,6 +62,7 @@ public class ReconciliationService {
                                  JdbcTemplate jdbc,
                                  CoreBankingAdapter coreBankingAdapter,
                                  PlatformTransactionManager txManager,
+                                 ReconciliationLease lease,
                                  @Value("${openfednow.reconciliation.batch-size:500}") int batchSize) {
         if (batchSize <= 0) {
             throw new IllegalArgumentException(
@@ -69,6 +71,7 @@ public class ReconciliationService {
         this.shadowLedger = shadowLedger;
         this.jdbc = jdbc;
         this.coreBankingAdapter = coreBankingAdapter;
+        this.lease = lease;
         this.batchSize = batchSize;
         // Per-account work runs inside its own transaction so a discrepancy correction
         // and the "mark unconfirmed rows confirmed" UPDATE commit together. If either
@@ -93,6 +96,17 @@ public class ReconciliationService {
      * @return a {@link ReconciliationReport} summarizing the results
      */
     public ReconciliationReport reconcile() {
+        return reconcile(null);
+    }
+
+    /**
+     * Like {@link #reconcile()}, with an explicit audit label for the
+     * {@code reconciliation_run} record. {@code AvailabilityBridge} passes
+     * {@code AUTO_RECOVERY} so self-triggered cycles are distinguishable from
+     * cron ({@code SCHEDULED}) and operator ({@code MANUAL}) runs in the audit
+     * trail. {@code null} falls back to the MDC-based detection.
+     */
+    public ReconciliationReport reconcile(String triggerLabel) {
         // Same-JVM concurrency guard. A second concurrent call returns immediately
         // with a synthetic "skipped" report so a misconfigured cron or simultaneous
         // manual + scheduled trigger does not create overlapping reconciliation_run
@@ -103,13 +117,62 @@ public class ReconciliationService {
                     "Skipped: another reconciliation cycle was already in progress");
         }
         try {
-            return reconcileLocked();
+            // Cross-instance guard. With automatic reconciliation on core
+            // recovery (#68, PR 3), every pod observes the same offline→online
+            // transition; exactly one may run the cycle. The lease is
+            // time-bounded, so a pod that crashes mid-cycle never blocks
+            // reconciliation permanently.
+            if (!lease.tryAcquire()) {
+                return new ReconciliationReport(0, 0, true,
+                        "Skipped: another instance holds the reconciliation lease");
+            }
+            try {
+                return reconcileLocked(triggerLabel);
+            } finally {
+                lease.release();
+            }
         } finally {
             reconcileLock.unlock();
         }
     }
 
-    private ReconciliationReport reconcileLocked() {
+    /**
+     * Whether a reconciliation cycle has anything to do: unconfirmed ledger
+     * rows, or (when the aggregate cap is enabled) open bridge-mode aggregate
+     * windows. Used by the automatic trigger to avoid pointless cycles on
+     * startup when there is nothing to reconcile.
+     */
+    public boolean hasPendingWork() {
+        return hasUnconfirmedEntries()
+                || (shadowLedger.isAggregateCapEnabled()
+                        && !shadowLedger.openAggregateAccountIds().isEmpty());
+    }
+
+    /**
+     * Whether another reconciliation cycle could make progress right now:
+     * ledger rows awaiting confirmation, or (cap enabled) an aggregate window
+     * holding sends that are already confirmed and resolved but not yet
+     * released — e.g. a release that failed on a Redis blip, or a saga that
+     * resolved after the last cycle. This is the signal behind the automatic
+     * retry while online. Deliberately narrower than {@link #hasPendingWork}:
+     * a window whose sends are all unresolved is waiting on an event or an
+     * operator, and retrying cycles against it would just write an audit row
+     * per retry interval forever.
+     */
+    public boolean hasRetryableWork() {
+        return hasUnconfirmedEntries()
+                || (shadowLedger.isAggregateCapEnabled() && shadowLedger.hasReleasableAggregate());
+    }
+
+    /** Whether any ledger row still awaits core confirmation. */
+    public boolean hasUnconfirmedEntries() {
+        Boolean unconfirmed = jdbc.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM shadow_ledger_transaction_log WHERE core_confirmed = FALSE)",
+                Boolean.class);
+        return Boolean.TRUE.equals(unconfirmed);
+    }
+
+    private ReconciliationReport reconcileLocked(String triggerLabel) {
         log.info("Reconciliation cycle starting");
 
         // Correlate this run with the admin_audit_log entry that triggered it (if any).
@@ -117,7 +180,9 @@ public class ReconciliationService {
         // job runs outside any HTTP request and has no MDC context; an operator hitting
         // /admin/reconcile has a per-request UUID from CorrelationFilter.
         final String requestId = org.slf4j.MDC.get(io.openfednow.gateway.CorrelationFilter.MDC_REQUEST_ID);
-        final String triggeredBy = requestId != null ? "MANUAL" : "SCHEDULED";
+        final String triggeredBy = triggerLabel != null
+                ? triggerLabel
+                : (requestId != null ? "MANUAL" : "SCHEDULED");
 
         // Open the run audit record
         KeyHolder keyHolder = new GeneratedKeyHolder();
@@ -160,6 +225,20 @@ public class ReconciliationService {
                         log.error("Reconciliation failed for account={}", accountId, e);
                         discrepanciesDetected++;
                     }
+
+                    // Keep the cross-instance lease alive per ACCOUNT, not per
+                    // batch: each account costs a synchronous core call, and a
+                    // recovering core is exactly when those calls are slow — a
+                    // 500-account batch of timing-out calls would outlive any
+                    // sane lease. Losing the lease means another instance took
+                    // over; abort instead of reconciling concurrently with it.
+                    if (!lease.renew()) {
+                        String message = "Aborted: reconciliation lease lost mid-cycle; "
+                                + "another instance took over";
+                        closeRunRecord(runId, transactionsReplayed, discrepanciesDetected, false, message);
+                        return new ReconciliationReport(
+                                transactionsReplayed, discrepanciesDetected, false, message);
+                    }
                 }
 
                 // Advance the cursor past this batch even if some accounts failed —
@@ -193,6 +272,16 @@ public class ReconciliationService {
                             log.error("Failed to release confirmed sends from bridge aggregate window "
                                             + "account={} — cap stays in force, next cycle retries",
                                     io.openfednow.security.pii.PiiRedactor.maskAccount(accountId), e);
+                        }
+                        // The sweep runs after the batch loop's last renewal and
+                        // can be long on its own — keep renewing here as well.
+                        if (!lease.renew()) {
+                            String message = "Aborted: reconciliation lease lost during the "
+                                    + "open-window sweep; another instance took over";
+                            closeRunRecord(runId, transactionsReplayed, discrepanciesDetected,
+                                    false, message);
+                            return new ReconciliationReport(
+                                    transactionsReplayed, discrepanciesDetected, false, message);
                         }
                     }
                 } else {
