@@ -254,3 +254,80 @@ jobs:
         run: |
           docker rm -f ci-app ci-app-fixtures ci-postgres ci-redis ci-rabbitmq >/dev/null 2>&1 || true
           docker network rm openfednow-ci >/dev/null 2>&1 || true
+
+  compose-app:
+    name: Compose App Stack
+    runs-on: ubuntu-latest
+    # The image build is the slow part and the unit tests gate it, same as the
+    # Container Image job.
+    needs: build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Preflight in app mode
+        run: python3 scripts/preflight.py --mode app
+
+      - name: The base file still publishes the backing services
+        # The host-run workflow has to keep working untouched; app mode is an
+        # addition, not a replacement.
+        run: |
+          set -euo pipefail
+          published="$(docker compose -f docker-compose.yml config | grep -c 'published:')"
+          if [ "$published" != 4 ]; then
+            echo "the base file publishes $published host ports, expected 4" >&2
+            exit 1
+          fi
+
+      - name: Start the app stack
+        run: |
+          docker compose -p ci-app-stack -f docker-compose.yml -f compose.app.yml \
+            up -d --wait
+
+      - name: Only the gateway publishes a port
+        run: |
+          set -euo pipefail
+          for service in postgres redis rabbitmq; do
+            id="$(docker compose -p ci-app-stack -f docker-compose.yml -f compose.app.yml ps -q "$service")"
+            bindings="$(docker inspect -f '{{json .HostConfig.PortBindings}}' "$id")"
+            if [ "$bindings" != '{}' ]; then
+              echo "$service publishes $bindings in app mode; it should publish nothing" >&2
+              exit 1
+            fi
+          done
+
+          code() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
+          health="$(code http://127.0.0.1:8080/fednow/health)"
+          [ "$health" = 200 ] || { echo "gateway health returned $health" >&2; exit 1; }
+
+          closed="$(code -u admin:changeme -X POST -H 'Content-Type: application/json' \
+            -d '{}' http://127.0.0.1:8080/reference/v1/fixtures/accounts)"
+          if [ "$closed" != 404 ]; then
+            echo "the fixture route answered $closed in app mode; expected 404" >&2
+            exit 1
+          fi
+
+      - name: A second project runs alongside the first
+        run: |
+          set -euo pipefail
+          APP_PORT=18080 docker compose -p ci-app-stack-2 -f docker-compose.yml -f compose.app.yml \
+            up -d --wait
+          for port in 8080 18080; do
+            code="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$port/fednow/health")"
+            [ "$code" = 200 ] || { echo "the gateway on $port returned $code" >&2; exit 1; }
+          done
+          echo "two projects healthy at the same time, on 8080 and 18080"
+
+      - name: Compose logs on failure
+        if: failure()
+        run: |
+          docker compose -p ci-app-stack -f docker-compose.yml -f compose.app.yml logs --tail 120 app || true
+
+      - name: Tear down
+        # Only this job's own projects, and only volumes it created.
+        if: always()
+        run: |
+          for project in ci-app-stack ci-app-stack-2; do
+            docker compose -p "$project" -f docker-compose.yml -f compose.app.yml down -v >/dev/null 2>&1 || true
+          done
