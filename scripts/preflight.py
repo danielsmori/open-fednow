@@ -6,8 +6,13 @@ checkout would publish are free. Every failure names the fix. Nothing here
 contacts a network service or a payment rail; it only inspects the local
 toolchain.
 
-    python3 scripts/preflight.py            # human-readable report
+    python3 scripts/preflight.py                   # human-readable report
     python3 scripts/preflight.py --json out.json   # also record the result
+    python3 scripts/preflight.py --mode app        # for the containerised stack
+
+`--mode host` (the default) is for running the application yourself against the
+Compose backing services, so it checks their published host ports. `--mode app`
+is for `compose.app.yml`, where only the application publishes a port.
 
 Exit status is 0 when every required check passes, 1 otherwise.
 """
@@ -27,6 +32,9 @@ ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_JAVA_MAJOR = 17
 MINIMUM_MAVEN = (3, 9)
 MINIMUM_PYTHON = (3, 9)
+# compose.app.yml resets the backing services' ports with the `!reset` tag,
+# which Compose understands from v2.24.
+MINIMUM_COMPOSE = (2, 24)
 
 # Host ports this checkout would publish, with the variable that moves each one.
 # Keep in step with docker-compose.yml.
@@ -34,6 +42,10 @@ COMPOSE_PORTS = (("postgres", "POSTGRES_PORT", 5432),
                  ("redis", "REDIS_PORT", 6379),
                  ("rabbitmq", "RABBITMQ_PORT", 5672),
                  ("rabbitmq-management", "RABBITMQ_MANAGEMENT_PORT", 15672))
+
+# In app mode the gateway reaches the backing services over the Compose network
+# and only its own port is published.
+APP_PORTS = (("app", "APP_PORT", 8080),)
 
 COMPOSE_IMAGES = ("postgres:16-alpine", "redis:7-alpine", "rabbitmq:3-management-alpine")
 
@@ -150,8 +162,14 @@ def check_compose():
         return Check("Docker Compose", False, "docker compose is unavailable",
                      "Install the Compose v2 plugin; this checkout uses "
                      "`docker compose`, not the legacy docker-compose binary.")
-    return Check("Docker Compose", True, output.strip().splitlines()[0] if output.strip()
-                 else "available")
+    version = parse_version(output)
+    if not version or version[:2] < MINIMUM_COMPOSE:
+        found = ".".join(str(part) for part in version) if version else "unknown"
+        return Check("Docker Compose", False, f"found Compose {found}",
+                     "compose.app.yml needs Compose %d.%d or newer for the `!reset` "
+                     "tag that drops the backing services' host ports. Upgrade the "
+                     "Compose plugin." % MINIMUM_COMPOSE)
+    return Check("Docker Compose", True, "Compose " + ".".join(str(p) for p in version))
 
 
 def port_is_free(port, host="127.0.0.1"):
@@ -177,9 +195,9 @@ def resolve_port(variable, default):
     return value if 1 <= value <= 65535 else None
 
 
-def check_ports():
+def check_ports(mode="host"):
     results = []
-    for service, variable, default in COMPOSE_PORTS:
+    for service, variable, default in (APP_PORTS if mode == "app" else COMPOSE_PORTS):
         port = resolve_port(variable, default)
         if port is None:
             results.append(Check(f"port {service}", False,
@@ -216,20 +234,27 @@ def check_image_cache():
     return Check("cache state (" + state + ")", True, detail, required=False)
 
 
-def collect():
+def collect(mode="host"):
     checks = [check_java(), check_maven(), check_python(), check_docker()]
+    if mode == "app":
+        # compose.app.yml builds the jar inside the image, so a local JDK and
+        # Maven are useful but not required. They are still reported, because a
+        # missing JDK matters the moment you switch to running the application
+        # yourself or run the evaluation.
+        for check in checks[:2]:
+            check.required = False
     if checks[-1].ok:
         checks.append(check_compose())
     else:
         checks.append(Check("Docker Compose", False, "not checked: Docker is unavailable",
                             "Start Docker, then re-run this preflight."))
-    checks.extend(check_ports())
+    checks.extend(check_ports(mode))
     if checks[3].ok:
         checks.append(check_image_cache())
     return checks
 
 
-def report(checks, stream=sys.stdout):
+def report(checks, stream=sys.stdout, mode="host"):
     width = max(len(check.name) for check in checks)
     for check in checks:
         if check.ok:
@@ -246,6 +271,11 @@ def report(checks, stream=sys.stdout):
     if failures:
         print(f"{len(failures)} check(s) failed; fix the items above before running "
               f"the evaluation.", file=stream)
+    elif mode == "app":
+        print("Preflight passed. Next:", file=stream)
+        print("  docker compose -p openfednow-app -f docker-compose.yml -f compose.app.yml "
+              "up -d --wait", file=stream)
+        print("  curl http://127.0.0.1:${APP_PORT:-8080}/fednow/health", file=stream)
     else:
         print("Preflight passed. Next:", file=stream)
         print("  docker compose -p openfednow-eval up -d --wait postgres redis rabbitmq",
@@ -260,15 +290,20 @@ def main(argv=None):
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--json", metavar="PATH",
                         help="Write the result, including cold/cached cache state, to a JSON file")
+    parser.add_argument("--mode", choices=("host", "app"), default="host",
+                        help="host (default): you run the application and the Compose "
+                             "backing services publish host ports. app: compose.app.yml "
+                             "runs the application too and only it publishes a port.")
     args = parser.parse_args(argv)
-    checks = collect()
-    status = report(checks)
+    checks = collect(args.mode)
+    status = report(checks, mode=args.mode)
     if args.json:
         destination = Path(args.json)
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text(json.dumps({
             "recorded_at": datetime.now(timezone.utc).isoformat(),
             "platform": platform.platform(),
+            "mode": args.mode,
             "passed": status == 0,
             "checks": [check.as_dict() for check in checks]}, indent=2) + "\n")
     return status

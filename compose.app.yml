@@ -1,0 +1,70 @@
+# Opt-in: run the gateway itself inside the Compose network.
+#
+# Layer this file over the base one, which it does not modify:
+#   docker compose -f docker-compose.yml -f compose.app.yml up -d --wait
+#
+# In this mode the gateway reaches postgres, redis and rabbitmq by service name
+# on their container ports, so none of them publishes a host port. Only the
+# gateway's own HTTP port is published, on 127.0.0.1, and APP_PORT moves it.
+# Two checkouts can therefore run the whole stack at the same time:
+#   docker compose -p one -f docker-compose.yml -f compose.app.yml up -d --wait
+#   APP_PORT=18080 docker compose -p two -f docker-compose.yml -f compose.app.yml up -d --wait
+#
+# Without this file nothing changes: `docker compose up -d` still publishes the
+# backing services on the host for an app you run yourself with
+# `mvn spring-boot:run` or from an IDE.
+#
+# This runs the gateway against synthetic local services. It is not a
+# production deployment and not the configuration the reliability evidence is
+# recorded against — see docs/adr/0011-evaluate-the-host-run-jvm.md. There is no
+# live FedNow rail and no core banking system here, and the non-production
+# fixture gates stay off unless you set them yourself.
+#
+# Requires Compose v2.24 or newer for the `!reset` tag below; the preflight
+# checks that (`python3 scripts/preflight.py --mode app`).
+
+services:
+
+  # The gateway reaches these over the Compose network, so publishing them to
+  # the host would only re-create the port conflicts that #104 removed. The
+  # named volumes, healthchecks and credentials all stay as the base file sets
+  # them.
+  postgres:
+    ports: !reset []
+
+  redis:
+    ports: !reset []
+
+  rabbitmq:
+    ports: !reset []
+
+  app:
+    build:
+      context: .
+      args:
+        VERSION: ${OPENFEDNOW_VERSION:-0.1.0-compose}
+        REVISION: ${OPENFEDNOW_REVISION:-local}
+    # Set OPENFEDNOW_IMAGE to run a published image instead of building here.
+    image: ${OPENFEDNOW_IMAGE:-openfednow:local}
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:8080"
+    environment:
+      # Service names on the Compose network, not host ports.
+      DB_URL: jdbc:postgresql://postgres:5432/openfednow
+      DB_USERNAME: openfednow
+      DB_PASSWORD: openfednow
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: guest
+      RABBITMQ_PASS: guest
+    # Flyway runs at startup, so the database has to be accepting connections
+    # first; the same holds for the cache and the broker the app connects to.
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    # The HEALTHCHECK comes from the image, so `up --wait` blocks until
+    # /fednow/health answers.
