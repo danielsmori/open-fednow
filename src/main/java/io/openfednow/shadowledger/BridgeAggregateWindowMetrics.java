@@ -100,7 +100,8 @@ public class BridgeAggregateWindowMetrics {
         Gauge.builder(name, value, AtomicInteger::get).description(description).register(registry);
     }
 
-    @Scheduled(fixedDelayString = "${openfednow.bridge-mode.metrics-sample-interval-seconds:60}000")
+    @Scheduled(fixedDelayString = "${openfednow.bridge-mode.metrics-sample-interval-seconds:60}",
+            timeUnit = TimeUnit.SECONDS)
     public void sample() {
         // off the shared scheduler thread; DiscardPolicy skips a tick if the
         // previous sample is still running

@@ -47,7 +47,7 @@ The cap **fails closed**. Nothing resets it on a timer.
 **An account stays capped after the core is back** (`windows_overdue` > 0, or the GET shows an old window):
 
 1. Check `reconciliation.auto.consecutive_unsettled` and the logs. If cycles are failing (core errors, lock contention), fix that first; the backoff retries on its own, and `POST /admin/reconcile` forces a cycle.
-2. If cycles complete but the window stays, a counted send's saga is not final — typically `OUTCOME_UNKNOWN` after a lost FedNow response. Find it with `GET /admin/sagas` and the window's counted sends, and resolve it through investigation.
+2. If cycles complete but the window stays, a counted send's saga is not final — typically `OUTCOME_UNKNOWN` after a lost FedNow response. The window view shows only how many sends are counted, not which; list the debtor's non-final sagas with `GET /admin/sagas` (or `GET /admin/sagas/{transactionId}` for a known send) and resolve them through investigation.
 3. Once the saga is final, the next cycle (automatic or manual) releases the send.
 4. Only if the position has been established out of band and the saga cannot be resolved in-system: `DELETE /admin/accounts/{accountId}/bridge-aggregate`. The call is recorded in the admin audit log.
 
