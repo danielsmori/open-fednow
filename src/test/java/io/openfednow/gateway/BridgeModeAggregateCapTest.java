@@ -193,6 +193,10 @@ class BridgeModeAggregateCapTest extends AbstractInfrastructureIntegrationTest {
         messageRouter.routeOutbound(message("REL-1", "400.00"));
         assertThat(sagaState("TXN-REL-1")).isEqualTo("FAILED");
         assertThat(countedTotal()).isEqualByComparingTo(BigDecimal.ZERO);
+        // releasing every send empties the window but must not close it: only
+        // reconciliation confirms the balance, and until then online sends are
+        // still counted against it
+        assertThat(shadowLedger.hasOpenAggregate(DEBTOR)).isTrue();
 
         assertThat(status(messageRouter.routeOutbound(message("REL-2", "400.00"))))
                 .isEqualTo(Pacs002Message.TransactionStatus.ACSC);

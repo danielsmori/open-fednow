@@ -283,6 +283,48 @@ class BridgeAggregateCapLedgerTest extends AbstractInfrastructureIntegrationTest
                 .isEqualTo(CappedDebitResult.APPLIED);
     }
 
+    // ── Input guards (issue #68 bug bash) ─────────────────────────────────────
+
+    @Test
+    void duplicateTransactionIdIsRefusedNotDoubleCounted() {
+        seed("ACC-AGG-DUPTXN", 100_000);
+        shadowLedger.applyDebitCapped("ACC-AGG-DUPTXN", new BigDecimal("100.00"), "TXN-DUPTXN-1");
+
+        org.assertj.core.api.Assertions.assertThatIllegalStateException()
+                .isThrownBy(() -> shadowLedger.applyDebitCapped(
+                        "ACC-AGG-DUPTXN", new BigDecimal("50.00"), "TXN-DUPTXN-1"))
+                .withMessageContaining("already counted");
+
+        // nothing moved: one debit, one counted send, total intact
+        assertThat(redis.opsForValue().get("balance:ACC-AGG-DUPTXN")).isEqualTo("90000");
+        BridgeAggregateView view = shadowLedger.getAggregateView("ACC-AGG-DUPTXN");
+        assertThat(view.totalCounted()).isEqualByComparingTo(new BigDecimal("100.00"));
+        assertThat(view.countedSends()).isEqualTo(1);
+        // and the original send still releases cleanly
+        shadowLedger.reverseDebit("TXN-DUPTXN-1");
+        assertThat(view("ACC-AGG-DUPTXN").totalCounted()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void nonPositiveAmountsAreRefusedByEveryLedgerEntryPoint() {
+        seed("ACC-AGG-NEG", 100_000);
+        BigDecimal minus = new BigDecimal("-10.00");
+
+        org.assertj.core.api.Assertions.assertThatIllegalArgumentException()
+                .isThrownBy(() -> shadowLedger.applyDebitCapped("ACC-AGG-NEG", minus, "TXN-NEG-1"));
+        org.assertj.core.api.Assertions.assertThatIllegalArgumentException()
+                .isThrownBy(() -> shadowLedger.tryApplyDebit("ACC-AGG-NEG", minus, "TXN-NEG-2"));
+        org.assertj.core.api.Assertions.assertThatIllegalArgumentException()
+                .isThrownBy(() -> shadowLedger.applyCredit("ACC-AGG-NEG", BigDecimal.ZERO, "TXN-NEG-3"));
+
+        assertThat(redis.opsForValue().get("balance:ACC-AGG-NEG")).isEqualTo("100000");
+        assertThat(shadowLedger.hasOpenAggregate("ACC-AGG-NEG")).isFalse();
+    }
+
+    private BridgeAggregateView view(String accountId) {
+        return shadowLedger.getAggregateView(accountId);
+    }
+
     // ── Policy ownership and read-side helpers (PR 2) ─────────────────────────
 
     @Test

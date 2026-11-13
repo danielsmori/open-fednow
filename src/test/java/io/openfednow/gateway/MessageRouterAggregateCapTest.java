@@ -58,7 +58,7 @@ class MessageRouterAggregateCapTest {
 
         f.router.routeOutbound(message("E2E-OFF"));
 
-        verify(f.shadowLedger).applyDebit(anyString(), any(), anyString());
+        verify(f.shadowLedger).tryApplyDebit(anyString(), any(), anyString());
         verify(f.shadowLedger, never()).applyDebitCappedDetailed(anyString(), any(), anyString());
         verify(f.shadowLedger, never()).hasOpenAggregate(anyString());
     }
@@ -70,7 +70,7 @@ class MessageRouterAggregateCapTest {
         f.router.routeOutbound(message("E2E-BRIDGE"));
 
         verify(f.shadowLedger).applyDebitCappedDetailed(anyString(), any(), anyString());
-        verify(f.shadowLedger, never()).applyDebit(anyString(), any(), anyString());
+        verify(f.shadowLedger, never()).tryApplyDebit(anyString(), any(), anyString());
     }
 
     @Test
@@ -80,7 +80,7 @@ class MessageRouterAggregateCapTest {
         f.router.routeOutbound(message("E2E-WINDOW"));
 
         verify(f.shadowLedger).applyDebitCappedDetailed(anyString(), any(), anyString());
-        verify(f.shadowLedger, never()).applyDebit(anyString(), any(), anyString());
+        verify(f.shadowLedger, never()).tryApplyDebit(anyString(), any(), anyString());
     }
 
     @Test
@@ -89,8 +89,34 @@ class MessageRouterAggregateCapTest {
 
         f.router.routeOutbound(message("E2E-ONLINE"));
 
-        verify(f.shadowLedger).applyDebit(anyString(), any(), anyString());
+        verify(f.shadowLedger).tryApplyDebit(anyString(), any(), anyString());
         verify(f.shadowLedger, never()).applyDebitCappedDetailed(anyString(), any(), anyString());
+    }
+
+    // ── Concurrent duplicate submissions (bug bash) ──────────────────────────
+
+    @Test
+    void outboundLoserOfTheSagaRaceGets503NotA500() {
+        Fixture f = new Fixture(false, false, false);
+        when(f.sagaOrchestrator.initiate(any(), any()))
+                .thenThrow(new org.springframework.dao.DuplicateKeyException("uq_saga_end_to_end_id"));
+
+        var response = f.router.routeOutbound(message("E2E-DUP-RACE"));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(503);
+        verify(f.shadowLedger, never()).tryApplyDebit(anyString(), any(), anyString());
+        verify(f.fedNowClient, never()).submitCreditTransfer(any());
+    }
+
+    @Test
+    void inboundLoserOfTheSagaRaceGets503NotA500() {
+        Fixture f = new Fixture(false, false, false);
+        when(f.sagaOrchestrator.initiate(any(), any()))
+                .thenThrow(new org.springframework.dao.DuplicateKeyException("uq_saga_transaction_id"));
+
+        var response = f.router.routeInbound(message("E2E-DUP-IN"), Rail.FEDNOW);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(503);
     }
 
     // ── Reconciliation owed (PR 3) ───────────────────────────────────────────
@@ -158,6 +184,23 @@ class MessageRouterAggregateCapTest {
     }
 
     // ── Race losers ──────────────────────────────────────────────────────────
+
+    @Test
+    void uncountedRaceLoserOnTheBalanceIsCompensatedWithAm04() {
+        // cap disabled: the plain path must also answer a final AM04 when a
+        // concurrent send drains the balance after the pre-check (#141/#143)
+        Fixture f = new Fixture(false, false, false);
+        when(f.shadowLedger.tryApplyDebit(anyString(), any(), anyString()))
+                .thenReturn(CappedDebitResult.INSUFFICIENT_FUNDS);
+
+        Pacs002Message r = f.router.routeOutbound(message("E2E-PLAIN-RACE")).getBody();
+
+        assertThat(r.getRejectReasonCode()).isEqualTo("AM04");
+        verify(f.sagaOrchestrator).compensate("SAGA-1", "AM04");
+        verify(f.fedNowClient, never()).submitCreditTransfer(any());
+        verify(f.idempotencyService).recordOutcome(eq("E2E-PLAIN-RACE"), any());
+        assertThat(f.capExceeded()).isZero();
+    }
 
     @Test
     void raceLoserOnTheCapIsCompensatedWithAm04() {
@@ -231,6 +274,8 @@ class MessageRouterAggregateCapTest {
             when(shadowLedger.hasOpenAggregate(anyString())).thenReturn(windowOpen);
             when(shadowLedger.applyDebitCappedDetailed(anyString(), any(), anyString()))
                     .thenReturn(new ShadowLedger.CappedDebit(CappedDebitResult.APPLIED, false));
+            when(shadowLedger.tryApplyDebit(anyString(), any(), anyString()))
+                    .thenReturn(CappedDebitResult.APPLIED);
             when(sagaOrchestrator.initiate(any(), any()))
                     .thenReturn(new PaymentSaga("SAGA-1", "TXN", Rail.FEDNOW));
             router = new MessageRouter(

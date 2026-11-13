@@ -79,6 +79,7 @@ public class AutomaticReconciliationTrigger {
 
     private final ReconciliationService reconciliationService;
     private final ReconciliationPendingMarker pendingMarker;
+    private final ShadowLedger shadowLedger;
     private final boolean enabled;
     private final long initialBackoffNanos;
     private final long maxBackoffNanos;
@@ -105,21 +106,33 @@ public class AutomaticReconciliationTrigger {
     public AutomaticReconciliationTrigger(
             ReconciliationService reconciliationService,
             ReconciliationPendingMarker pendingMarker,
+            ShadowLedger shadowLedger,
             MeterRegistry meterRegistry,
             @Value("${openfednow.reconciliation.auto-on-core-recovery:true}") boolean enabled,
             @Value("${openfednow.reconciliation.auto-retry-backoff-initial-seconds:30}") long initialBackoffSeconds,
             @Value("${openfednow.reconciliation.auto-retry-backoff-max-seconds:900}") long maxBackoffSeconds) {
-        this(reconciliationService, pendingMarker, meterRegistry, enabled,
-                initialBackoffSeconds, maxBackoffSeconds,
+        this(reconciliationService, pendingMarker, shadowLedger, meterRegistry, enabled,
+                validatedBackoff(initialBackoffSeconds, maxBackoffSeconds),
+                maxBackoffSeconds,
                 Executors.newSingleThreadExecutor(daemon("reconciliation-auto")),
                 new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(1),
                         daemon("reconciliation-mark"), new ThreadPoolExecutor.DiscardPolicy()),
                 System::nanoTime);
     }
 
+    /** Validates before the delegating constructor builds executors, so an invalid config leaks no threads. */
+    private static long validatedBackoff(long initialBackoffSeconds, long maxBackoffSeconds) {
+        if (initialBackoffSeconds <= 0 || maxBackoffSeconds < initialBackoffSeconds) {
+            throw new IllegalArgumentException("openfednow.reconciliation.auto-retry-backoff-initial-seconds "
+                    + "must be positive and not exceed ...-max-seconds");
+        }
+        return initialBackoffSeconds;
+    }
+
     /** Visible for tests: synchronous or controllable executors, a fake clock. */
     AutomaticReconciliationTrigger(ReconciliationService reconciliationService,
                                    ReconciliationPendingMarker pendingMarker,
+                                   ShadowLedger shadowLedger,
                                    MeterRegistry meterRegistry,
                                    boolean enabled,
                                    long initialBackoffSeconds,
@@ -127,12 +140,10 @@ public class AutomaticReconciliationTrigger {
                                    ExecutorService cycleExecutor,
                                    ExecutorService markExecutor,
                                    LongSupplier nanoClock) {
-        if (initialBackoffSeconds <= 0 || maxBackoffSeconds < initialBackoffSeconds) {
-            throw new IllegalArgumentException("openfednow.reconciliation.auto-retry-backoff-initial-seconds "
-                    + "must be positive and not exceed ...-max-seconds");
-        }
+        validatedBackoff(initialBackoffSeconds, maxBackoffSeconds);
         this.reconciliationService = reconciliationService;
         this.pendingMarker = pendingMarker;
+        this.shadowLedger = shadowLedger;
         this.enabled = enabled;
         this.initialBackoffNanos = TimeUnit.SECONDS.toNanos(initialBackoffSeconds);
         this.maxBackoffNanos = TimeUnit.SECONDS.toNanos(maxBackoffSeconds);
@@ -218,7 +229,19 @@ public class AutomaticReconciliationTrigger {
         try {
             Optional<String> token = pendingMarker.currentToken();
             if (token.isEmpty()) {
-                return; // nothing owed
+                // Self-healing (#68 bug bash): the marker is one fire-and-forget
+                // Redis write; if the only mark for some bridge-mode work was
+                // lost (failover, write error), the capped accounts would
+                // otherwise stay capped with nothing ever starting a cycle.
+                // Periodically look for open windows with no marker and re-mark.
+                if (!orphanWindowsExist()) {
+                    return; // nothing owed
+                }
+                pendingMarker.mark("open aggregate windows without a pending marker");
+                token = pendingMarker.currentToken();
+                if (token.isEmpty()) {
+                    return; // marker still unwritable — retried on a later poll
+                }
             }
             readToken = token.get();
             if (backoffToken != null && !readToken.equals(backoffToken)) {
@@ -269,17 +292,49 @@ public class AutomaticReconciliationTrigger {
             }
         } catch (RuntimeException e) {
             failedCycles.increment();
-            long backoff = backoffAfter(consecutiveUnsettled.incrementAndGet());
-            // Back off the work this cycle failed on. If the marker itself was
-            // unreadable (readToken null), the next poll fails at the same read
-            // before reaching the backoff check, so there is nothing to back off.
-            backoffToken = readToken;
-            nextAttemptNanos = nanoClock.getAsLong() + backoff;
-            log.error("Automatic reconciliation failed — retrying in {}s",
-                    TimeUnit.NANOSECONDS.toSeconds(backoff), e);
+            if (readToken == null) {
+                // Failed before any cycle ran (reading the marker, the orphan
+                // scan, or re-marking): nothing to back off and no unsettled
+                // streak to count — the next poll retries.
+                log.warn("Automatic reconciliation failed before a cycle could start — "
+                        + "retrying on the next poll", e);
+            } else {
+                long backoff = backoffAfter(consecutiveUnsettled.incrementAndGet());
+                backoffToken = readToken;
+                nextAttemptNanos = nanoClock.getAsLong() + backoff;
+                log.error("Automatic reconciliation failed — retrying in {}s",
+                        TimeUnit.NANOSECONDS.toSeconds(backoff), e);
+            }
         } finally {
             inFlight.set(false);
         }
+    }
+
+    /** How often, at most, an empty marker triggers the orphaned-window scan. */
+    private static final long ORPHAN_CHECK_INTERVAL_NANOS = TimeUnit.MINUTES.toNanos(5);
+    /** Last orphaned-window scan; touched only on the cycle thread. */
+    private long lastOrphanCheckNanos;
+
+    /**
+     * Whether open aggregate windows exist although no reconciliation is
+     * marked owed. Throttled: the scan walks the Redis keyspace, so with no
+     * marker and no windows it runs at most every five minutes, not every poll.
+     */
+    private boolean orphanWindowsExist() {
+        if (!shadowLedger.isAggregateCapEnabled()) {
+            return false;
+        }
+        long now = nanoClock.getAsLong();
+        if (lastOrphanCheckNanos != 0 && now - lastOrphanCheckNanos < ORPHAN_CHECK_INTERVAL_NANOS) {
+            return false;
+        }
+        lastOrphanCheckNanos = now;
+        boolean orphans = !shadowLedger.openAggregateAccountIds().isEmpty();
+        if (orphans) {
+            log.warn("Open bridge aggregate windows found with no pending reconciliation marker — "
+                    + "re-marking so a cycle releases them");
+        }
+        return orphans;
     }
 
     /** initial × 2^(n-1), capped at the maximum, without overflow. */

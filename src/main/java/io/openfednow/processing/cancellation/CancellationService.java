@@ -7,8 +7,10 @@ import io.openfednow.processing.saga.SagaOrchestrator;
 import io.openfednow.processing.saga.SagaSnapshot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -27,7 +29,9 @@ import java.util.Optional;
  *           <li>{@code NOOR} — no original transaction exists with the given ID.</li>
  *         </ul>
  *       </li>
- *       <li>{@code PDCR} — outcome cannot be determined yet ({@code CORE_SUBMITTED} or {@code COMPENSATING}); a follow-up resolution would be required.</li>
+ *       <li>{@code PDCR} — outcome cannot be determined yet ({@code CORE_SUBMITTED},
+ *           {@code COMPENSATING}, or a saga whose payment thread has not written its
+ *           ledger leg yet); a follow-up resolution would be required.</li>
  *     </ul>
  *   </li>
  * </ol>
@@ -37,7 +41,14 @@ import java.util.Optional;
  *
  * <p>Scope: this service handles <em>inbound</em> cancellation requests — another
  * institution asks us to cancel a payment that was sent to us. Outbound cancellation
- * (we initiate a camt.056 to recall our own payment) is not yet implemented.
+ * (we initiate a camt.056 to recall our own payment) is not yet implemented. The
+ * saga table does not record direction, so the Shadow Ledger log is consulted
+ * before any side effect: a camt.056 naming one of our <em>outbound</em> payments
+ * (a DEBIT leg) is rejected — cancelling it here would mark the saga FAILED, let
+ * the compensation sweep reverse the debit and free its aggregate-cap slot while
+ * the submission thread still sends the payment. A saga with no ledger leg at all
+ * is answered {@code PDCR}: the payment thread is mid-flight in either direction,
+ * and cancelling would race it the same way.
  */
 @Component
 public class CancellationService {
@@ -51,9 +62,11 @@ public class CancellationService {
     public static final String RJCR_NO_ORIGINAL = "NOOR";
 
     private final SagaOrchestrator sagaOrchestrator;
+    private final JdbcTemplate jdbc;
 
-    public CancellationService(SagaOrchestrator sagaOrchestrator) {
+    public CancellationService(SagaOrchestrator sagaOrchestrator, JdbcTemplate jdbc) {
         this.sagaOrchestrator = sagaOrchestrator;
+        this.jdbc = jdbc;
     }
 
     /**
@@ -95,6 +108,25 @@ public class CancellationService {
     }
 
     private Camt029Message cancel(Camt056Message request, SagaSnapshot snapshot) {
+        List<String> legs = jdbc.queryForList(
+                "SELECT DISTINCT transaction_type FROM shadow_ledger_transaction_log "
+                        + "WHERE transaction_id = ? AND transaction_type IN ('DEBIT', 'CREDIT')",
+                String.class, snapshot.transactionId());
+        if (legs.contains("DEBIT")) {
+            log.warn("Cancellation rejected — transactionId={} is an outbound transfer, not an "
+                    + "inbound payment; a camt.056 cannot cancel it here", snapshot.transactionId());
+            return Camt029Message.rejected(request, RJCR_NO_ORIGINAL,
+                    "Original transaction is an outbound transfer from this institution; "
+                            + "inbound cancellation does not apply");
+        }
+        if (legs.isEmpty()) {
+            // No ledger leg yet: the payment thread is between saga creation and
+            // its ledger write, in either direction. Cancelling now would race
+            // it (the saga would be FAILED under a thread that keeps going).
+            log.warn("Cancellation pending — sagaId={} has no ledger leg yet; retry shortly",
+                    snapshot.sagaId());
+            return Camt029Message.pending(request);
+        }
         log.info("Cancelling sagaId={} reason={}",
                 snapshot.sagaId(), request.getCancellationReasonCode());
         sagaOrchestrator.cancelInboundSaga(snapshot.sagaId(), request.getCancellationReasonCode());

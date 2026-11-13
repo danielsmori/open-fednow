@@ -44,15 +44,20 @@ public class BridgeAggregateCapPolicy {
 
     private static final Logger log = LoggerFactory.getLogger(BridgeAggregateCapPolicy.class);
 
-    /** Ceiling in USD, or {@code null} when the cap is disabled. */
+    /** Ceiling in USD (normalized to cents), or {@code null} when the cap is disabled. */
     private final BigDecimal maxAggregateSendAmount;
+    /** Ceiling in integer cents, or {@code null} when the cap is disabled. */
+    private final Long maxAggregateSendCents;
     private final int expectedWindowHours;
 
     public BridgeAggregateCapPolicy(
             @Value("${openfednow.bridge-mode.max-aggregate-send-amount:}") String maxAggregateSendAmount,
             @Value("${openfednow.bridge-mode.expected-window-hours:6}") int expectedWindowHours,
             @Value("${openfednow.bridge-mode.allow-sends:false}") boolean allowSends) {
-        this.maxAggregateSendAmount = parseCap(maxAggregateSendAmount);
+        this.maxAggregateSendCents = parseCapCents(maxAggregateSendAmount);
+        this.maxAggregateSendAmount = this.maxAggregateSendCents == null
+                ? null
+                : BigDecimal.valueOf(this.maxAggregateSendCents).movePointLeft(2);
         if (expectedWindowHours <= 0) {
             throw new IllegalArgumentException(
                     "openfednow.bridge-mode.expected-window-hours must be positive");
@@ -74,7 +79,14 @@ public class BridgeAggregateCapPolicy {
         }
     }
 
-    private static BigDecimal parseCap(String raw) {
+    /**
+     * Parses and validates the ceiling as the integer-cents value that is
+     * actually enforced (HALF_UP, like the ledger). Validating the raw decimal
+     * alone is not enough: {@code 0.004} is positive but rounds to a 0-cent cap
+     * that rejects every send, and an absurdly large value would only fail at
+     * enforcement time, per send.
+     */
+    private static Long parseCapCents(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;
         }
@@ -91,7 +103,21 @@ public class BridgeAggregateCapPolicy {
                     "openfednow.bridge-mode.max-aggregate-send-amount must be positive "
                             + "(leave it unset to disable the cap)");
         }
-        return cap;
+        long cents;
+        try {
+            cents = cap.setScale(2, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100))
+                    .longValueExact();
+        } catch (ArithmeticException e) {
+            throw new IllegalArgumentException(
+                    "openfednow.bridge-mode.max-aggregate-send-amount is too large to enforce: " + raw, e);
+        }
+        if (cents < 1) {
+            throw new IllegalArgumentException(
+                    "openfednow.bridge-mode.max-aggregate-send-amount rounds to zero cents (" + raw
+                            + ") — every send would be rejected; leave it unset to disable the cap");
+        }
+        return cents;
     }
 
     /** Whether an aggregate ceiling is configured at all. */
@@ -111,12 +137,10 @@ public class BridgeAggregateCapPolicy {
      * @throws IllegalStateException if the cap is disabled
      */
     public long getMaxAggregateSendCents() {
-        if (maxAggregateSendAmount == null) {
+        if (maxAggregateSendCents == null) {
             throw new IllegalStateException("Aggregate cap is disabled — check isEnabled() first");
         }
-        return maxAggregateSendAmount.setScale(2, RoundingMode.HALF_UP)
-                .multiply(BigDecimal.valueOf(100))
-                .longValueExact();
+        return maxAggregateSendCents;
     }
 
     /**

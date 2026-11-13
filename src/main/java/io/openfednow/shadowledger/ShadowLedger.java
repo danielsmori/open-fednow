@@ -3,11 +3,8 @@ package io.openfednow.shadowledger;
 import io.openfednow.bridgemode.BridgeAggregateCapPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.Cursor;
-import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.ScanOptions;
-import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
@@ -32,10 +29,11 @@ import java.util.Set;
  * system is offline for scheduled maintenance.
  *
  * <p>Balances are stored in Redis as integer cents to avoid floating-point
- * precision issues. Debits use optimistic locking (WATCH/MULTI/EXEC) with
- * retry to prevent race conditions on concurrent payment requests. Every
- * operation is appended to {@code shadow_ledger_transaction_log} in
- * PostgreSQL as an immutable audit trail.
+ * precision issues. Debits run as single atomic Lua scripts (balance check and
+ * decrement in one step), so concurrent payment requests cannot race or run
+ * out of retries. Every operation is appended to
+ * {@code shadow_ledger_transaction_log} in PostgreSQL as an immutable audit
+ * trail.
  *
  * @see ReconciliationService
  * @see AvailabilityBridge
@@ -57,7 +55,8 @@ public class ShadowLedger {
      * counted. The key carries <strong>no TTL</strong> — the cap fails closed.
      * Sends leave the window only by reversal ({@link #reverseDebit}) or by
      * core confirmation ({@link #closeConfirmedAggregate}, called by
-     * reconciliation); the key disappears once no counted send remains.
+     * reconciliation); the key is deleted by the close once no counted send
+     * remains (a reversal alone leaves an empty window for the next close).
      */
     static final String AGGREGATE_KEY_PREFIX = "bridge:aggregate:";
 
@@ -70,8 +69,8 @@ public class ShadowLedger {
     /** Prefix of the per-send hash fields ({@code txn:<transactionId>} → cents). */
     static final String AGGREGATE_TXN_FIELD_PREFIX = "txn:";
 
-    /** Maximum retry attempts when an optimistic lock conflict is detected. */
-    private static final int MAX_RETRY_ATTEMPTS = 3;
+    /** Max bind parameters per confirmed-send lookup statement. */
+    static final int CONFIRMED_LOOKUP_CHUNK = 1_000;
 
     /**
      * Atomic, idempotent release of one counted send from the aggregate window.
@@ -99,6 +98,8 @@ public class ShadowLedger {
     private static final long CAPPED_DEBIT_INSUFFICIENT_FUNDS = -1L;
     /** {@link #CAPPED_DEBIT_SCRIPT} result code: aggregate cap would be exceeded. */
     private static final long CAPPED_DEBIT_CAP_EXCEEDED = -2L;
+    /** {@link #CAPPED_DEBIT_SCRIPT} result code: this transactionId is already counted. */
+    private static final long CAPPED_DEBIT_DUPLICATE = -3L;
 
     /**
      * Atomic capped debit. KEYS[1] = balance key, KEYS[2] = aggregate hash.
@@ -114,7 +115,8 @@ public class ShadowLedger {
      * notation.
      */
     private static final RedisScript<List> CAPPED_DEBIT_SCRIPT = new DefaultRedisScript<>(
-            "local bal = tonumber(redis.call('GET', KEYS[1]) or '0')\n" +
+            "if redis.call('HEXISTS', KEYS[2], ARGV[3]) == 1 then return {-3, 0} end\n" +
+                    "local bal = tonumber(redis.call('GET', KEYS[1]) or '0')\n" +
                     "local amt = tonumber(ARGV[1])\n" +
                     "if bal < amt then return {-1, bal} end\n" +
                     "local total = tonumber(redis.call('HGET', KEYS[2], ARGV[4]) or '0')\n" +
@@ -245,59 +247,72 @@ public class ShadowLedger {
     }
 
     /**
-     * Applies a debit to an account using optimistic locking.
+     * Atomic uncounted debit — issues #141/#143. KEYS[1] = balance key, ARGV[1]
+     * = amount cents. Returns {@code {-1, balance}} on insufficient funds and
+     * {@code {0, balanceBefore}} when applied. One script, no retry loop: a
+     * concurrent-debit race yields a clean rejection value, never an exception
+     * after a payment's saga already exists. Replaces the WATCH/MULTI/EXEC
+     * optimistic-locking loop of ADR-0001, whose retries could run out under
+     * contention.
+     */
+    private static final RedisScript<List> PLAIN_DEBIT_SCRIPT = new DefaultRedisScript<>(
+            "local bal = tonumber(redis.call('GET', KEYS[1]) or '0')\n" +
+                    "local amt = tonumber(ARGV[1])\n" +
+                    "if bal < amt then return {-1, bal} end\n" +
+                    "redis.call('SET', KEYS[1], string.format('%d', bal - amt))\n" +
+                    "return {0, bal}",
+            List.class);
+
+    /**
+     * Applies a debit to an account, atomically checking the balance and
+     * debiting in one Redis script, and reports the outcome as a value.
      *
-     * <p>Uses Redis WATCH/MULTI/EXEC to atomically check the balance and
-     * apply the debit. If a concurrent update is detected (EXEC returns null),
-     * the operation is retried up to {@code MAX_RETRY_ATTEMPTS} times.
+     * <p>This is the uncounted twin of {@link #applyDebitCapped}: no retry
+     * loop, no exception for a lost balance race, so the dispatch path can map
+     * {@code INSUFFICIENT_FUNDS} to a clean ISO 20022 {@code AM04} even when a
+     * concurrent send drained the balance after the pre-check (#141/#143).
+     *
+     * @return {@link CappedDebitResult#APPLIED} (with a DEBIT audit row
+     *         written) or {@link CappedDebitResult#INSUFFICIENT_FUNDS}; never
+     *         {@code AGGREGATE_CAP_EXCEEDED}
+     */
+    public CappedDebitResult tryApplyDebit(String accountId, BigDecimal amount, String transactionId) {
+        requirePositive(amount);
+        long amountCents = dollarsToCents(amount);
+        List<?> result = redis.execute(PLAIN_DEBIT_SCRIPT,
+                List.of(BALANCE_KEY_PREFIX + accountId), String.valueOf(amountCents));
+        if (result == null || result.isEmpty()) {
+            throw new IllegalStateException(
+                    "Shadow Ledger debit returned no result: account=" + accountId);
+        }
+        long code = ((Number) result.get(0)).longValue();
+        long balanceCents = result.size() > 1 ? ((Number) result.get(1)).longValue() : 0L;
+        if (code != 0) {
+            log.info("Shadow Ledger debit rejected: insufficient funds account={} balance={} requested={}",
+                    io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
+                    centsToDollars(balanceCents), amount);
+            return CappedDebitResult.INSUFFICIENT_FUNDS;
+        }
+        long balanceAfterCents = balanceCents - amountCents;
+        logTransaction(transactionId, transactionId, accountId, "DEBIT",
+                amount, centsToDollars(balanceCents), centsToDollars(balanceAfterCents));
+        log.info("Shadow Ledger debit applied account={} amount={} balanceAfter={}",
+                accountId, amount, centsToDollars(balanceAfterCents));
+        return CappedDebitResult.APPLIED;
+    }
+
+    /**
+     * {@link #tryApplyDebit}, with the historical exception contract: callers
+     * that treat insufficient funds as exceptional (tests, fixtures) keep
+     * working. The payment path uses {@link #tryApplyDebit} instead.
      *
      * @throws IllegalArgumentException if the account balance is insufficient
-     * @throws IllegalStateException    if optimistic lock conflicts persist after retries
      */
     public void applyDebit(String accountId, BigDecimal amount, String transactionId) {
-        String key = BALANCE_KEY_PREFIX + accountId;
-        long amountCents = dollarsToCents(amount);
-
-        for (int attempt = 0; attempt < MAX_RETRY_ATTEMPTS; attempt++) {
-            final long[] capturedBalance = new long[1];
-
-            List<Object> txResult = redis.execute(new SessionCallback<List<Object>>() {
-                @Override
-                @SuppressWarnings("unchecked")
-                public List<Object> execute(RedisOperations ops) throws DataAccessException {
-                    ops.watch(key);
-                    String raw = (String) ops.opsForValue().get(key);
-                    long currentCents = raw != null ? Long.parseLong(raw) : 0L;
-                    capturedBalance[0] = currentCents;
-
-                    if (currentCents < amountCents) {
-                        ops.unwatch();
-                        throw new IllegalArgumentException(
-                                String.format("Insufficient funds: account=%s balance=%s requested=%s",
-                                        accountId, centsToDollars(currentCents), amount));
-                    }
-
-                    ops.multi();
-                    ops.opsForValue().set(key, String.valueOf(currentCents - amountCents));
-                    return ops.exec();
-                }
-            });
-
-            if (txResult != null && !txResult.isEmpty()) {
-                long balanceBeforeCents = capturedBalance[0];
-                long balanceAfterCents = balanceBeforeCents - amountCents;
-                logTransaction(transactionId, transactionId, accountId, "DEBIT",
-                        amount, centsToDollars(balanceBeforeCents), centsToDollars(balanceAfterCents));
-                log.info("Shadow Ledger debit applied account={} amount={} balanceAfter={}",
-                        accountId, amount, centsToDollars(balanceAfterCents));
-                return;
-            }
-
-            log.debug("Shadow Ledger debit conflict, retrying attempt={} account={}", attempt + 1, accountId);
+        if (tryApplyDebit(accountId, amount, transactionId) != CappedDebitResult.APPLIED) {
+            throw new IllegalArgumentException(
+                    String.format("Insufficient funds: account=%s requested=%s", accountId, amount));
         }
-
-        throw new IllegalStateException(
-                "Shadow Ledger debit failed after " + MAX_RETRY_ATTEMPTS + " retries: account=" + accountId);
     }
 
     /**
@@ -354,6 +369,7 @@ public class ShadowLedger {
      */
     public CappedDebit applyDebitCappedDetailed(String accountId, BigDecimal amount,
                                                 String transactionId) {
+        requirePositive(amount);
         // Throws IllegalStateException when the cap is disabled.
         long aggregateCapCents = aggregateCapPolicy.getMaxAggregateSendCents();
         long amountCents = dollarsToCents(amount);
@@ -373,6 +389,15 @@ public class ShadowLedger {
         long code = ((Number) result.get(0)).longValue();
         long observed = result.size() > 1 ? ((Number) result.get(1)).longValue() : 0L;
 
+        if (code == CAPPED_DEBIT_DUPLICATE) {
+            // Counting the same send twice would overwrite its idempotency
+            // field: the second amount would inflate the total, and the
+            // reversal would release only one of them, stranding the rest.
+            // routeOutbound cannot reach this (the saga's unique transaction_id
+            // fails first); refuse it for any other caller.
+            throw new IllegalStateException(
+                    "Transaction already counted toward the aggregate window: " + transactionId);
+        }
         if (code == CAPPED_DEBIT_INSUFFICIENT_FUNDS) {
             log.info("Shadow Ledger capped debit rejected: insufficient funds account={} "
                             + "balance={} requested={}",
@@ -405,6 +430,7 @@ public class ShadowLedger {
      * Applies a credit to an account atomically using Redis INCRBY.
      */
     public void applyCredit(String accountId, BigDecimal amount, String transactionId) {
+        requirePositive(amount);
         String key = BALANCE_KEY_PREFIX + accountId;
         long amountCents = dollarsToCents(amount);
 
@@ -590,7 +616,7 @@ public class ShadowLedger {
      *
      * <p>Used by the on-demand admin seed endpoint, where the operator has
      * explicitly asked for the balance to be replaced with the core's current view.
-     * Distinct from {@link #reconcile(String, BigDecimal)} in that this is a
+     * Distinct from {@link #reconcile(String, BigDecimal, BigDecimal)} in that this is a
      * one-shot operator action and does not log a RECONCILIATION audit row —
      * those rows belong to the scheduled reconciliation cycle.
      */
@@ -601,35 +627,55 @@ public class ShadowLedger {
     }
 
     /**
-     * Overwrites the Shadow Ledger balance with the core system's confirmed balance.
-     * Logs the reconciliation with discrepancy detection. No-ops when balances match.
+     * Applies the core's confirmed balance as a <em>relative</em> correction —
+     * issues #142/#144.
+     *
+     * <p>The caller supplies the shadow balance it snapshotted before reading
+     * the core; the correction applied is {@code confirmed − snapshot}, with an
+     * atomic {@code INCRBY}. Payments keep flowing while reconciliation runs,
+     * and a debit or credit that lands between the snapshot and this call
+     * survives the correction — the old unconditional {@code SET} erased it.
+     * The authority model is unchanged: relative to the snapshot moment, the
+     * core's figure wins, exactly as before.
+     *
+     * <p>The balance can come out negative when the core reports less than the
+     * concurrent activity assumed (two channels genuinely overspent during a
+     * window); further debits are then rejected until a credit or the next
+     * correction.
+     *
+     * <p>No-ops when snapshot and confirmed balance match. Otherwise writes a
+     * RECONCILIATION audit row with the balance the increment actually saw.
      */
-    public void reconcile(String accountId, BigDecimal confirmedBalance) {
-        String key = BALANCE_KEY_PREFIX + accountId;
-        long confirmedCents = dollarsToCents(confirmedBalance);
-
-        String raw = redis.opsForValue().get(key);
-        long shadowCents = raw != null ? Long.parseLong(raw) : 0L;
-
-        if (shadowCents != confirmedCents) {
-            log.warn("Shadow Ledger discrepancy detected account={} shadow={} confirmed={}",
-                    io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
-                    centsToDollars(shadowCents), confirmedBalance);
-        } else {
+    public void reconcile(String accountId, BigDecimal shadowSnapshot, BigDecimal confirmedBalance) {
+        long deltaCents = dollarsToCents(confirmedBalance) - dollarsToCents(shadowSnapshot);
+        if (deltaCents == 0) {
             log.debug("Shadow Ledger reconciliation: balances match account={}",
                     io.openfednow.security.pii.PiiRedactor.maskAccount(accountId));
+            return;
+        }
+        log.warn("Shadow Ledger discrepancy detected account={} shadowSnapshot={} confirmed={}",
+                io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
+                shadowSnapshot, confirmedBalance);
+
+        Long newCents = redis.opsForValue().increment(BALANCE_KEY_PREFIX + accountId, deltaCents);
+        if (newCents == null) {
+            log.warn("Shadow Ledger reconciliation increment returned null for account={}",
+                    io.openfednow.security.pii.PiiRedactor.maskAccount(accountId));
+            return;
         }
 
-        redis.opsForValue().set(key, String.valueOf(confirmedCents));
-
-        BigDecimal diff = confirmedBalance.subtract(centsToDollars(shadowCents)).abs();
-        if (diff.compareTo(BigDecimal.ZERO) > 0) {
-            String syntheticTxnId = "RECONCILE-" + accountId + "-" + System.currentTimeMillis();
-            logTransaction(syntheticTxnId, syntheticTxnId, accountId, "RECONCILIATION",
-                    diff, centsToDollars(shadowCents), confirmedBalance);
-        }
-
-        log.info("Shadow Ledger reconciled account={} confirmedBalance={}", accountId, confirmedBalance);
+        long balanceBeforeCents = newCents - deltaCents;
+        // Must fit the VARCHAR(35) transaction_id column for any account_id
+        // (itself up to 34 chars): a timestamp plus an account hash, ~24 chars.
+        // The account is identified by the row's account_id column.
+        String syntheticTxnId = "RECON-" + Long.toString(System.currentTimeMillis(), 36)
+                + "-" + Integer.toHexString(accountId.hashCode());
+        logTransaction(syntheticTxnId, syntheticTxnId, accountId, "RECONCILIATION",
+                centsToDollars(Math.abs(deltaCents)),
+                centsToDollars(balanceBeforeCents), centsToDollars(newCents));
+        log.info("Shadow Ledger reconciled account={} correction={} balanceAfter={}",
+                io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
+                centsToDollars(deltaCents), centsToDollars(newCents));
     }
 
     /**
@@ -716,6 +762,16 @@ public class ShadowLedger {
      * core-confirmed and whose saga (if any) is final.
      */
     private List<String> confirmedAndResolved(String accountId, List<String> transactionIds) {
+        // Chunked: a JDBC statement caps the number of bind parameters (~32k for
+        // PostgreSQL), and one oversized window must not wedge its own release.
+        if (transactionIds.size() > CONFIRMED_LOOKUP_CHUNK) {
+            List<String> all = new ArrayList<>();
+            for (int from = 0; from < transactionIds.size(); from += CONFIRMED_LOOKUP_CHUNK) {
+                int to = Math.min(from + CONFIRMED_LOOKUP_CHUNK, transactionIds.size());
+                all.addAll(confirmedAndResolved(accountId, transactionIds.subList(from, to)));
+            }
+            return all;
+        }
         String placeholders = String.join(",", java.util.Collections.nCopies(transactionIds.size(), "?"));
         List<Object> params = new ArrayList<>();
         params.add(accountId);
@@ -805,6 +861,18 @@ public class ShadowLedger {
     }
 
     // ── Internal helpers ───────────────────────────────────────────────────────
+
+    /**
+     * The HTTP layer validates amounts ({@code @DecimalMin("0.01")}), but the
+     * ledger is a public component: a zero or negative amount here would move
+     * money the wrong way (a negative counted debit would even lift the cap),
+     * so it refuses them regardless of the caller.
+     */
+    private static void requirePositive(BigDecimal amount) {
+        if (amount == null || amount.signum() <= 0) {
+            throw new IllegalArgumentException("Amount must be positive: " + amount);
+        }
+    }
 
     /** Converts a USD dollar amount to integer cents for Redis storage. */
     static long dollarsToCents(BigDecimal dollars) {

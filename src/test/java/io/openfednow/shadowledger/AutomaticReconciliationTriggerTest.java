@@ -38,6 +38,7 @@ class AutomaticReconciliationTriggerTest {
 
     private final ReconciliationService service = mock(ReconciliationService.class);
     private final ReconciliationPendingMarker marker = mock(ReconciliationPendingMarker.class);
+    private final ShadowLedger ledger = mock(ShadowLedger.class); // cap disabled by default
     private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
     private final AtomicLong clock = new AtomicLong(1_000 * SECOND);
 
@@ -232,9 +233,50 @@ class AutomaticReconciliationTriggerTest {
     @Test
     void invalidBackoffBoundsAreRejected() {
         assertThatIllegalArgumentException().isThrownBy(() -> new AutomaticReconciliationTrigger(
-                service, marker, meters, true, 0, 60, direct(), direct(), clock::get));
+                service, marker, ledger, meters, true, 0, 60, direct(), direct(), clock::get));
         assertThatIllegalArgumentException().isThrownBy(() -> new AutomaticReconciliationTrigger(
-                service, marker, meters, true, 120, 60, direct(), direct(), clock::get));
+                service, marker, ledger, meters, true, 120, 60, direct(), direct(), clock::get));
+    }
+
+    // ── Orphaned windows (lost marker) ───────────────────────────────────────
+
+    @Test
+    void openWindowsWithoutAMarkerAreReMarkedAndReconciled() {
+        // the only mark for some bridge-mode work was lost (e.g. Redis failover):
+        // the windows still exist, so the trigger must heal the marker itself
+        when(marker.currentToken())
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of("T-HEAL"));
+        when(ledger.isAggregateCapEnabled()).thenReturn(true);
+        when(ledger.openAggregateAccountIds()).thenReturn(List.of("ACC-ORPHAN"));
+        when(service.attemptReconciliation()).thenReturn(attempt(Outcome.COMPLETED, 0, 0, 0));
+        when(marker.clearIfUnchanged("T-HEAL")).thenReturn(true);
+
+        trigger(true).onCoreOnline();
+
+        verify(marker).mark(anyString());
+        verify(service).attemptReconciliation();
+        verify(marker).clearIfUnchanged("T-HEAL");
+    }
+
+    @Test
+    void orphanScanIsThrottledAndSkippedWhenTheCapIsDisabled() {
+        when(marker.currentToken()).thenReturn(Optional.empty());
+        AutomaticReconciliationTrigger disabledCap = trigger(true);
+        disabledCap.onCoreOnline();
+        verify(ledger, never()).openAggregateAccountIds(); // cap disabled: no scan
+
+        when(ledger.isAggregateCapEnabled()).thenReturn(true);
+        when(ledger.openAggregateAccountIds()).thenReturn(List.of());
+        AutomaticReconciliationTrigger trigger = trigger(true);
+        trigger.onCoreOnline();
+        trigger.onCoreOnline(); // within the throttle window: no second scan
+        verify(ledger, times(1)).openAggregateAccountIds();
+
+        clock.addAndGet(TimeUnit.MINUTES.toNanos(5));
+        trigger.onCoreOnline();
+        verify(ledger, times(2)).openAggregateAccountIds();
+        verify(service, never()).attemptReconciliation(); // no windows → nothing owed
     }
 
     // ── One cycle at a time per instance ─────────────────────────────────────
@@ -251,7 +293,7 @@ class AutomaticReconciliationTriggerTest {
         });
         ExecutorService executor = Executors.newFixedThreadPool(2);
         AutomaticReconciliationTrigger trigger = new AutomaticReconciliationTrigger(
-                service, marker, meters, true, 30, 120, executor, direct(), clock::get);
+                service, marker, ledger, meters, true, 30, 120, executor, direct(), clock::get);
 
         trigger.onCoreOnline();
         assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();
@@ -270,7 +312,7 @@ class AutomaticReconciliationTriggerTest {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.shutdown();
         AutomaticReconciliationTrigger trigger = new AutomaticReconciliationTrigger(
-                service, marker, meters, true, 30, 120, executor, executor, clock::get);
+                service, marker, ledger, meters, true, 30, 120, executor, executor, clock::get);
 
         trigger.onCoreOnline(); // rejected — must not leave the in-flight flag set
         trigger.onCoreOnline();
@@ -295,7 +337,7 @@ class AutomaticReconciliationTriggerTest {
     }
 
     private AutomaticReconciliationTrigger trigger(boolean enabled) {
-        return new AutomaticReconciliationTrigger(service, marker, meters, enabled, 30, 120,
+        return new AutomaticReconciliationTrigger(service, marker, ledger, meters, enabled, 30, 120,
                 direct(), direct(), clock::get);
     }
 

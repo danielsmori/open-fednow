@@ -48,6 +48,21 @@ class BridgeAggregateCapPolicyTest {
     }
 
     @Test
+    void capThatRoundsToZeroCentsIsRejected() {
+        // 0.004 is positive but would enforce a 0-cent ceiling: every send AM04
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new BridgeAggregateCapPolicy("0.004", 6, true))
+                .withMessageContaining("zero cents");
+    }
+
+    @Test
+    void capTooLargeToEnforceIsRejectedAtStartupNotPerSend() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new BridgeAggregateCapPolicy("10000000000000000000", 6, true))
+                .withMessageContaining("too large");
+    }
+
+    @Test
     void zeroCapIsRejected() {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> new BridgeAggregateCapPolicy("0", 6, true))

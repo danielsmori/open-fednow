@@ -14,10 +14,12 @@ import org.junit.jupiter.params.provider.EnumSource;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -34,12 +36,17 @@ import static org.mockito.Mockito.when;
 class CancellationServiceTest {
 
     private SagaOrchestrator orchestrator;
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
     private CancellationService service;
 
     @BeforeEach
     void setUp() {
         orchestrator = mock(SagaOrchestrator.class);
-        service = new CancellationService(orchestrator);
+        jdbc = mock(org.springframework.jdbc.core.JdbcTemplate.class);
+        // default: the original payment is a recorded inbound credit
+        when(jdbc.queryForList(anyString(), eq(String.class), any()))
+                .thenReturn(List.of("CREDIT"));
+        service = new CancellationService(orchestrator, jdbc);
     }
 
     // ── No saga found ────────────────────────────────────────────────────────
@@ -52,6 +59,36 @@ class CancellationServiceTest {
 
         assertThat(response.getResolutionStatus()).isEqualTo(Camt029Message.ResolutionStatus.RJCR);
         assertThat(response.getRejectionReasonCode()).isEqualTo(CancellationService.RJCR_NO_ORIGINAL);
+        verify(orchestrator, never()).cancelInboundSaga(any(), any());
+    }
+
+    // ── Direction guard (issue #68 bug bash) ─────────────────────────────────
+
+    @Test
+    void outboundTransferIsRejectedNotCancelled() {
+        // a camt.056 naming one of OUR outbound sends: cancelling it would mark
+        // the saga FAILED, reverse the debit and free its cap slot while the
+        // submission thread still sends the payment
+        stubSaga("SAGA-OUT", PaymentSaga.SagaState.FUNDS_RESERVED);
+        when(jdbc.queryForList(anyString(), eq(String.class), any()))
+                .thenReturn(List.of("DEBIT"));
+
+        Camt029Message response = service.handleCancellationRequest(request("TXN-OUT"));
+
+        assertThat(response.getResolutionStatus()).isEqualTo(Camt029Message.ResolutionStatus.RJCR);
+        verify(orchestrator, never()).cancelInboundSaga(any(), any());
+    }
+
+    @Test
+    void sagaWithoutALedgerLegYetResolvesToPendingNotCancelled() {
+        // mid-flight in either direction: cancelling now would race the payment thread
+        stubSaga("SAGA-MIDFLIGHT", PaymentSaga.SagaState.INITIATED);
+        when(jdbc.queryForList(anyString(), eq(String.class), any()))
+                .thenReturn(List.of());
+
+        Camt029Message response = service.handleCancellationRequest(request("TXN-MIDFLIGHT"));
+
+        assertThat(response.getResolutionStatus()).isEqualTo(Camt029Message.ResolutionStatus.PDCR);
         verify(orchestrator, never()).cancelInboundSaga(any(), any());
     }
 

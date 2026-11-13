@@ -277,8 +277,15 @@ public class ReconciliationService {
                     : List.of();
             if (!openWindows.isEmpty()) {
                 if (coreBankingAdapter.isCoreSystemAvailable()) {
-                    for (String accountId : openWindows) {
+                    for (int i = 0; i < openWindows.size(); i++) {
+                        String accountId = openWindows.get(i);
                         lockWatch.verify(false);
+                        if (!coreBankingAdapter.isCoreSystemAvailable()) {
+                            log.info("Core went offline during the window sweep — remaining "
+                                    + "windows stay open");
+                            deferredAccounts += openWindows.size() - i;
+                            break;
+                        }
                         try {
                             if (!shadowLedger.closeConfirmedAggregate(accountId)) {
                                 openWindowsRemaining++;
@@ -422,13 +429,27 @@ public class ReconciliationService {
     /**
      * Reconciles a single account inside its own transaction.
      *
+     * <p>Payments keep flowing during a cycle, so the account is reconciled
+     * against a consistent moment rather than "whatever is there when each
+     * statement runs" (#142/#144):
+     * <ol>
+     *   <li>a <em>cutoff</em> — the account's highest transaction-log row id —
+     *       is captured first, and only rows at or below it are confirmed.
+     *       A row written after the cutoff was not covered by the core balance
+     *       read here and stays unconfirmed for the next cycle;</li>
+     *   <li>the shadow balance is snapshotted <em>before</em> the (slow) core
+     *       read, and the correction is applied as the relative delta
+     *       {@code core − snapshot} ({@link ShadowLedger#reconcile}), so a
+     *       debit or credit landing mid-cycle is never erased.</li>
+     * </ol>
+     *
      * <p>The Postgres-side writes — the optional RECONCILIATION audit row from
      * {@link ShadowLedger#reconcile} and the "mark unconfirmed rows confirmed"
-     * UPDATE — commit or roll back together. The Redis update inside
+     * UPDATE — commit or roll back together. The Redis increment inside
      * {@code shadowLedger.reconcile} is outside this transaction (different
-     * system); if Postgres rolls back after Redis has been updated, the
-     * subsequent cycle will detect the residual discrepancy and write the
-     * correction afresh.
+     * system); if Postgres rolls back after Redis was corrected, the next
+     * cycle's snapshot already includes the correction, computes a zero delta,
+     * and simply confirms the rows.
      *
      * <p><strong>Bridge-mode aggregate windows (#68).</strong> An account with
      * an open aggregate window is reconciled only while the core is online;
@@ -486,24 +507,33 @@ public class ReconciliationService {
 
     private int[] reconcileOneAccountInTx(String accountId) {
         return perAccountTx.execute(status -> {
-            int confirmed = 0;
             int discrepancyDetected = 0;
+            // Order matters (#142/#144): cutoff, then the shadow snapshot, then
+            // the slow core read. Rows and balance changes that land after the
+            // snapshot are untouched by this cycle.
+            Long cutoffId = jdbc.queryForObject(
+                    "SELECT COALESCE(MAX(id), 0) FROM shadow_ledger_transaction_log "
+                            + "WHERE account_id = ?",
+                    Long.class, accountId);
+            BigDecimal shadowSnapshot = shadowLedger.getAvailableBalance(accountId);
             BigDecimal coreBalance = coreBankingAdapter.getAvailableBalance(accountId);
-            BigDecimal shadowBalance = shadowLedger.getAvailableBalance(accountId);
 
-            if (coreBalance.compareTo(shadowBalance) != 0) {
+            if (coreBalance.compareTo(shadowSnapshot) != 0) {
                 discrepancyDetected = 1;
-                log.warn("Balance discrepancy account={} shadow={} core={}",
+                log.warn("Balance discrepancy account={} shadowSnapshot={} core={}",
                         io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
-                        shadowBalance, coreBalance);
-                shadowLedger.reconcile(accountId, coreBalance);
+                        shadowSnapshot, coreBalance);
+                shadowLedger.reconcile(accountId, shadowSnapshot, coreBalance);
+                // The correction's own audit row is unconfirmed and above the
+                // cutoff, so this account re-enters the next cycle once, sees a
+                // zero delta, and confirms it — accepted cost of the cutoff.
             }
 
-            confirmed = jdbc.update(
+            int confirmed = jdbc.update(
                     "UPDATE shadow_ledger_transaction_log " +
                     "SET core_confirmed = TRUE " +
-                    "WHERE account_id = ? AND core_confirmed = FALSE",
-                    accountId);
+                    "WHERE account_id = ? AND core_confirmed = FALSE AND id <= ?",
+                    accountId, cutoffId);
             return new int[] { confirmed, discrepancyDetected };
         });
     }
@@ -535,8 +565,23 @@ public class ReconciliationService {
                 String.class, lastSeen, batchSize);
     }
 
+    /**
+     * Best-effort: the run's outcome is returned to the caller either way, and
+     * a failure to close the audit row must not replace it (nor, on the abort
+     * path, mask the original failure). A row left with {@code completed_at
+     * IS NULL} is visible in the run history.
+     */
     private void closeRunRecord(Long runId, int replayed, int discrepancies,
                                 boolean successful, String summary) {
+        try {
+            closeRunRecordOrThrow(runId, replayed, discrepancies, successful, summary);
+        } catch (RuntimeException e) {
+            log.error("Failed to close reconciliation_run id={} — row stays open", runId, e);
+        }
+    }
+
+    private void closeRunRecordOrThrow(Long runId, int replayed, int discrepancies,
+                                       boolean successful, String summary) {
         jdbc.update("""
                 UPDATE reconciliation_run
                 SET completed_at = ?, transactions_replayed = ?,

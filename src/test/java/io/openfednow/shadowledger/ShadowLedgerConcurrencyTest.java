@@ -21,13 +21,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Concurrency integration tests for {@link ShadowLedger} — issue #16.
  *
- * <p>Verifies that Redis WATCH/MULTI/EXEC optimistic locking maintains balance
- * integrity and prevents overdrafts under concurrent payment workloads.
- *
- * <p>Thread counts for debit tests are kept at 3 (= MAX_RETRY_ATTEMPTS) to
- * guarantee all threads succeed even in the worst-case scheduling scenario
- * where only one thread succeeds per retry round. Credit tests use higher
- * concurrency because {@code INCRBY} is atomic and never conflicts.
+ * <p>Verifies that the atomic Lua debit maintains balance integrity and
+ * prevents overdrafts under concurrent payment workloads. The script has no
+ * retry loop, so outcomes under contention are exact: every thread either
+ * debits or is rejected for insufficient funds, and none errors (#141/#143).
  */
 class ShadowLedgerConcurrencyTest extends AbstractInfrastructureIntegrationTest {
 
@@ -112,8 +109,10 @@ class ShadowLedgerConcurrencyTest extends AbstractInfrastructureIntegrationTest 
         String raw = redis.opsForValue().get("balance:ACC-CONC-OVERDRAFT");
         long remainingCents = Long.parseLong(raw);
 
-        // Safety: no overdraft
+        // Safety: no overdraft, and the contention outcome is exact
         assertThat(remainingCents).isGreaterThanOrEqualTo(0);
+        assertThat(successes.get()).isEqualTo(5);
+        assertThat(failures.get()).isEqualTo(5);
 
         // Conservation: balance + debited amount == starting balance
         long debitedCents = (long) successes.get() * 10_000L;

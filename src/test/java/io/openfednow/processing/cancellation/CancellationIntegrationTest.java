@@ -66,22 +66,39 @@ class CancellationIntegrationTest extends AbstractInfrastructureIntegrationTest 
     }
 
     @Test
-    void cancellingInitiatedSagaTerminatesWithoutReversal() {
+    void cancellingInitiatedSagaWithoutALedgerLegResolvesToPending() {
+        // #68 bug bash: at INITIATED the payment thread is between saga creation
+        // and its ledger write — in either direction (the saga table records no
+        // direction). Cancelling now would mark the saga FAILED under a thread
+        // that keeps going; for an outbound send the compensation sweep would
+        // then reverse the debit and free its cap slot while the payment still
+        // goes out. The request resolves to PDCR and can be retried.
         PaymentSaga saga = orchestrator.initiate(
                 pacs008("TXN-INIT", "E2E-INIT", "ACC-INIT"), Rail.FEDNOW);
 
         Camt029Message response = cancellationService.handleCancellationRequest(
                 camt056("TXN-INIT", "CUST"));
 
-        assertThat(response.getResolutionStatus()).isEqualTo(Camt029Message.ResolutionStatus.CNCL);
-        assertThat(loadState(saga.getSagaId())).isEqualTo("FAILED");
-        assertThat(loadReasonCode(saga.getSagaId())).isEqualTo("CUST");
-        // No reversal row inserted because no credit was applied
-        Integer reversals = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM shadow_ledger_transaction_log " +
-                "WHERE transaction_id = ? AND transaction_type = 'REVERSAL'",
-                Integer.class, "TXN-INIT");
-        assertThat(reversals).isZero();
+        assertThat(response.getResolutionStatus()).isEqualTo(Camt029Message.ResolutionStatus.PDCR);
+        assertThat(loadState(saga.getSagaId())).isEqualTo("INITIATED");
+    }
+
+    @Test
+    void cancellingAnOutboundTransferIsRejected() {
+        // a camt.056 naming one of OUR outbound sends must never cancel it here
+        PaymentSaga saga = orchestrator.initiate(
+                pacs008("TXN-OUTB", "E2E-OUTB", "ACC-OUTB"), Rail.FEDNOW);
+        redis.opsForValue().set("balance:ACC-OUTB", "100000");
+        shadowLedger.applyDebit("ACC-OUTB", new java.math.BigDecimal("100.00"), "TXN-OUTB");
+        orchestrator.advance(saga, PaymentSaga.SagaState.FUNDS_RESERVED);
+
+        Camt029Message response = cancellationService.handleCancellationRequest(
+                camt056("TXN-OUTB", "DUPL"));
+
+        assertThat(response.getResolutionStatus()).isEqualTo(Camt029Message.ResolutionStatus.RJCR);
+        assertThat(loadState(saga.getSagaId())).isEqualTo("FUNDS_RESERVED");
+        // the debit is untouched
+        assertThat(shadowLedger.getAvailableBalance("ACC-OUTB")).isEqualByComparingTo("900.00");
     }
 
     // ── PDCR path ─────────────────────────────────────────────────────────────

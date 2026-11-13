@@ -44,6 +44,8 @@ class UncertainSubmissionReproducerTest {
         when(sagas.initiate(any(), eq(Rail.FEDNOW)))
                 .thenReturn(new PaymentSaga("SAGA-UNCERTAIN", "TX-UNCERTAIN", Rail.FEDNOW));
         when(sagas.findByEndToEndId(any())).thenReturn(Optional.empty());
+        when(ledger.tryApplyDebit(any(), any(), any()))
+                .thenReturn(io.openfednow.shadowledger.ShadowLedger.CappedDebitResult.APPLIED);
         var router = new MessageRouter(new HttpFedNowClient(server.getHttpBaseUrl(), 1),
                 mock(CoreBankingAdapter.class), idempotency, mock(AvailabilityBridge.class),
                 mock(SyncAsyncBridge.class), new ObjectMapper(), ledger, sagas,
@@ -59,7 +61,7 @@ class UncertainSubmissionReproducerTest {
         com.github.tomakehurst.wiremock.client.WireMock.verify(1, postRequestedFor(urlEqualTo("/transfers")));
         assertThat(response.getStatusCode().value()).isEqualTo(503);
         assertThat(response.getBody()).isNull();
-        org.mockito.Mockito.verify(ledger).applyDebit("SYNTHETIC-DEBTOR", new BigDecimal("10.00"), "TX-UNCERTAIN");
+        org.mockito.Mockito.verify(ledger).tryApplyDebit("SYNTHETIC-DEBTOR", new BigDecimal("10.00"), "TX-UNCERTAIN");
         org.mockito.Mockito.verify(sagas).markOutcomeUnknown(any());
         org.mockito.Mockito.verify(sagas, never()).compensate(any(), any());
         org.mockito.Mockito.verify(idempotency, never()).recordOutcome(any(), any());

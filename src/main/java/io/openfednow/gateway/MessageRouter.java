@@ -232,7 +232,17 @@ public class MessageRouter {
         }
 
         // Step 2 — initiate saga (durable record of this payment's lifecycle)
-        PaymentSaga saga = sagaOrchestrator.initiate(message, sourceRail);
+        PaymentSaga saga;
+        try {
+            saga = sagaOrchestrator.initiate(message, sourceRail);
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            // Two identical inbound deliveries raced past the duplicate check;
+            // the loser has no side effects yet. 503 lets the rail retry and
+            // converge on the winner's outcome.
+            log.warn("Concurrent duplicate inbound delivery lost the saga race e2e={}",
+                    message.getEndToEndId());
+            return ResponseEntity.status(503).build();
+        }
 
         Pacs002Message response;
 
@@ -435,6 +445,12 @@ public class MessageRouter {
         // This pre-check rejects the common case before any saga or debit
         // exists; the atomic re-check at the debit (Step 4) is the enforcement
         // point for concurrent sends.
+        // Known boundary: bridge-mode detection is a live core probe, so a send
+        // that passes this check in the instant the core goes down is debited
+        // without being counted. The exposure is bounded by the sends in flight
+        // at the transition (each under the single-transfer cap) — the same
+        // probe boundary the TS01 guard has. Closing it fully needs the core's
+        // own authorization (the SQL reliability path, #137).
         String debtorAccount = message.getDebtorAccountNumber();
         boolean capEnabled = shadowLedger.isAggregateCapEnabled();
         boolean inBridgeMode = capEnabled && availabilityBridge.isInBridgeMode();
@@ -448,7 +464,17 @@ public class MessageRouter {
         // Step 3 — initiate saga. routeOutbound is only invoked by FedNowGateway today;
         // RTP outbound initiation is disabled. If outbound routing is ever extended
         // to RTP, this constant should be threaded through as a parameter.
-        PaymentSaga saga = sagaOrchestrator.initiate(message, Rail.FEDNOW);
+        PaymentSaga saga;
+        try {
+            saga = sagaOrchestrator.initiate(message, Rail.FEDNOW);
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            // Two identical submissions raced past the duplicate checks; the
+            // loser has no side effects yet. Same answer as the durable-saga
+            // check above: 503, and a retry converges on the winner's outcome.
+            log.warn("Concurrent duplicate outbound submission lost the saga race e2e={}",
+                    message.getEndToEndId());
+            return ResponseEntity.status(503).build();
+        }
 
         // Step 4 — reserve funds: debit debtor account in Shadow Ledger
         if (countTowardAggregate) {
@@ -480,10 +506,17 @@ public class MessageRouter {
                         inBridgeMode ? "bridge-mode send counted" : "send re-opened an aggregate window");
             }
         } else {
-            shadowLedger.applyDebit(
+            ShadowLedger.CappedDebitResult debit = shadowLedger.tryApplyDebit(
                     debtorAccount,
                     message.getInterbankSettlementAmount(),
                     message.getTransactionId());
+            if (debit != ShadowLedger.CappedDebitResult.APPLIED) {
+                // Lost a balance race after the Step 2 pre-check (#141/#143):
+                // nothing was debited, so close the saga and answer a final
+                // AM04 rather than an error.
+                sagaOrchestrator.compensate(saga.getSagaId(), "AM04");
+                return rejectInsufficientFunds(message);
+            }
         }
         sagaOrchestrator.advance(saga, PaymentSaga.SagaState.FUNDS_RESERVED);
 
@@ -552,7 +585,9 @@ public class MessageRouter {
      * Final AM04 for a send that would push the debtor's bridge-mode aggregate
      * window over the configured cap (#68). Recorded idempotently like the
      * other rejections, so a retry of the same end-to-end ID gets the same
-     * answer rather than being re-evaluated after the window clears.
+     * answer rather than being re-evaluated after the window clears (within
+     * the idempotency retention window; race-loser rejections additionally
+     * leave a FAILED saga, after which a later retry gets 503).
      */
     private ResponseEntity<Pacs002Message> rejectAggregateCapExceeded(Pacs008Message message) {
         log.warn("Outbound payment rejected: bridge-mode aggregate send cap reached account={} requested={}",
