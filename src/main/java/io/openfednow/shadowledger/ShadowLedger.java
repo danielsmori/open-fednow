@@ -49,6 +49,39 @@ public class ShadowLedger {
     static final String BALANCE_KEY_PREFIX = "balance:";
 
     /**
+     * Redis key prefix for each account's balance <em>version</em>: a counter
+     * every balance write increments in the same atomic step. Reconciliation
+     * compares versions, not values, so any write between its snapshot and its
+     * correction — even an equal-and-opposite pair that leaves the value
+     * unchanged — makes the correction back off (#142/#144). A separate prefix
+     * (not {@code balance:ver:}) so no account id can collide with it.
+     */
+    static final String VERSION_KEY_PREFIX = "balance-version:";
+
+    /** INCRBY the balance and bump its version. KEYS: balance, version; ARGV[1]: delta cents. */
+    private static final RedisScript<Long> BALANCE_INCRBY_SCRIPT = new DefaultRedisScript<>(
+            "local n = redis.call('INCRBY', KEYS[1], ARGV[1])\n" +
+                    "redis.call('INCR', KEYS[2])\n" +
+                    "return n",
+            Long.class);
+
+    /** SET the balance and bump its version. KEYS: balance, version; ARGV[1]: cents. */
+    private static final RedisScript<Long> BALANCE_SET_SCRIPT = new DefaultRedisScript<>(
+            "redis.call('SET', KEYS[1], ARGV[1])\n" +
+                    "redis.call('INCR', KEYS[2])\n" +
+                    "return 1",
+            Long.class);
+
+    /** SETNX the balance; bump the version only if it was written. Returns 1 if written. */
+    private static final RedisScript<Long> BALANCE_SETNX_SCRIPT = new DefaultRedisScript<>(
+            "if redis.call('SETNX', KEYS[1], ARGV[1]) == 1 then\n" +
+                    "  redis.call('INCR', KEYS[2])\n" +
+                    "  return 1\n" +
+                    "end\n" +
+                    "return 0",
+            Long.class);
+
+    /**
      * Redis key prefix for the per-account bridge-mode aggregate send window
      * (issue #68). The value is a hash: {@code total} holds the counted
      * aggregate in integer cents, {@code opened_at} the epoch second the window
@@ -110,24 +143,27 @@ public class ShadowLedger {
     /**
      * Undoes a capped debit whose DEBIT audit row could not be written, so no
      * send is ever counted (and debited) without the row every release path
-     * keys on. KEYS[1] = balance key, KEYS[2] = aggregate hash; ARGV[1] = the
-     * send's {@code txn:} field, ARGV[2] = {@code total} field, ARGV[3] = the
-     * {@code txn:} prefix. Credits the counted amount back, releases the send,
-     * and drops the window if it is left empty. Returns the cents undone, or
-     * nil if the send was not counted.
+     * keys on. KEYS[1] = balance key, KEYS[2] = aggregate hash, KEYS[3] =
+     * balance version; ARGV[1] = the send's {@code txn:} field, ARGV[2] =
+     * {@code total} field, ARGV[3] = the {@code txn:} prefix, ARGV[4] = the
+     * debited cents. Always credits the debited amount back (the debit just
+     * happened, whatever became of the window since — e.g. an operator
+     * cleared it), then releases the send if it is still counted and drops the
+     * window if it is left empty. Returns the cents credited back.
      */
     private static final RedisScript<Long> UNDO_CAPPED_DEBIT_SCRIPT = new DefaultRedisScript<>(
-            "local amt = redis.call('HGET', KEYS[2], ARGV[1])\n" +
-                    "if not amt then return nil end\n" +
-                    "redis.call('INCRBY', KEYS[1], amt)\n" +
+            "redis.call('INCRBY', KEYS[1], ARGV[4])\n" +
+                    "redis.call('INCR', KEYS[3])\n" +
+                    "local amt = redis.call('HGET', KEYS[2], ARGV[1])\n" +
+                    "if not amt then return tonumber(ARGV[4]) end\n" +
                     "if tonumber(amt) ~= 0 then redis.call('HINCRBY', KEYS[2], ARGV[2], '-' .. amt) end\n" +
                     "redis.call('HDEL', KEYS[2], ARGV[1])\n" +
                     "local prefixLen = string.len(ARGV[3])\n" +
                     "for _, k in ipairs(redis.call('HKEYS', KEYS[2])) do\n" +
-                    "  if string.sub(k, 1, prefixLen) == ARGV[3] then return tonumber(amt) end\n" +
+                    "  if string.sub(k, 1, prefixLen) == ARGV[3] then return tonumber(ARGV[4]) end\n" +
                     "end\n" +
                     "redis.call('DEL', KEYS[2])\n" +
-                    "return tonumber(amt)",
+                    "return tonumber(ARGV[4])",
             Long.class);
 
     /** {@link #CAPPED_DEBIT_SCRIPT} result code: insufficient funds. */
@@ -136,7 +172,8 @@ public class ShadowLedger {
     private static final long CAPPED_DEBIT_CAP_EXCEEDED = -2L;
 
     /**
-     * Atomic capped debit. KEYS[1] = balance key, KEYS[2] = aggregate hash.
+     * Atomic capped debit. KEYS[1] = balance key, KEYS[2] = aggregate hash,
+     * KEYS[3] = balance version (bumped when applied).
      * ARGV: [1] amount cents, [2] cap cents, [3] the send's {@code txn:<id>}
      * field, [4] {@code total} field, [5] {@code opened_at} field, [6] now
      * (epoch seconds).
@@ -155,6 +192,7 @@ public class ShadowLedger {
                     "local total = tonumber(redis.call('HGET', KEYS[2], ARGV[4]) or '0')\n" +
                     "if total + amt > tonumber(ARGV[2]) then return {-2, total} end\n" +
                     "redis.call('SET', KEYS[1], string.format('%d', bal - amt))\n" +
+                    "redis.call('INCR', KEYS[3])\n" +
                     "redis.call('HINCRBY', KEYS[2], ARGV[4], ARGV[1])\n" +
                     "local opened = redis.call('HSETNX', KEYS[2], ARGV[5], ARGV[6])\n" +
                     "redis.call('HSET', KEYS[2], ARGV[3], ARGV[1])\n" +
@@ -193,14 +231,16 @@ public class ShadowLedger {
             Long.class);
 
     /**
-     * Compare-and-set for {@link #reconcileIfUnchanged}. KEYS[1] = balance key;
-     * ARGV[1] = expected cents (absent key = 0), ARGV[2] = confirmed cents.
-     * Returns 1 if set, 0 if the balance no longer matches.
+     * Compare-and-set for {@link #reconcileIfUnchanged}. KEYS[1] = balance key,
+     * KEYS[2] = balance version; ARGV[1] = the version seen in the snapshot
+     * (absent = 0), ARGV[2] = confirmed cents. Returns 1 if set, 0 if any
+     * balance write happened since the snapshot.
      */
     private static final RedisScript<Long> RECONCILE_IF_UNCHANGED_SCRIPT = new DefaultRedisScript<>(
-            "local cur = tonumber(redis.call('GET', KEYS[1]) or '0')\n" +
-                    "if cur ~= tonumber(ARGV[1]) then return 0 end\n" +
+            "local v = tonumber(redis.call('GET', KEYS[2]) or '0')\n" +
+                    "if v ~= tonumber(ARGV[1]) then return 0 end\n" +
                     "redis.call('SET', KEYS[1], ARGV[2])\n" +
+                    "redis.call('INCR', KEYS[2])\n" +
                     "return 1",
             Long.class);
 
@@ -326,6 +366,7 @@ public class ShadowLedger {
 
                     ops.multi();
                     ops.opsForValue().set(key, String.valueOf(currentCents - amountCents));
+                    ops.opsForValue().increment(VERSION_KEY_PREFIX + accountId);
                     return ops.exec();
                 }
             });
@@ -406,7 +447,8 @@ public class ShadowLedger {
         long amountCents = dollarsToCents(amount);
 
         List<?> result = redis.execute(CAPPED_DEBIT_SCRIPT,
-                List.of(BALANCE_KEY_PREFIX + accountId, AGGREGATE_KEY_PREFIX + accountId),
+                List.of(BALANCE_KEY_PREFIX + accountId, AGGREGATE_KEY_PREFIX + accountId,
+                        VERSION_KEY_PREFIX + accountId),
                 String.valueOf(amountCents),
                 String.valueOf(aggregateCapCents),
                 AGGREGATE_TXN_FIELD_PREFIX + transactionId,
@@ -447,7 +489,7 @@ public class ShadowLedger {
             // Every release path (reversal, reconciliation) keys on the DEBIT
             // row. Without it the send would stay counted — and debited —
             // forever, with only the admin override able to lift the cap.
-            undoCappedDebit(accountId, transactionId);
+            undoCappedDebit(accountId, transactionId, amountCents);
             throw e;
         }
         log.info("Shadow Ledger capped debit applied account={} amount={} balanceAfter={} "
@@ -464,7 +506,7 @@ public class ShadowLedger {
         String key = BALANCE_KEY_PREFIX + accountId;
         long amountCents = dollarsToCents(amount);
 
-        Long newCents = redis.opsForValue().increment(key, amountCents);
+        Long newCents = incrementBalance(accountId, amountCents);
         if (newCents == null) {
             log.warn("Shadow Ledger credit increment returned null for account={}", accountId);
             return;
@@ -509,7 +551,7 @@ public class ShadowLedger {
         String key = BALANCE_KEY_PREFIX + accountId;
         long amountCents = dollarsToCents(amount);
 
-        Long newCents = redis.opsForValue().increment(key, amountCents);
+        Long newCents = incrementBalance(accountId, amountCents);
         if (newCents == null) {
             log.warn("Shadow Ledger reversal increment returned null for account={}", accountId);
             return;
@@ -550,12 +592,13 @@ public class ShadowLedger {
      * itself fails the send stays counted (fail-closed) and the error says how
      * to recover it.
      */
-    private void undoCappedDebit(String accountId, String transactionId) {
+    /* package-private for tests */ void undoCappedDebit(String accountId, String transactionId, long amountCents) {
         try {
             Long undone = redis.execute(UNDO_CAPPED_DEBIT_SCRIPT,
-                    List.of(BALANCE_KEY_PREFIX + accountId, AGGREGATE_KEY_PREFIX + accountId),
+                    List.of(BALANCE_KEY_PREFIX + accountId, AGGREGATE_KEY_PREFIX + accountId,
+                            VERSION_KEY_PREFIX + accountId),
                     AGGREGATE_TXN_FIELD_PREFIX + transactionId, AGGREGATE_TOTAL_FIELD,
-                    AGGREGATE_TXN_FIELD_PREFIX);
+                    AGGREGATE_TXN_FIELD_PREFIX, String.valueOf(amountCents));
             log.warn("Shadow Ledger capped debit undone after its audit row failed account={} "
                             + "transactionId={} amount={}",
                     io.openfednow.security.pii.PiiRedactor.maskAccount(accountId), transactionId,
@@ -641,7 +684,7 @@ public class ShadowLedger {
         String key = BALANCE_KEY_PREFIX + accountId;
         long amountCents = dollarsToCents(amount);
 
-        Long newCents = redis.opsForValue().increment(key, -amountCents);
+        Long newCents = incrementBalance(accountId, -amountCents);
         if (newCents == null) {
             log.warn("Shadow Ledger reversal decrement returned null for account={}", accountId);
             return;
@@ -667,9 +710,10 @@ public class ShadowLedger {
      */
     public boolean seedBalanceIfAbsent(String accountId, BigDecimal balance) {
         long cents = dollarsToCents(balance);
-        Boolean written = redis.opsForValue()
-                .setIfAbsent(BALANCE_KEY_PREFIX + accountId, String.valueOf(cents));
-        boolean seeded = Boolean.TRUE.equals(written);
+        Long written = redis.execute(BALANCE_SETNX_SCRIPT,
+                List.of(BALANCE_KEY_PREFIX + accountId, VERSION_KEY_PREFIX + accountId),
+                String.valueOf(cents));
+        boolean seeded = written != null && written == 1L;
         if (seeded) {
             log.info("Shadow Ledger seeded account={} balance={}", accountId, balance);
         } else {
@@ -689,42 +733,57 @@ public class ShadowLedger {
      */
     public void seedBalance(String accountId, BigDecimal balance) {
         long cents = dollarsToCents(balance);
-        redis.opsForValue().set(BALANCE_KEY_PREFIX + accountId, String.valueOf(cents));
+        redis.execute(BALANCE_SET_SCRIPT,
+                List.of(BALANCE_KEY_PREFIX + accountId, VERSION_KEY_PREFIX + accountId),
+                String.valueOf(cents));
         log.info("Shadow Ledger force-seeded account={} balance={}", accountId, balance);
+    }
+
+    /** A balance read together with its version (see {@link #VERSION_KEY_PREFIX}). */
+    public record BalanceSnapshot(BigDecimal balance, long version) { }
+
+    /**
+     * Reads an account's balance and its version in one atomic {@code MGET},
+     * for {@link #reconcileIfUnchanged}. An unseeded account reads as zero,
+     * version 0.
+     */
+    public BalanceSnapshot snapshotBalance(String accountId) {
+        List<String> values = redis.opsForValue().multiGet(
+                List.of(BALANCE_KEY_PREFIX + accountId, VERSION_KEY_PREFIX + accountId));
+        String rawBalance = values == null ? null : values.get(0);
+        String rawVersion = values == null ? null : values.get(1);
+        return new BalanceSnapshot(
+                rawBalance == null ? BigDecimal.ZERO : centsToDollars(Long.parseLong(rawBalance)),
+                rawVersion == null ? 0L : Long.parseLong(rawVersion));
     }
 
     /**
      * Sets the Shadow Ledger balance to the core's confirmed balance — but only
-     * if the balance is still exactly what the caller observed before reading
-     * the core (#142/#144).
+     * if no balance write happened since {@code snapshot} was taken (#142/#144).
      *
-     * <p>Reconciliation reads the shadow balance, then the core balance, then
-     * corrects the shadow balance. Payments keep flowing meanwhile: a debit or
-     * credit applied between the read and the correction would be silently
-     * erased by a plain overwrite, making spent money spendable again (or a
-     * credit vanish). This method performs the check and the write as one
-     * atomic Redis script, so the correction applies only if nothing changed;
-     * otherwise nothing is written and the caller retries the account later.
-     * An absent balance key counts as zero, matching
-     * {@link #getAvailableBalance}.
+     * <p>Reconciliation snapshots the shadow balance, reads the core, then
+     * corrects the shadow balance. Payments keep flowing meanwhile: a write in
+     * between would be silently erased by a plain overwrite, making spent money
+     * spendable again (or a credit vanish). This method checks the account's
+     * balance version and writes in one atomic Redis script: the correction
+     * applies only if the version is unchanged — comparing versions rather than
+     * values also catches an equal-and-opposite pair of writes that leaves the
+     * value where it was. Otherwise nothing is written and the caller retries.
      *
      * <p>When applied and the balances differed, a {@code RECONCILIATION} audit
      * row records the correction, as before.
      *
-     * @param expectedShadowBalance the shadow balance the caller read before
-     *                              reading the core
-     * @param confirmedBalance      the core's authoritative balance
      * @return {@code true} if the balance now equals {@code confirmedBalance};
-     *         {@code false} if a concurrent update changed it since the caller's
-     *         read (nothing written)
+     *         {@code false} if a concurrent write happened since the snapshot
+     *         (nothing written)
      */
-    public boolean reconcileIfUnchanged(String accountId, BigDecimal expectedShadowBalance,
+    public boolean reconcileIfUnchanged(String accountId, BalanceSnapshot snapshot,
                                         BigDecimal confirmedBalance) {
-        long expectedCents = dollarsToCents(expectedShadowBalance);
+        long expectedCents = dollarsToCents(snapshot.balance());
         long confirmedCents = dollarsToCents(confirmedBalance);
         Long applied = redis.execute(RECONCILE_IF_UNCHANGED_SCRIPT,
-                List.of(BALANCE_KEY_PREFIX + accountId),
-                String.valueOf(expectedCents), String.valueOf(confirmedCents));
+                List.of(BALANCE_KEY_PREFIX + accountId, VERSION_KEY_PREFIX + accountId),
+                String.valueOf(snapshot.version()), String.valueOf(confirmedCents));
         if (applied == null || applied != 1L) {
             log.info("Shadow Ledger reconciliation deferred — balance changed since it was read "
                             + "account={}",
@@ -933,6 +992,13 @@ public class ShadowLedger {
     }
 
     // ── Internal helpers ───────────────────────────────────────────────────────
+
+    /** INCRBY an account's balance and bump its version atomically. */
+    private Long incrementBalance(String accountId, long deltaCents) {
+        return redis.execute(BALANCE_INCRBY_SCRIPT,
+                List.of(BALANCE_KEY_PREFIX + accountId, VERSION_KEY_PREFIX + accountId),
+                String.valueOf(deltaCents));
+    }
 
     /** Converts a USD dollar amount to integer cents for Redis storage. */
     static long dollarsToCents(BigDecimal dollars) {

@@ -184,7 +184,7 @@ class ReconciliationAggregateWindowTest {
     }
 
     private static ShadowLedger ledger(boolean capEnabled) {
-        ShadowLedger ledger = mock(ShadowLedger.class);
+        ShadowLedger ledger = LedgerMocks.mockLedger();
         when(ledger.getAvailableBalance(any())).thenReturn(BigDecimal.ZERO);
         when(ledger.isAggregateCapEnabled()).thenReturn(capEnabled);
         return ledger;

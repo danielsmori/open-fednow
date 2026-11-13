@@ -200,7 +200,7 @@ class PostgresAdvisoryReconciliationLockTest extends AbstractInfrastructureInteg
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private ReconciliationService pod(CoreBankingAdapter core) {
-        ShadowLedger ledger = mock(ShadowLedger.class);
+        ShadowLedger ledger = LedgerMocks.mockLedger();
         when(ledger.getAvailableBalance(any())).thenReturn(BigDecimal.ZERO);
         return new ReconciliationService(ledger, jdbc, core, txManager, 100,
                 new PostgresAdvisoryReconciliationLock(dataSource));

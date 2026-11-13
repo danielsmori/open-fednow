@@ -241,6 +241,11 @@ class ReconciliationLockingTest {
         assertThat(attempt.fullyReconciled()).isFalse();
         assertThat(attempt.report().transactionsReplayed()).isZero();
         assertThat(unconfirmed()).isEqualTo(1);
+        // retried within the cycle before giving up; and the true difference
+        // is unknown, so it is not reported as a discrepancy
+        verify(ledger, org.mockito.Mockito.times(ReconciliationService.BUSY_ACCOUNT_ATTEMPTS))
+                .reconcileIfUnchanged(eq("ACC-BUSY"), any(), any());
+        assertThat(attempt.report().discrepanciesDetected()).isZero();
     }
 
     @Test
@@ -322,7 +327,7 @@ class ReconciliationLockingTest {
     }
 
     private static ShadowLedger ledger() {
-        ShadowLedger ledger = mock(ShadowLedger.class);
+        ShadowLedger ledger = LedgerMocks.mockLedger();
         when(ledger.getAvailableBalance(any())).thenReturn(BigDecimal.ZERO);
         return ledger;
     }

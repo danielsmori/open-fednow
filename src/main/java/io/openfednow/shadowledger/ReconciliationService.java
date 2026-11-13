@@ -452,11 +452,10 @@ public class ReconciliationService {
      *
      * <p>The Postgres-side writes — the optional RECONCILIATION audit row from
      * {@link ShadowLedger#reconcileIfUnchanged} and the "mark unconfirmed rows
-     * confirmed" UPDATE — commit or roll back together. The Redis update inside
-     * {@code shadowLedger.reconcile} is outside this transaction (different
-     * system); if Postgres rolls back after Redis has been updated, the
-     * subsequent cycle will detect the residual discrepancy and write the
-     * correction afresh.
+     * confirmed" UPDATE — commit or roll back together. The Redis correction
+     * is outside this transaction (different system): if Postgres rolls back
+     * after Redis was corrected, the rows stay unconfirmed and the next cycle
+     * confirms them, but that correction's audit row is lost.
      *
      * <p><strong>Bridge-mode aggregate windows (#68).</strong> An account with
      * an open aggregate window is reconciled only while the core is online;
@@ -517,24 +516,34 @@ public class ReconciliationService {
         }
     }
 
+    /** Attempts per account before a busy account is left for the next cycle. */
+    static final int BUSY_ACCOUNT_ATTEMPTS = 3;
+
     /**
      * The per-account reconciliation, inside its own transaction, made safe
      * against payments that keep flowing while it runs (#142/#144):
      * <ol>
      *   <li><strong>Cutoff first.</strong> Read the highest unconfirmed row id.
      *       A ledger row is written after its Redis balance change, so every
-     *       row at or below the cutoff is already reflected in the snapshot
-     *       taken next.</li>
-     *   <li><strong>Snapshot</strong> the shadow balance, then read the core.</li>
-     *   <li><strong>Correct only if unchanged.</strong> If they differ, apply the
-     *       core's balance with {@link ShadowLedger#reconcileIfUnchanged}. If a
-     *       payment changed the shadow balance meanwhile, nothing is written,
-     *       nothing is confirmed, and the account is reported busy — the next
-     *       cycle retries it. A blind overwrite would erase that payment.</li>
-     *   <li><strong>Confirm only up to the cutoff.</strong> Rows written after the
-     *       cutoff may not be in the balance that was just reconciled; they stay
-     *       unconfirmed for the next cycle rather than being confirmed against a
-     *       balance that never saw them.</li>
+     *       row at or below the cutoff is already reflected in any snapshot
+     *       taken afterwards.</li>
+     *   <li><strong>Snapshot</strong> the shadow balance with its version, then
+     *       read the core.</li>
+     *   <li><strong>Correct only if nothing was written meanwhile.</strong> If the
+     *       balances differ, apply the core's balance with
+     *       {@link ShadowLedger#reconcileIfUnchanged}, which compares the balance
+     *       <em>version</em> — any write since the snapshot (even an
+     *       equal-and-opposite pair) makes it back off. A busy account is
+     *       retried up to {@link #BUSY_ACCOUNT_ATTEMPTS} times; if it is still
+     *       busy, nothing is written or confirmed and it is reported deferred
+     *       (not as a discrepancy: the true difference is unknown), and the
+     *       next cycle retries it. A blind overwrite would erase those
+     *       payments.</li>
+     *   <li><strong>Confirm only up to the cutoff</strong>, plus the correction's
+     *       own RECONCILIATION row. Rows written after the cutoff may not be in
+     *       the balance that was just reconciled; they stay unconfirmed for the
+     *       next cycle rather than being confirmed against a balance that never
+     *       saw them.</li>
      * </ol>
      *
      * @return {@code [transactionsConfirmed, discrepancyDetected, busy]}
@@ -545,24 +554,34 @@ public class ReconciliationService {
                     "SELECT MAX(id) FROM shadow_ledger_transaction_log "
                             + "WHERE account_id = ? AND core_confirmed = FALSE",
                     Long.class, accountId);
-            BigDecimal shadowBalance = shadowLedger.getAvailableBalance(accountId);
-            BigDecimal coreBalance = coreBankingAdapter.getAvailableBalance(accountId);
 
             int discrepancyDetected = 0;
-            if (coreBalance.compareTo(shadowBalance) != 0) {
-                discrepancyDetected = 1;
-                log.warn("Balance discrepancy account={} shadow={} core={}",
-                        io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
-                        shadowBalance, coreBalance);
-                if (!shadowLedger.reconcileIfUnchanged(accountId, shadowBalance, coreBalance)) {
-                    return new int[] { 0, discrepancyDetected, 1 };
+            boolean settled = false;
+            for (int attempt = 1; attempt <= BUSY_ACCOUNT_ATTEMPTS && !settled; attempt++) {
+                ShadowLedger.BalanceSnapshot snapshot = shadowLedger.snapshotBalance(accountId);
+                BigDecimal coreBalance = coreBankingAdapter.getAvailableBalance(accountId);
+                if (coreBalance.compareTo(snapshot.balance()) == 0) {
+                    settled = true;
+                } else if (shadowLedger.reconcileIfUnchanged(accountId, snapshot, coreBalance)) {
+                    discrepancyDetected = 1;
+                    log.warn("Balance discrepancy corrected account={} shadow={} core={}",
+                            io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
+                            snapshot.balance(), coreBalance);
+                    settled = true;
                 }
+            }
+            if (!settled) {
+                log.warn("Account left for the next reconciliation cycle: its balance changed during "
+                                + "each of {} attempts account={}",
+                        BUSY_ACCOUNT_ATTEMPTS, io.openfednow.security.pii.PiiRedactor.maskAccount(accountId));
+                return new int[] { 0, 0, 1 };
             }
 
             int confirmed = cutoff == null ? 0 : jdbc.update(
                     "UPDATE shadow_ledger_transaction_log " +
                     "SET core_confirmed = TRUE " +
-                    "WHERE account_id = ? AND core_confirmed = FALSE AND id <= ?",
+                    "WHERE account_id = ? AND core_confirmed = FALSE " +
+                    "AND (id <= ? OR transaction_type = 'RECONCILIATION')",
                     accountId, cutoff);
             return new int[] { confirmed, discrepancyDetected, 0 };
         });

@@ -141,18 +141,31 @@ class MessageRouterAggregateCapTest {
     }
 
     @Test
-    void bridgeModeIsReadOnceSoTheGuardAndTheCapAgree() {
+    void coreGoingOfflineAfterTheGuardFailsClosedWithTs01() {
         // allow-sends=false: the guard reads "online", then the core goes
-        // offline. A second read would count the send as a bridge-mode send
-        // that the guard had just let through as online.
+        // offline before the cap reads it. The send must get the guard's TS01
+        // — not proceed as an uncounted send while bridge-mode sends are off.
         Fixture f = new Fixture(true, false, false, false);
         when(f.availabilityBridge.isInBridgeMode()).thenReturn(false, true);
 
-        f.router.routeOutbound(message("E2E-ONE-READ"));
+        Pacs002Message r = f.router.routeOutbound(message("E2E-RACE-GUARD")).getBody();
 
-        verify(f.availabilityBridge, times(1)).isInBridgeMode();
+        assertThat(r.getRejectReasonCode()).isEqualTo("TS01");
+        verify(f.sagaOrchestrator, never()).initiate(any(), any());
+        verify(f.shadowLedger, never()).applyDebit(anyString(), any(), anyString());
         verify(f.shadowLedger, never()).applyDebitCappedDetailed(anyString(), any(), anyString());
-        verify(f.availabilityBridge, never()).markReconciliationPending(anyString());
+        verify(f.idempotencyService).recordOutcome(eq("E2E-RACE-GUARD"), any());
+    }
+
+    @Test
+    void coreGoingOfflineAfterTheGuardIsCountedWhenBridgeSendsAreAllowed() {
+        Fixture f = new Fixture(true, false, false, true);
+        when(f.availabilityBridge.isInBridgeMode()).thenReturn(true);
+
+        f.router.routeOutbound(message("E2E-RACE-COUNT"));
+
+        verify(f.shadowLedger).applyDebitCappedDetailed(anyString(), any(), anyString());
+        verify(f.availabilityBridge).markReconciliationPending(anyString());
     }
 
     // ── Pre-check ────────────────────────────────────────────────────────────

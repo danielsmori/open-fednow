@@ -282,9 +282,7 @@ public class AutomaticReconciliationTrigger {
                 return;
             }
             long backoff = backoffAfter(consecutiveUnsettled.incrementAndGet());
-            // Back off the work this cycle failed on. If the marker itself was
-            // unreadable (readToken null), the next poll fails at the same read
-            // before reaching the backoff check, so there is nothing to back off.
+            // Back off the work this cycle failed on.
             backoffToken = readToken;
             nextAttemptNanos = nanoClock.getAsLong() + backoff;
             log.error("Automatic reconciliation failed — retrying in {}s",
