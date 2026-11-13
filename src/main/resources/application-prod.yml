@@ -53,6 +53,12 @@ openfednow:
   # See ADR-0011 and docs/known-limitations.md for the reasoning.
   bridge-mode:
     allow-sends: ${BRIDGE_MODE_ALLOW_SENDS:false}
+    # Aggregate ceiling per account per maintenance window (#68). Unset =
+    # disabled; set it before enabling allow-sends, to the worst-case exposure
+    # the institution explicitly accepts. Fails closed: cleared only by a
+    # confirmed reconciliation, never by a timer.
+    max-aggregate-send-amount: ${BRIDGE_MODE_MAX_AGGREGATE_SEND_AMOUNT:}
+    expected-window-hours: ${BRIDGE_MODE_EXPECTED_WINDOW_HOURS:6}
 
 spring:
   datasource:
