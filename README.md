@@ -113,6 +113,13 @@ docker compose -f docker-compose.yml -f compose.app.yml up -d --wait
 curl http://127.0.0.1:8080/fednow/health
 ```
 
+That builds the image from this checkout. To run a published release instead, which is multi-arch and runs natively on Apple Silicon as well as x86, name it and skip the build:
+
+```sh
+OPENFEDNOW_IMAGE=ghcr.io/danielsmori/open-fednow:0.1.0 \
+  docker compose -f docker-compose.yml -f compose.app.yml up -d --wait --no-build
+```
+
 In that mode the service reaches PostgreSQL, Redis and RabbitMQ by name inside the Compose network, so only the service's own port is published, on `127.0.0.1`. `APP_PORT` moves it, which lets two checkouts run the whole stack at once. This is a synthetic local stack: no live FedNow rail, no core banking system, and the non-production fixture gates stay off. The recorded reliability evidence is produced against the service running on the host, not this container; see [ADR-0011](docs/adr/0011-evaluate-the-host-run-jvm.md).
 
 The local health route is `http://localhost:8080/fednow/health`; `http://localhost:8080/demo/` is a synthetic browser demonstration. The optional `./demo/run-demo.sh` exercises legacy outbound and return examples and requires starting the app with `LEGACY_OUTBOUND_SANDBOX_ENABLED=true LEGACY_RETURN_SANDBOX_ENABLED=true` in a **local sandbox**. Those routes are disabled by default. The reliability bridge is a separate opt-in non-production path; see [reproduction instructions](docs/reliability/reproduce.md).

@@ -37,6 +37,11 @@ jobs:
       - name: Run clean-checkout preflight tests
         run: python3 -m unittest discover -s scripts -p 'test_preflight.py'
 
+      - name: Run release image tooling tests
+        # The layout splitter decides which image each platform scan covers,
+        # so a regression here would let a release scan the wrong image.
+        run: python3 -m unittest discover -s .github/scripts -p 'test_*.py'
+
       - name: Check the clean-checkout preflight runs
         # The runner has JDK 17, Maven, Python and Docker, so the documented
         # preflight must pass here; a non-zero status means the documented
@@ -151,10 +156,10 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build the image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           load: true

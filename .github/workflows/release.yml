@@ -1,17 +1,43 @@
 name: Release
 
+# A tag push builds, tests, scans and publishes a release. A pull request that
+# changes how a release is built runs the same build, tests, image build, scan
+# and SBOM generation as a rehearsal, and publishes nothing.
 on:
   push:
     tags:
       - 'v*.*.*'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - ".github/workflows/release.yml"
+      - ".github/scripts/oci_platform_layout.py"
+      - ".github/scripts/scan_image_platforms.sh"
+      - "Dockerfile"
+      - ".dockerignore"
+      - ".trivyignore"
+  workflow_dispatch:
 
+# Jobs ask for what they need. Nothing that runs the build holds a write token.
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # Must match helm/values.yaml image.repository.
+  IMAGE: ghcr.io/danielsmori/open-fednow
+  PLATFORMS: linux/amd64,linux/arm64
+  SKOPEO_IMAGE: quay.io/skopeo/stable:v1.20@sha256:47853bb9fb24202af9110531ebd6e43c5f97701254ca290596640290d17942f4
 
 jobs:
-  release:
-    name: Test, package and publish
+  build:
+    name: Test, build and scan
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Checkout
@@ -23,6 +49,26 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           cache: maven
+
+      - name: Work out the version
+        id: version
+        run: |
+          set -euo pipefail
+          pom="$(python3 -c "import xml.etree.ElementTree as ET; print(ET.parse('pom.xml').getroot().find('{http://maven.apache.org/POM/4.0.0}version').text)")"
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            version="${GITHUB_REF_NAME#v}"
+            # A release must name one version everywhere, or the chart would
+            # deploy an image that does not match the release it came from.
+            [ "$version" = "$pom" ] || { echo "tag $GITHUB_REF_NAME, but pom.xml says $pom" >&2; exit 1; }
+            grep -qE "^  tag: \"$version\"$" helm/values.yaml \
+              || { echo "helm/values.yaml image.tag is not \"$version\"" >&2; exit 1; }
+            grep -qE "^appVersion: \"$version\"$" helm/Chart.yaml \
+              || { echo "helm/Chart.yaml appVersion is not \"$version\"" >&2; exit 1; }
+          else
+            version="$pom"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Release version: $version"
 
       - name: Run unit tests
         run: mvn -B test --no-transfer-progress
@@ -37,22 +83,153 @@ jobs:
       - name: Build service jar
         run: mvn -B package -DskipTests --no-transfer-progress
 
+      - name: Set up QEMU
+        # The runtime stage of the arm64 image runs one command under emulation.
+        # Maven does not: the Dockerfile compiles on the runner's own platform.
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build the image for every platform
+        # Written to an OCI layout on disk, not pushed. The scan below reads
+        # these exact bytes, and the publish job pushes them unchanged.
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: ${{ env.PLATFORMS }}
+          sbom: true
+          provenance: mode=max
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            REVISION=${{ github.sha }}
+          outputs: type=oci,dest=target/image,tar=false
+
+      - name: Scan every platform, gating on HIGH and CRITICAL
+        run: .github/scripts/scan_image_platforms.sh target/image target/scan ${PLATFORMS//,/ }
+
       - name: Assemble release files
         env:
-          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          VERSION="${TAG#v}"
+          set -euo pipefail
           mkdir -p dist
-          JAR="$(ls target/openfednow-*.jar | grep -v original | head -n 1)"
-          cp "$JAR" "dist/openfednow-${VERSION}.jar"
+          cp "target/openfednow-${VERSION}.jar" "dist/openfednow-${VERSION}.jar"
           zip -r "dist/openfednow-test-kit-${VERSION}.zip" \
             harness docs/reliability/portable-send-profile.md LICENSE NOTICE \
             -x 'harness/__pycache__/*'
           cp target/portable/release-smoke.json "dist/smoke-report-${VERSION}.json"
-          (cd dist && sha256sum * > SHA256SUMS.txt)
+          for platform in ${PLATFORMS//,/ }; do
+            name="${platform#linux/}"
+            cp "target/scan/sbom-$name.cdx.json" "dist/openfednow-${VERSION}-sbom-linux-$name.cdx.json"
+            cp "target/scan/trivy-$name.json" "dist/openfednow-${VERSION}-image-scan-linux-$name.json"
+          done
+          ls -l dist
+
+      - name: Keep the release files
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-files
+          path: dist/
+          if-no-files-found: warn
+
+      - name: Keep the scan reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: image-scan-reports
+          path: |
+            target/scan/*.json
+            target/scan/*.sarif
+          if-no-files-found: warn
+
+      - name: Keep the scanned image for publishing
+        # Only a release needs it, and it is a few hundred megabytes.
+        if: github.ref_type == 'tag'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-image
+          path: target/image/
+          retention-days: 7
+          if-no-files-found: error
+
+  publish:
+    name: Publish image and release
+    needs: build
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # create the GitHub Release
+      packages: write   # push the image to GHCR
+
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+      TAG: ${{ github.ref_name }}
+
+    steps:
+      - name: Fetch the release files
+        uses: actions/download-artifact@v8
+        with:
+          name: release-files
+          path: dist
+
+      - name: Fetch the scanned image
+        uses: actions/download-artifact@v8
+        with:
+          name: release-image
+          path: image
+
+      - name: Push the scanned image to GHCR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          auth="$RUNNER_TEMP/registry-auth"
+          mkdir -p "$auth"
+          trap 'rm -rf "$auth"' EXIT
+          skopeo() {
+            docker run --rm -i -v "$PWD/image:/src:ro" -v "$auth:/auth" \
+              "$SKOPEO_IMAGE" "$@"
+          }
+
+          expected="$(python3 -c "import json; print(json.load(open('image/index.json'))['manifests'][0]['digest'])")"
+          echo "Scanned image index: $expected"
+
+          printf '%s' "$GH_TOKEN" | skopeo login ghcr.io --username "$GITHUB_ACTOR" \
+            --password-stdin --authfile /auth/auth.json
+
+          # A published version is never replaced with different bytes. Re-running
+          # only this job pushes the same layout again, which is a no-op; a whole
+          # new build of the same tag would not match and stops here.
+          if skopeo inspect --raw --authfile /auth/auth.json "docker://$IMAGE:$VERSION" > "$auth/existing.json" 2>/dev/null; then
+            existing="sha256:$(sha256sum "$auth/existing.json" | cut -d' ' -f1)"
+            if [ "$existing" != "$expected" ]; then
+              echo "$IMAGE:$VERSION already exists as $existing; refusing to overwrite it with $expected" >&2
+              exit 1
+            fi
+            echo "$IMAGE:$VERSION already holds this exact image; pushing again is a no-op"
+          fi
+
+          skopeo copy --all --preserve-digests --authfile /auth/auth.json \
+            --digestfile /auth/pushed.digest "oci:/src" "docker://$IMAGE:$VERSION"
+          pushed="$(cat "$auth/pushed.digest")"
+
+          # Read it back from the registry rather than trusting the push.
+          skopeo inspect --raw --authfile /auth/auth.json "docker://$IMAGE:$VERSION" > "$auth/published.json"
+          published="sha256:$(sha256sum "$auth/published.json" | cut -d' ' -f1)"
+          if [ "$pushed" != "$expected" ] || [ "$published" != "$expected" ]; then
+            echo "digest mismatch: scanned $expected, pushed $pushed, registry serves $published" >&2
+            exit 1
+          fi
+          echo "$IMAGE:$VERSION@$expected" > "dist/openfednow-${VERSION}-container-image.txt"
+          echo "Published $IMAGE:$VERSION@$expected"
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
-        run: gh release create "$TAG" dist/* --title "OpenFedNow ${TAG#v}" --generate-notes --verify-tag
+        run: |
+          set -euo pipefail
+          (cd dist && sha256sum * > SHA256SUMS.txt)
+          gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" \
+            --title "OpenFedNow $VERSION" --generate-notes --verify-tag

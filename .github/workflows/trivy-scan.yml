@@ -1,7 +1,8 @@
 name: Dependency Vulnerability Scan
 
-# Scan Maven dependencies without an NVD API key. HIGH/CRITICAL findings fail
-# the job. Application-specific exceptions, if any, are documented in .trivyignore.
+# Scan Maven dependencies without an NVD API key, and scan the container image
+# for every platform it is published for. HIGH/CRITICAL findings fail the job.
+# Application-specific exceptions, if any, are documented in .trivyignore.
 on:
   schedule:
     - cron: "0 4 * * 1"
@@ -11,6 +12,10 @@ on:
       - "pom.xml"
       - ".github/workflows/trivy-scan.yml"
       - ".trivyignore*"
+      - "Dockerfile"
+      - ".dockerignore"
+      - ".github/scripts/oci_platform_layout.py"
+      - ".github/scripts/scan_image_platforms.sh"
   workflow_dispatch:
 
 permissions:
@@ -68,4 +73,59 @@ jobs:
           path: |
             trivy-results.json
             trivy-results.sarif
+          if-no-files-found: warn
+
+  image:
+    # The filesystem scan above reads pom.xml, so it does not see transitive
+    # dependencies such as spring-webmvc. The image holds those jars, so this
+    # scan does. It also covers the base OS layer, per platform.
+    name: Scan the container image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build the image for every published platform
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          outputs: type=oci,dest=target/image,tar=false
+
+      - name: Scan every platform
+        run: .github/scripts/scan_image_platforms.sh target/image target/scan linux/amd64 linux/arm64
+
+      # One upload per platform: code scanning keeps one analysis per category,
+      # so a shared category would let arm64 replace amd64.
+      - name: Upload amd64 SARIF
+        if: always() && hashFiles('target/scan/trivy-amd64.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: target/scan/trivy-amd64.sarif
+          category: trivy-image-linux-amd64
+
+      - name: Upload arm64 SARIF
+        if: always() && hashFiles('target/scan/trivy-arm64.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: target/scan/trivy-arm64.sarif
+          category: trivy-image-linux-arm64
+
+      - name: Upload image scan reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: image-vulnerability-report
+          path: |
+            target/scan/*.json
+            target/scan/*.sarif
           if-no-files-found: warn

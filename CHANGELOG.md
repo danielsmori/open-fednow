@@ -15,10 +15,15 @@ First tagged release. It contains everything listed under the dated headings bel
 - Affiliation and trademark notice in the README and a `NOTICE` file.
 - `SECURITY.md`, `CODE_OF_CONDUCT.md`, `GOVERNANCE.md`, `CITATION.cff`, issue templates and a pull-request template.
 - Release process ([docs/releasing.md](docs/releasing.md)) and a tag-triggered release workflow.
+- A container image for the gateway, published as `ghcr.io/danielsmori/open-fednow:<version>` for `linux/amd64` and `linux/arm64`, so it runs natively on Apple Silicon. Base images are pinned by digest, the image runs as UID 1000 to match the Helm chart, and the non-production fixture gates stay off ([#121](https://github.com/danielsmori/open-fednow/pull/121), [#128](https://github.com/danielsmori/open-fednow/pull/128)).
+- The release scans each platform's image before anything is published, pushes exactly the scanned bytes, and attaches CycloneDX SBOMs, the scan results and the image digest to the GitHub Release. The weekly vulnerability scan now covers the image for both platforms ([#128](https://github.com/danielsmori/open-fednow/pull/128)).
+- `compose.app.yml` runs the gateway inside the Compose network, publishing only its own port, so two checkouts can run the whole stack at once. [ADR-0011](docs/adr/0011-evaluate-the-host-run-jvm.md) records that the reliability evidence describes the host-run JVM, not the container ([#127](https://github.com/danielsmori/open-fednow/pull/127)).
+- `scripts/preflight.py` checks JDK 17, Maven, Python, Docker, Compose and the host ports before a clean-checkout evaluation, naming the fix for each failure; `--mode app` checks the containerised stack instead ([#118](https://github.com/danielsmori/open-fednow/pull/118), [#127](https://github.com/danielsmori/open-fednow/pull/127)).
 
 ### Changed
 - The full component table moved from the README to [docs/status.md](docs/status.md), and the development phases to [docs/roadmap.md](docs/roadmap.md).
 - `docs/whitepaper.pdf` replaced by the revised November 9, 2026 preprint.
+- `docker-compose.yml` no longer fixes container names, so a second Compose project starts without renaming or removing another's containers. Host ports bind `127.0.0.1` only and move with `POSTGRES_PORT`, `REDIS_PORT`, `RABBITMQ_PORT` and `RABBITMQ_MANAGEMENT_PORT`. The evaluation harness picks its application ports at run time and no longer overrides `DB_URL` ([#118](https://github.com/danielsmori/open-fednow/pull/118)).
 - Project version set to `0.1.0`. `demo/payment-integration.sh` and `harness/evaluate_external.py` now read the jar name from `pom.xml` instead of a fixed `0.1.0-SNAPSHOT` name.
 - The README DOI badge is now labelled as the preprint's DOI. The DOI identifies the architecture preprint; the software is cited by repository and commit or release tag.
 

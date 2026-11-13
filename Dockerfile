@@ -3,7 +3,9 @@
 # Two stages. Maven with JDK 17 builds and repackages the Spring Boot jar; a
 # JRE 17 runtime carries only the extracted application. No Maven, no compiler
 # and no JDK reach the runtime layer. Both base images are pinned by digest so
-# this file resolves the same bytes on every build; Dependabot raises them.
+# this file resolves the same bytes on every build. Each FROM names its tag as
+# well as its digest: Docker resolves the digest, and the tag tells Dependabot
+# which line to follow when it raises the digest.
 #
 # The non-production fixture gates stay off. application.yml defaults
 # RELIABILITY_FIXTURE_API_ENABLED and RELIABILITY_LEGACY_ENTRY_BRIDGE_ENABLED
@@ -19,8 +21,11 @@
 #     -e DB_URL=jdbc:postgresql://postgres:5432/openfednow \
 #     -e REDIS_HOST=redis -e RABBITMQ_HOST=rabbitmq openfednow:dev
 
-# maven:3.9-eclipse-temurin-17
-FROM maven@sha256:1a352420f7aba21f5ad08df31bab55f74c013fb491f1ae8ab1dd7ff9ed698584 AS build
+# The build stage always runs on the builder's own platform. The jar is JVM
+# bytecode, identical for every target architecture, so compiling it once
+# natively and copying it into each runtime image avoids running Maven under
+# emulation for the non-native target of a multi-arch build.
+FROM --platform=$BUILDPLATFORM maven:3.9-eclipse-temurin-17@sha256:1a352420f7aba21f5ad08df31bab55f74c013fb491f1ae8ab1dd7ff9ed698584 AS build
 
 WORKDIR /build
 
@@ -39,8 +44,7 @@ RUN jar="$(ls target/openfednow-*.jar)" \
     && java -Djarmode=tools -jar "$jar" extract --layers --launcher --destination extracted
 
 
-# eclipse-temurin:17-jre
-FROM eclipse-temurin@sha256:0b6521287f850ec1c4b31c9074c5a1ae1d67c5922c3fefd21065c7c32e244d4a AS runtime
+FROM eclipse-temurin:17-jre@sha256:0b6521287f850ec1c4b31c9074c5a1ae1d67c5922c3fefd21065c7c32e244d4a AS runtime
 
 ARG VERSION=0.0.0-dev
 ARG REVISION=unknown
