@@ -227,6 +227,22 @@ openfednow:
   # counter so ops can measure how often the guard trips.
   bridge-mode:
     allow-sends: ${BRIDGE_MODE_ALLOW_SENDS:false}
+    # Per-account aggregate send cap during bridge mode (#68). Bounds the total
+    # USD that can leave one account against the cached Shadow Ledger balance
+    # while the core is offline (the STIP gap, ADR-0010). Unset = disabled: an
+    # operator must opt in with a ceiling they have reasoned about rather than
+    # inherit a shipped number. Once an account's counted sends would exceed the
+    # cap, further sends are rejected with ISO 20022 AM04 until the core is back
+    # online AND reconciliation confirms the authoritative balance. The cap
+    # fails closed: no TTL, no time-based reset. A reversed (compensated) send
+    # releases its amount; ACSP/unknown-outcome sends stay counted.
+    # Requires a Redis eviction policy that cannot drop the window key
+    # (noeviction or volatile-*) and persistence, same as balances.
+    max-aggregate-send-amount: ${BRIDGE_MODE_MAX_AGGREGATE_SEND_AMOUNT:}
+    # How long a maintenance window is expected to last. Alerting threshold
+    # only — a window open longer than this is flagged to operators; it never
+    # resets the cap.
+    expected-window-hours: ${BRIDGE_MODE_EXPECTED_WINDOW_HOURS:6}
 
   # Admin audit log retention (audit #15). Default 365 days — long enough for
   # typical compliance review windows. The sweep runs daily.
