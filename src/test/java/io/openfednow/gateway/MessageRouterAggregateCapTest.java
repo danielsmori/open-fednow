@@ -59,7 +59,7 @@ class MessageRouterAggregateCapTest {
         f.router.routeOutbound(message("E2E-OFF"));
 
         verify(f.shadowLedger).applyDebit(anyString(), any(), anyString());
-        verify(f.shadowLedger, never()).applyDebitCapped(anyString(), any(), anyString());
+        verify(f.shadowLedger, never()).applyDebitCappedDetailed(anyString(), any(), anyString());
         verify(f.shadowLedger, never()).hasOpenAggregate(anyString());
     }
 
@@ -69,7 +69,7 @@ class MessageRouterAggregateCapTest {
 
         f.router.routeOutbound(message("E2E-BRIDGE"));
 
-        verify(f.shadowLedger).applyDebitCapped(anyString(), any(), anyString());
+        verify(f.shadowLedger).applyDebitCappedDetailed(anyString(), any(), anyString());
         verify(f.shadowLedger, never()).applyDebit(anyString(), any(), anyString());
     }
 
@@ -79,7 +79,7 @@ class MessageRouterAggregateCapTest {
 
         f.router.routeOutbound(message("E2E-WINDOW"));
 
-        verify(f.shadowLedger).applyDebitCapped(anyString(), any(), anyString());
+        verify(f.shadowLedger).applyDebitCappedDetailed(anyString(), any(), anyString());
         verify(f.shadowLedger, never()).applyDebit(anyString(), any(), anyString());
     }
 
@@ -90,7 +90,53 @@ class MessageRouterAggregateCapTest {
         f.router.routeOutbound(message("E2E-ONLINE"));
 
         verify(f.shadowLedger).applyDebit(anyString(), any(), anyString());
-        verify(f.shadowLedger, never()).applyDebitCapped(anyString(), any(), anyString());
+        verify(f.shadowLedger, never()).applyDebitCappedDetailed(anyString(), any(), anyString());
+    }
+
+    // ── Reconciliation owed (PR 3) ───────────────────────────────────────────
+
+    @Test
+    void countedBridgeModeSendMarksReconciliationPending() {
+        Fixture f = new Fixture(true, true, false);
+
+        f.router.routeOutbound(message("E2E-MARK"));
+
+        verify(f.availabilityBridge).markReconciliationPending(anyString());
+    }
+
+    @Test
+    void countedSendWithTheCoreOnlineDoesNotMark() {
+        // a send counted only because an earlier window is still open: the
+        // owed reconciliation was already marked when that window opened
+        Fixture f = new Fixture(true, false, true);
+
+        f.router.routeOutbound(message("E2E-NOMARK"));
+
+        verify(f.availabilityBridge, never()).markReconciliationPending(anyString());
+    }
+
+    @Test
+    void onlineSendThatReopensAWindowMarks() {
+        // the send passed the "window open" check just as reconciliation closed
+        // the window, and its debit re-created it: that window is owed a cycle
+        Fixture f = new Fixture(true, false, true);
+        when(f.shadowLedger.applyDebitCappedDetailed(anyString(), any(), anyString()))
+                .thenReturn(new ShadowLedger.CappedDebit(CappedDebitResult.APPLIED, true));
+
+        f.router.routeOutbound(message("E2E-REOPEN"));
+
+        verify(f.availabilityBridge).markReconciliationPending(anyString());
+    }
+
+    @Test
+    void rejectedBridgeModeSendDoesNotMark() {
+        Fixture f = new Fixture(true, true, false);
+        when(f.shadowLedger.applyDebitCappedDetailed(anyString(), any(), anyString()))
+                .thenReturn(new ShadowLedger.CappedDebit(CappedDebitResult.AGGREGATE_CAP_EXCEEDED, false));
+
+        f.router.routeOutbound(message("E2E-REJ-NOMARK"));
+
+        verify(f.availabilityBridge, never()).markReconciliationPending(anyString());
     }
 
     // ── Pre-check ────────────────────────────────────────────────────────────
@@ -105,7 +151,7 @@ class MessageRouterAggregateCapTest {
         assertThat(r.getTransactionStatus()).isEqualTo(Pacs002Message.TransactionStatus.RJCT);
         assertThat(r.getRejectReasonCode()).isEqualTo("AM04");
         verify(f.sagaOrchestrator, never()).initiate(any(), any());
-        verify(f.shadowLedger, never()).applyDebitCapped(anyString(), any(), anyString());
+        verify(f.shadowLedger, never()).applyDebitCappedDetailed(anyString(), any(), anyString());
         verify(f.fedNowClient, never()).submitCreditTransfer(any());
         verify(f.idempotencyService).recordOutcome(eq("E2E-PRE"), any());
         assertThat(f.capExceeded()).isEqualTo(1.0);
@@ -116,8 +162,8 @@ class MessageRouterAggregateCapTest {
     @Test
     void raceLoserOnTheCapIsCompensatedWithAm04() {
         Fixture f = new Fixture(true, true, false);
-        when(f.shadowLedger.applyDebitCapped(anyString(), any(), anyString()))
-                .thenReturn(CappedDebitResult.AGGREGATE_CAP_EXCEEDED);
+        when(f.shadowLedger.applyDebitCappedDetailed(anyString(), any(), anyString()))
+                .thenReturn(new ShadowLedger.CappedDebit(CappedDebitResult.AGGREGATE_CAP_EXCEEDED, false));
 
         Pacs002Message r = f.router.routeOutbound(message("E2E-RACE-CAP")).getBody();
 
@@ -132,8 +178,8 @@ class MessageRouterAggregateCapTest {
     @Test
     void raceLoserOnTheBalanceIsCompensatedWithInsufficientFunds() {
         Fixture f = new Fixture(true, true, false);
-        when(f.shadowLedger.applyDebitCapped(anyString(), any(), anyString()))
-                .thenReturn(CappedDebitResult.INSUFFICIENT_FUNDS);
+        when(f.shadowLedger.applyDebitCappedDetailed(anyString(), any(), anyString()))
+                .thenReturn(new ShadowLedger.CappedDebit(CappedDebitResult.INSUFFICIENT_FUNDS, false));
 
         Pacs002Message r = f.router.routeOutbound(message("E2E-RACE-NSF")).getBody();
 
@@ -183,8 +229,8 @@ class MessageRouterAggregateCapTest {
             when(shadowLedger.getAvailableBalance(anyString())).thenReturn(new BigDecimal("10000.00"));
             when(shadowLedger.isAggregateCapEnabled()).thenReturn(capEnabled);
             when(shadowLedger.hasOpenAggregate(anyString())).thenReturn(windowOpen);
-            when(shadowLedger.applyDebitCapped(anyString(), any(), anyString()))
-                    .thenReturn(CappedDebitResult.APPLIED);
+            when(shadowLedger.applyDebitCappedDetailed(anyString(), any(), anyString()))
+                    .thenReturn(new ShadowLedger.CappedDebit(CappedDebitResult.APPLIED, false));
             when(sagaOrchestrator.initiate(any(), any()))
                     .thenReturn(new PaymentSaga("SAGA-1", "TXN", Rail.FEDNOW));
             router = new MessageRouter(

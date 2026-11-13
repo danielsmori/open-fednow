@@ -277,6 +277,21 @@ openfednow:
   # throughput on well-resourced JVMs; decrease for tighter heap budgets.
   reconciliation:
     batch-size: ${RECONCILIATION_BATCH_SIZE:500}
+    # Start a reconciliation cycle automatically once the core is back online
+    # after bridge-mode activity (#68). Required for the fail-closed aggregate
+    # send cap to lift without an operator. Polls every
+    # shadow-ledger.reconciliation-poll-interval-seconds; a cycle that does not
+    # reconcile every account is retried on the next poll. With PostgreSQL,
+    # instances coordinate through an advisory lock so only one cycle runs at a
+    # time (needs session pooling — not PgBouncer transaction mode). The manual
+    # /admin/reconcile endpoint works either way.
+    auto-on-core-recovery: ${RECONCILIATION_AUTO_ON_CORE_RECOVERY:true}
+    # A cycle that runs but does not settle the backlog (failed or deferred
+    # accounts, or bridge-mode windows still open — e.g. a send whose rail
+    # outcome is unknown) is retried with exponential backoff between these
+    # bounds. Watch reconciliation.auto.consecutive_unsettled.
+    auto-retry-backoff-initial-seconds: ${RECONCILIATION_AUTO_RETRY_BACKOFF_INITIAL_SECONDS:30}
+    auto-retry-backoff-max-seconds: ${RECONCILIATION_AUTO_RETRY_BACKOFF_MAX_SECONDS:900}
 
   # Shadow Ledger settings
   shadow-ledger:

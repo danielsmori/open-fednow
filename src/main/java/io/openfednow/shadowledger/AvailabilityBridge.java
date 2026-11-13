@@ -34,6 +34,7 @@ public class AvailabilityBridge {
     private final CoreBankingAdapter coreBankingAdapter;
     private final ShadowLedger shadowLedger;
     private final RabbitTemplate rabbitTemplate;
+    private final AutomaticReconciliationTrigger reconciliationTrigger;
 
     /**
      * Tracks the last known core availability to detect mode transitions.
@@ -43,10 +44,22 @@ public class AvailabilityBridge {
 
     public AvailabilityBridge(CoreBankingAdapter coreBankingAdapter,
                                ShadowLedger shadowLedger,
-                               RabbitTemplate rabbitTemplate) {
+                               RabbitTemplate rabbitTemplate,
+                               AutomaticReconciliationTrigger reconciliationTrigger) {
         this.coreBankingAdapter = coreBankingAdapter;
         this.shadowLedger = shadowLedger;
         this.rabbitTemplate = rabbitTemplate;
+        this.reconciliationTrigger = reconciliationTrigger;
+    }
+
+    /**
+     * Records that bridge-mode work happened and a reconciliation is owed once
+     * the core is back (#68). Called for work the availability poll might not
+     * see — an outage shorter than one poll interval. Never throws; a no-op
+     * when automatic reconciliation is disabled.
+     */
+    public void markReconciliationPending(String reason) {
+        reconciliationTrigger.markPending(reason);
     }
 
     /**
@@ -77,16 +90,25 @@ public class AvailabilityBridge {
                     return message;
                 });
         log.info("Transaction queued for core replay transactionId={}", transactionId);
+        markReconciliationPending("inbound payment queued for core replay");
     }
 
     /**
-     * Monitors core system availability and logs mode transitions.
+     * Monitors core system availability, logs mode transitions, and drives
+     * automatic reconciliation (#68).
      *
      * <p>Runs on a fixed delay controlled by
      * {@code openfednow.shadow-ledger.reconciliation-poll-interval-seconds}
      * (default: 30 seconds). Logs an event whenever the core transitions
      * between online and bridge modes so that operations dashboards and
      * alerting systems can detect maintenance windows.
+     *
+     * <p>Every poll hands over to {@link AutomaticReconciliationTrigger}: one
+     * that finds the core offline marks a reconciliation as owed (on every
+     * poll, not only on the transition, so a mark lost to a transient Redis
+     * error is retried); one that finds it online starts a cycle in the
+     * background if one is owed — whether this instance saw the outage or not.
+     * Neither blocks this (scheduler) thread on Redis or on the cycle.
      */
     @Scheduled(fixedDelayString =
             "${openfednow.shadow-ledger.reconciliation-poll-interval-seconds:30}000")
@@ -109,6 +131,12 @@ public class AvailabilityBridge {
             lastKnownAvailable = currentlyAvailable;
         } else {
             log.debug("Core availability poll: mode={}", currentlyAvailable ? "ONLINE" : "BRIDGE");
+        }
+
+        if (currentlyAvailable) {
+            reconciliationTrigger.onCoreOnline();
+        } else {
+            reconciliationTrigger.onCoreOffline();
         }
     }
 }
