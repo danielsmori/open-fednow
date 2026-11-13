@@ -198,8 +198,8 @@ public class BridgeAggregateWindowMonitor {
         lastScanEpochSeconds.set(now.getEpochSecond());
         if (overdue > 0 && overdue != previousOverdue) {
             log.warn("{} bridge-mode aggregate window(s) open longer than {}h — the accounts stay capped "
-                            + "until reconciliation confirms their sends; check reconciliation and unresolved "
-                            + "sends (GET /admin/sagas)", overdue, policy.getExpectedWindowHours());
+                            + "until reconciliation releases their sends; check reconciliation, unresolved sends "
+                            + "(GET /admin/sagas) and the operator guide's runbook", overdue, policy.getExpectedWindowHours());
         }
     }
 }

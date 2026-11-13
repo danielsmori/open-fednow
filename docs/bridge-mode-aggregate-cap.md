@@ -13,7 +13,7 @@ It does **not**:
 - **See other channels.** Card and teller activity is never counted. The cap limits what *this system* sends during a window, so worst-case exposure is the cap plus whatever other channels authorize.
 - **Apply to the SQL reliability path.** It covers the legacy `MessageRouter.routeOutbound` path only. The reliability path refuses sends while the core is offline; enforcing the cap there before that changes is tracked in [#137](https://github.com/danielsmori/open-fednow/issues/137).
 - **Enable sends on its own.** `openfednow.bridge-mode.allow-sends` is still `false` by default, and with it off, sends during an outage are rejected with `TS01` before the cap is consulted.
-- **Run on the default route.** The legacy route it guards (`POST /fednow/send` through `MessageRouter.routeOutbound`) is reachable only in the sandbox. That requires `openfednow.legacy-outbound-sandbox-enabled=true` (default `false`), the sandbox FedNow client, and the reliability bridge (`openfednow.reliability.legacy-entry-bridge-enabled`) left off. Otherwise `/fednow/send` answers 503 or uses the SQL reliability path, and the cap never applies.
+- **Apply on the default route.** The legacy route it guards (`POST /fednow/send` through `MessageRouter.routeOutbound`) is reachable only in the sandbox. That requires `openfednow.legacy-outbound-sandbox-enabled=true` (default `false`), the sandbox FedNow client, and the reliability bridge (`openfednow.reliability.legacy-entry-bridge-enabled`) left off. Otherwise `/fednow/send` answers 503 or uses the SQL reliability path, and the cap never applies.
 
 ## How it works
 
@@ -82,7 +82,7 @@ None of these carries an account tag: per-account series would be unbounded and 
 Suggested alerts:
 
 - `windows_overdue > 0` sustained for longer than the retry backoff maximum (15 minutes by default) once maintenance is over. No metric reports core availability, so correlate with your maintenance schedule.
-- `last_scan_epoch_seconds` older than a few scan intervals.
+- `last_scan_epoch_seconds` older than a few scan intervals, while the cap is enabled (with the cap disabled it stays at 0).
 - `reconciliation.auto.consecutive_unsettled >= 3`.
 - A rising `cap_exceeded` rate.
 - `windows_near_cap` trending up during a window.

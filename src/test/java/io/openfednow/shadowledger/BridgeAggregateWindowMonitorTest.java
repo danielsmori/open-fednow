@@ -68,13 +68,21 @@ class BridgeAggregateWindowMonitorTest {
         when(ledger.openAggregateAccountIds())
                 .thenReturn(List.of())
                 .thenThrow(new IllegalStateException("redis down"));
-        BridgeAggregateWindowMonitor monitor = monitor(enabledPolicy());
+        java.util.concurrent.atomic.AtomicReference<Instant> now = new java.util.concurrent.atomic.AtomicReference<>(NOW);
+        Clock moving = new Clock() {
+            @Override public java.time.ZoneId getZone() { return ZoneOffset.UTC; }
+            @Override public Clock withZone(java.time.ZoneId zone) { return this; }
+            @Override public Instant instant() { return now.get(); }
+        };
+        BridgeAggregateWindowMonitor monitor =
+                new BridgeAggregateWindowMonitor(ledger, enabledPolicy(), meters, 80, 60, moving);
 
         monitor.scan();
         assertThat(gauge(BridgeAggregateWindowMonitor.LAST_SCAN_METRIC)).isEqualTo(NOW.getEpochSecond());
 
+        now.set(NOW.plusSeconds(60)); // a later scan that fails...
         org.assertj.core.api.Assertions.assertThatThrownBy(monitor::scan);
-        // a failed scan leaves the timestamp where it was: staleness is visible
+        // ...leaves the timestamp at the last success: staleness is visible
         assertThat(gauge(BridgeAggregateWindowMonitor.LAST_SCAN_METRIC)).isEqualTo(NOW.getEpochSecond());
     }
 

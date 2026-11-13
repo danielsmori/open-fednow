@@ -124,7 +124,7 @@ Inbound cancellation handling is now implemented — see "Cancellation handling"
 
 Since [#146](https://github.com/danielsmori/open-fednow/pull/146), reconciliation starts automatically when the core comes back, and a PostgreSQL session-level advisory lock keeps it to one cycle at a time across instances. Limits:
 
-- **Overlap is narrowed, not fenced.** If the lock's database session is lost mid-cycle, the cycle stops once it notices: after up to about 15 seconds plus the slowest single account, longer if the database stops responding (the liveness check's network timeout is 30 seconds). Until then, a second cycle could overlap.
+- **Overlap is narrowed, not fenced.** If the lock's database session is lost mid-cycle, the cycle stops once it notices: after up to about 15 seconds plus the slowest single account, longer if the database stops responding (the liveness check's network timeout is 30 seconds), and not bounded at all if PostgreSQL itself is slow to notice a dead session. Until then, a second cycle could overlap.
 - **Pooling.** The lock requires session pooling; PgBouncer in transaction mode breaks it. On a non-PostgreSQL database there is no cross-instance lock at all.
 - **Socket timeouts.** Without a pgjdbc `socketTimeout`, a dead database connection can block a cycle indefinitely on that instance. The lock's own connection has a 30-second network timeout.
 - **Uncapped short outages.** With the cap disabled, an outbound send during an outage shorter than one availability poll does not mark reconciliation as owed.
