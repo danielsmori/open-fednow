@@ -65,7 +65,7 @@ class ReconciliationPaginationTest {
     void zeroBatchSizeIsRejected() {
         ShadowLedger ledger = mock(ShadowLedger.class);
         CoreBankingAdapter adapter = mock(CoreBankingAdapter.class);
-        assertThatThrownBy(() -> new ReconciliationService(ledger, jdbc, adapter, txManager, 0))
+        assertThatThrownBy(() -> new ReconciliationService(ledger, jdbc, adapter, txManager, 0, ReconciliationLock.LOCAL_ONLY))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("batch-size");
     }
@@ -74,7 +74,7 @@ class ReconciliationPaginationTest {
     void negativeBatchSizeIsRejected() {
         ShadowLedger ledger = mock(ShadowLedger.class);
         CoreBankingAdapter adapter = mock(CoreBankingAdapter.class);
-        assertThatThrownBy(() -> new ReconciliationService(ledger, jdbc, adapter, txManager, -5))
+        assertThatThrownBy(() -> new ReconciliationService(ledger, jdbc, adapter, txManager, -5, ReconciliationLock.LOCAL_ONLY))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("batch-size");
     }
@@ -91,7 +91,7 @@ class ReconciliationPaginationTest {
     void allAccountsAreReconciledWhenDatasetSpansManyBatches() {
         ShadowLedger ledger = stubLedgerAtBalance(BigDecimal.ZERO);
         CoreBankingAdapter adapter = stubCoreAtBalance(BigDecimal.ZERO);
-        ReconciliationService service = new ReconciliationService(ledger, jdbc, adapter, txManager, 100);
+        ReconciliationService service = new ReconciliationService(ledger, jdbc, adapter, txManager, 100, ReconciliationLock.LOCAL_ONLY);
 
         // 1,250 distinct accounts, one row each — forces 13 paginated iterations
         // (1250 / 100 batchSize + a final empty fetch) and exercises the lastSeen cursor.
@@ -144,7 +144,7 @@ class ReconciliationPaginationTest {
     void multipleRowsPerAccountAreAllConfirmedInOneVisit() {
         ShadowLedger ledger = stubLedgerAtBalance(BigDecimal.ZERO);
         CoreBankingAdapter adapter = stubCoreAtBalance(BigDecimal.ZERO);
-        ReconciliationService service = new ReconciliationService(ledger, jdbc, adapter, txManager, 10);
+        ReconciliationService service = new ReconciliationService(ledger, jdbc, adapter, txManager, 10, ReconciliationLock.LOCAL_ONLY);
 
         // 25 accounts, 4 rows each — total 100 rows, but 25 distinct account IDs
         int accountCount = 25;
@@ -178,7 +178,7 @@ class ReconciliationPaginationTest {
         when(adapter.getAvailableBalance(eq("ACC-00050"))).thenReturn(new BigDecimal("50.00"));
         when(adapter.getAvailableBalance(eq("ACC-00350"))).thenReturn(new BigDecimal("50.00"));
 
-        ReconciliationService service = new ReconciliationService(ledger, jdbc, adapter, txManager, 100);
+        ReconciliationService service = new ReconciliationService(ledger, jdbc, adapter, txManager, 100, ReconciliationLock.LOCAL_ONLY);
 
         for (int i = 0; i < 400; i++) {
             insertPendingRow("ACC-%05d".formatted(i), "TXN-%05d".formatted(i));
@@ -203,7 +203,7 @@ class ReconciliationPaginationTest {
         when(adapter.getAvailableBalance(eq("ACC-00000")))
                 .thenThrow(new RuntimeException("simulated core failure"));
 
-        ReconciliationService service = new ReconciliationService(ledger, jdbc, adapter, txManager, 5);
+        ReconciliationService service = new ReconciliationService(ledger, jdbc, adapter, txManager, 5, ReconciliationLock.LOCAL_ONLY);
 
         // Small dataset — completes quickly if the loop is correct; hangs if it isn't
         for (int i = 0; i < 20; i++) {
@@ -238,7 +238,7 @@ class ReconciliationPaginationTest {
     void coreAdapterIsConsultedOncePerDistinctAccount() {
         ShadowLedger ledger = stubLedgerAtBalance(BigDecimal.ZERO);
         CoreBankingAdapter adapter = stubCoreAtBalance(BigDecimal.ZERO);
-        ReconciliationService service = new ReconciliationService(ledger, jdbc, adapter, txManager, 7);
+        ReconciliationService service = new ReconciliationService(ledger, jdbc, adapter, txManager, 7, ReconciliationLock.LOCAL_ONLY);
 
         // 21 distinct accounts — exactly 3 batches of 7 plus an empty terminator query.
         // (3 rows per account so the test also confirms one adapter call per account,
@@ -266,7 +266,8 @@ class ReconciliationPaginationTest {
                 jdbc,
                 stubCoreAtBalance(BigDecimal.ZERO),
                 txManager,
-                batchSize);
+                batchSize,
+                ReconciliationLock.LOCAL_ONLY);
     }
 
     private ShadowLedger stubLedgerAtBalance(BigDecimal balance) {

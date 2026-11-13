@@ -108,7 +108,8 @@ public class ShadowLedger {
      *
      * <p>Returns {@code {-1, balance}} on insufficient funds,
      * {@code {-2, aggregate}} when the cap would be exceeded, and
-     * {@code {0, balanceBefore, aggregateAfter}} when applied. Amounts are
+     * {@code {0, balanceBefore, aggregateAfter, openedWindow}} when applied
+     * ({@code openedWindow} is 1 when this send created the window). Amounts are
      * formatted with {@code %d} so large values never switch to exponent
      * notation.
      */
@@ -120,9 +121,9 @@ public class ShadowLedger {
                     "if total + amt > tonumber(ARGV[2]) then return {-2, total} end\n" +
                     "redis.call('SET', KEYS[1], string.format('%d', bal - amt))\n" +
                     "redis.call('HINCRBY', KEYS[2], ARGV[4], ARGV[1])\n" +
-                    "redis.call('HSETNX', KEYS[2], ARGV[5], ARGV[6])\n" +
+                    "local opened = redis.call('HSETNX', KEYS[2], ARGV[5], ARGV[6])\n" +
                     "redis.call('HSET', KEYS[2], ARGV[3], ARGV[1])\n" +
-                    "return {0, bal, total + amt}",
+                    "return {0, bal, total + amt, opened}",
             List.class);
 
     /**
@@ -332,6 +333,27 @@ public class ShadowLedger {
      */
     public CappedDebitResult applyDebitCapped(String accountId, BigDecimal amount,
                                               String transactionId) {
+        return applyDebitCappedDetailed(accountId, amount, transactionId).result();
+    }
+
+    /**
+     * Outcome of {@link #applyDebitCappedDetailed}.
+     *
+     * @param openedWindow {@code true} when this send created the account's
+     *                     aggregate window (there was none before it) — the
+     *                     caller must then record that a reconciliation is owed
+     */
+    public record CappedDebit(CappedDebitResult result, boolean openedWindow) { }
+
+    /**
+     * {@link #applyDebitCapped}, also reporting whether the send opened a new
+     * aggregate window. A window can be opened outside bridge mode: a send that
+     * passed the "window open" check just as reconciliation closed the window
+     * re-creates it holding only itself, and that window is owed a
+     * reconciliation like any other (#68).
+     */
+    public CappedDebit applyDebitCappedDetailed(String accountId, BigDecimal amount,
+                                                String transactionId) {
         // Throws IllegalStateException when the cap is disabled.
         long aggregateCapCents = aggregateCapPolicy.getMaxAggregateSendCents();
         long amountCents = dollarsToCents(amount);
@@ -356,26 +378,27 @@ public class ShadowLedger {
                             + "balance={} requested={}",
                     io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
                     centsToDollars(observed), amount);
-            return CappedDebitResult.INSUFFICIENT_FUNDS;
+            return new CappedDebit(CappedDebitResult.INSUFFICIENT_FUNDS, false);
         }
         if (code == CAPPED_DEBIT_CAP_EXCEEDED) {
             log.warn("Shadow Ledger capped debit rejected: aggregate cap would be exceeded "
                             + "account={} aggregate={} requested={} cap={}",
                     io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
                     centsToDollars(observed), amount, centsToDollars(aggregateCapCents));
-            return CappedDebitResult.AGGREGATE_CAP_EXCEEDED;
+            return new CappedDebit(CappedDebitResult.AGGREGATE_CAP_EXCEEDED, false);
         }
 
         long balanceBeforeCents = observed;
         long balanceAfterCents = balanceBeforeCents - amountCents;
         long aggregateAfterCents = ((Number) result.get(2)).longValue();
+        boolean openedWindow = result.size() > 3 && ((Number) result.get(3)).longValue() == 1L;
         logTransaction(transactionId, transactionId, accountId, "DEBIT",
                 amount, centsToDollars(balanceBeforeCents), centsToDollars(balanceAfterCents));
         log.info("Shadow Ledger capped debit applied account={} amount={} balanceAfter={} "
                         + "aggregateAfter={}",
                 io.openfednow.security.pii.PiiRedactor.maskAccount(accountId), amount,
                 centsToDollars(balanceAfterCents), centsToDollars(aggregateAfterCents));
-        return CappedDebitResult.APPLIED;
+        return new CappedDebit(CappedDebitResult.APPLIED, openedWindow);
     }
 
     /**

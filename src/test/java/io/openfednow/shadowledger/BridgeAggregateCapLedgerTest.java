@@ -286,6 +286,24 @@ class BridgeAggregateCapLedgerTest extends AbstractInfrastructureIntegrationTest
     // ── Policy ownership and read-side helpers (PR 2) ─────────────────────────
 
     @Test
+    void detailedDebitReportsWhenASendOpensTheWindow() {
+        seed("ACC-AGG-OPEN", 100_000);
+
+        assertThat(shadowLedger.applyDebitCappedDetailed(
+                "ACC-AGG-OPEN", new BigDecimal("10.00"), "TXN-OPEN-1").openedWindow()).isTrue();
+        assertThat(shadowLedger.applyDebitCappedDetailed(
+                "ACC-AGG-OPEN", new BigDecimal("10.00"), "TXN-OPEN-2").openedWindow()).isFalse();
+        // a rejection never opens a window
+        assertThat(shadowLedger.applyDebitCappedDetailed(
+                "ACC-AGG-OPEN", new BigDecimal("1000.00"), "TXN-OPEN-3").openedWindow()).isFalse();
+
+        // once reconciliation closed it, the next counted send opens a new one
+        shadowLedger.clearAggregate("ACC-AGG-OPEN");
+        assertThat(shadowLedger.applyDebitCappedDetailed(
+                "ACC-AGG-OPEN", new BigDecimal("10.00"), "TXN-OPEN-4").openedWindow()).isTrue();
+    }
+
+    @Test
     void ledgerReadsTheCapFromThePolicy() {
         assertThat(shadowLedger.isAggregateCapEnabled()).isTrue();
     }

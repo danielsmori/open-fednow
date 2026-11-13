@@ -52,16 +52,34 @@ public class ReconciliationService {
      * realistic concern is "operator triggers /admin/reconcile while the scheduled
      * trigger is already running" — a non-fair lock with tryLock semantics surfaces
      * the collision immediately rather than queuing the second call behind a
-     * potentially long-running cycle. Cross-pod coordination is institution-specific
-     * deployment work (see ADR-0001 / known-limitations on the multi-pod constraint).
+     * potentially long-running cycle. Across instances, {@link #reconciliationLock}
+     * provides the same guarantee when it is the PostgreSQL advisory lock; with
+     * {@link ReconciliationLock#LOCAL_ONLY} (non-PostgreSQL databases) there is
+     * no cross-instance guard.
      */
     private final ReentrantLock reconcileLock = new ReentrantLock();
+    /**
+     * Cross-instance guard (#68): at most one reconciliation cycle runs anywhere
+     * at a time. Taken after the in-JVM lock and held for the whole cycle.
+     */
+    private final ReconciliationLock reconciliationLock;
+
+    /**
+     * How often a running cycle re-confirms it still holds the cross-instance
+     * lock (between accounts, and always before the first account and before
+     * the window sweep). This narrows, but does not fence, the time two cycles
+     * could overlap if the lock is lost mid-cycle: the worst case is this
+     * interval plus the slowest single account (one core call). It also keeps
+     * the lock's database session from idling out.
+     */
+    static final long LOCK_CHECK_INTERVAL_NANOS = java.util.concurrent.TimeUnit.SECONDS.toNanos(15);
 
     public ReconciliationService(ShadowLedger shadowLedger,
                                  JdbcTemplate jdbc,
                                  CoreBankingAdapter coreBankingAdapter,
                                  PlatformTransactionManager txManager,
-                                 @Value("${openfednow.reconciliation.batch-size:500}") int batchSize) {
+                                 @Value("${openfednow.reconciliation.batch-size:500}") int batchSize,
+                                 ReconciliationLock reconciliationLock) {
         if (batchSize <= 0) {
             throw new IllegalArgumentException(
                     "openfednow.reconciliation.batch-size must be positive");
@@ -70,6 +88,7 @@ public class ReconciliationService {
         this.jdbc = jdbc;
         this.coreBankingAdapter = coreBankingAdapter;
         this.batchSize = batchSize;
+        this.reconciliationLock = reconciliationLock;
         // Per-account work runs inside its own transaction so a discrepancy correction
         // and the "mark unconfirmed rows confirmed" UPDATE commit together. If either
         // fails, neither persists — the account is reprocessed on the next cycle.
@@ -93,23 +112,80 @@ public class ReconciliationService {
      * @return a {@link ReconciliationReport} summarizing the results
      */
     public ReconciliationReport reconcile() {
+        return attemptReconciliation().report();
+    }
+
+    /**
+     * Runs a reconciliation cycle if no other cycle is running in this JVM or on
+     * any other instance, and reports how it ended in more detail than
+     * {@link #reconcile()} — whether it ran at all, and whether every account
+     * was actually reconciled. {@link AutomaticReconciliationTrigger} uses this
+     * to decide whether the pending marker can be cleared.
+     */
+    public ReconciliationAttempt attemptReconciliation() {
         // Same-JVM concurrency guard. A second concurrent call returns immediately
         // with a synthetic "skipped" report so a misconfigured cron or simultaneous
         // manual + scheduled trigger does not create overlapping reconciliation_run
         // rows and racing UPDATEs against shadow_ledger_transaction_log.
         if (!reconcileLock.tryLock()) {
             log.warn("Reconciliation cycle skipped — another invocation is already running");
-            return new ReconciliationReport(0, 0, true,
+            return ReconciliationAttempt.skipped(Outcome.SKIPPED_IN_PROGRESS,
                     "Skipped: another reconciliation cycle was already in progress");
         }
         try {
-            return reconcileLocked();
+            // Cross-instance guard: the same refusal, across every instance.
+            java.util.Optional<ReconciliationLock.Lease> lease;
+            try {
+                lease = reconciliationLock.tryAcquire();
+            } catch (RuntimeException e) {
+                log.error("Reconciliation cycle not started — cross-instance lock unavailable", e);
+                return new ReconciliationAttempt(Outcome.ABORTED,
+                        new ReconciliationReport(0, 0, false,
+                                "Aborted: reconciliation lock unavailable: " + e.getMessage()),
+                        0, 0, 0);
+            }
+            if (lease.isEmpty()) {
+                log.info("Reconciliation cycle skipped — another instance is running one");
+                return ReconciliationAttempt.skipped(Outcome.SKIPPED_ELSEWHERE,
+                        "Skipped: another instance holds the reconciliation lock");
+            }
+            try (ReconciliationLock.Lease held = lease.get()) {
+                return reconcileLocked(new LockWatch(held));
+            }
         } finally {
             reconcileLock.unlock();
         }
     }
 
-    private ReconciliationReport reconcileLocked() {
+    /**
+     * Re-confirms the cross-instance lock at most every
+     * {@link #LOCK_CHECK_INTERVAL_NANOS}, and on demand before phases that
+     * must not run unguarded. Throws if the lock is gone, which aborts the cycle.
+     */
+    private static final class LockWatch {
+        private final ReconciliationLock.Lease lease;
+        /** Starts "due", so the first account is checked before it is touched. */
+        private long lastCheck = System.nanoTime() - LOCK_CHECK_INTERVAL_NANOS;
+
+        LockWatch(ReconciliationLock.Lease lease) {
+            this.lease = lease;
+        }
+
+        void verify(boolean force) {
+            long now = System.nanoTime();
+            if (!force && now - lastCheck < LOCK_CHECK_INTERVAL_NANOS) {
+                return;
+            }
+            lastCheck = now;
+            if (!lease.stillHeld()) {
+                throw new IllegalStateException(
+                        "Cross-instance reconciliation lock lost mid-cycle — stopping so another "
+                                + "instance's cycle cannot overlap this one");
+            }
+        }
+    }
+
+    private ReconciliationAttempt reconcileLocked(LockWatch lockWatch) {
         log.info("Reconciliation cycle starting");
 
         // Correlate this run with the admin_audit_log entry that triggered it (if any).
@@ -133,6 +209,11 @@ public class ReconciliationService {
 
         int transactionsReplayed = 0;
         int discrepanciesDetected = 0;
+        // Not part of the public report: they tell the automatic trigger whether
+        // every account was actually reconciled (#68).
+        int failedAccounts = 0;
+        int deferredAccounts = 0;
+        int openWindowsRemaining = 0;
 
         try {
             // Process accounts in keyset-paginated batches so a large institution's
@@ -152,13 +233,17 @@ public class ReconciliationService {
                 totalAccounts += batch.size();
 
                 for (String accountId : batch) {
+                    lockWatch.verify(false);
                     try {
-                        int[] outcome = reconcileOneAccount(accountId);
-                        transactionsReplayed += outcome[0];
-                        discrepanciesDetected += outcome[1];
+                        AccountOutcome outcome = reconcileOneAccount(accountId);
+                        transactionsReplayed += outcome.confirmed();
+                        discrepanciesDetected += outcome.discrepancy();
+                        if (outcome.deferred()) deferredAccounts++;
+                        if (outcome.windowReleaseFailed()) failedAccounts++;
                     } catch (Exception e) {
                         log.error("Reconciliation failed for account={}", accountId, e);
                         discrepanciesDetected++;
+                        failedAccounts++;
                     }
                 }
 
@@ -181,22 +266,33 @@ public class ReconciliationService {
             // online: an offline core must not lift the cap. Skipped entirely
             // when the cap is disabled — the SCAN walks the whole keyspace, and
             // an unenforced window has nothing to protect.
+            //
+            // A window still open after the sweep holds sends that are not
+            // releasable yet (rail outcome unresolved, or counted after the
+            // confirmation). It is reported so the cycle does not count as
+            // settled: the owed reconciliation stays pending until it closes.
+            lockWatch.verify(true);
             List<String> openWindows = shadowLedger.isAggregateCapEnabled()
                     ? shadowLedger.openAggregateAccountIds()
                     : List.of();
             if (!openWindows.isEmpty()) {
                 if (coreBankingAdapter.isCoreSystemAvailable()) {
                     for (String accountId : openWindows) {
+                        lockWatch.verify(false);
                         try {
-                            shadowLedger.closeConfirmedAggregate(accountId);
+                            if (!shadowLedger.closeConfirmedAggregate(accountId)) {
+                                openWindowsRemaining++;
+                            }
                         } catch (Exception e) {
                             log.error("Failed to release confirmed sends from bridge aggregate window "
                                             + "account={} — cap stays in force, next cycle retries",
                                     io.openfednow.security.pii.PiiRedactor.maskAccount(accountId), e);
+                            failedAccounts++;
                         }
                     }
                 } else {
                     log.info("Core offline — {} bridge aggregate window(s) stay open", openWindows.size());
+                    deferredAccounts += openWindows.size();
                 }
             }
 
@@ -204,8 +300,10 @@ public class ReconciliationService {
             log.error("Reconciliation cycle failed", e);
             closeRunRecord(runId, transactionsReplayed, discrepanciesDetected, false,
                     "Reconciliation aborted: " + e.getMessage());
-            return new ReconciliationReport(transactionsReplayed, discrepanciesDetected, false,
-                    "Aborted: " + e.getMessage());
+            return new ReconciliationAttempt(Outcome.ABORTED,
+                    new ReconciliationReport(transactionsReplayed, discrepanciesDetected, false,
+                            "Aborted: " + e.getMessage()),
+                    failedAccounts, deferredAccounts, openWindowsRemaining);
         }
 
         boolean successful = discrepanciesDetected == 0;
@@ -216,10 +314,14 @@ public class ReconciliationService {
                         discrepanciesDetected);
 
         closeRunRecord(runId, transactionsReplayed, discrepanciesDetected, successful, summary);
-        log.info("Reconciliation cycle complete replayed={} discrepancies={} success={}",
-                transactionsReplayed, discrepanciesDetected, successful);
+        log.info("Reconciliation cycle complete replayed={} discrepancies={} success={} "
+                        + "failedAccounts={} deferredAccounts={} openWindowsRemaining={}",
+                transactionsReplayed, discrepanciesDetected, successful, failedAccounts, deferredAccounts,
+                openWindowsRemaining);
 
-        return new ReconciliationReport(transactionsReplayed, discrepanciesDetected, successful, summary);
+        return new ReconciliationAttempt(Outcome.COMPLETED,
+                new ReconciliationReport(transactionsReplayed, discrepanciesDetected, successful, summary),
+                failedAccounts, deferredAccounts, openWindowsRemaining);
     }
 
     /**
@@ -338,41 +440,47 @@ public class ReconciliationService {
      * {@link ShadowLedger#closeConfirmedAggregate}. Accounts without a window
      * take exactly the pre-existing path.
      *
-     * @return a two-element array {@code [transactionsConfirmed, discrepancyDetected]}
+     * @return how the account was handled
      */
-    private int[] reconcileOneAccount(String accountId) {
+    private AccountOutcome reconcileOneAccount(String accountId) {
         boolean windowOpen = shadowLedger.hasOpenAggregate(accountId);
         if (windowOpen && !coreBankingAdapter.isCoreSystemAvailable()) {
             log.warn("Core offline — deferring reconciliation of account with open bridge "
                             + "aggregate window account={}",
                     io.openfednow.security.pii.PiiRedactor.maskAccount(accountId));
-            return new int[] { 0, 0 };
+            return new AccountOutcome(0, 0, true, false);
         }
         int[] outcome = reconcileOneAccountInTx(accountId);
-        if (windowOpen) {
-            releaseConfirmedSends(accountId);
-        }
-        return outcome;
+        boolean releaseFailed = windowOpen && !releaseConfirmedSends(accountId);
+        return new AccountOutcome(outcome[0], outcome[1], false, releaseFailed);
     }
+
+    /** Per-account result of {@link #reconcileOneAccount}. */
+    private record AccountOutcome(int confirmed, int discrepancy, boolean deferred,
+                                  boolean windowReleaseFailed) { }
 
     /**
      * Releases the sends the just-committed reconciliation confirmed, if the
      * core is still online. A failure is logged and left for the open-window
      * sweep in {@link #reconcile()}: the sends stay counted (fail-closed).
+     *
+     * @return {@code false} if the release did not happen (core offline, error)
      */
-    private void releaseConfirmedSends(String accountId) {
+    private boolean releaseConfirmedSends(String accountId) {
         try {
             if (!coreBankingAdapter.isCoreSystemAvailable()) {
                 log.warn("Core went offline during reconciliation — bridge aggregate window "
                                 + "stays open account={}",
                         io.openfednow.security.pii.PiiRedactor.maskAccount(accountId));
-                return;
+                return false;
             }
             shadowLedger.closeConfirmedAggregate(accountId);
+            return true;
         } catch (Exception e) {
             log.error("Failed to release confirmed sends from bridge aggregate window account={} "
                             + "— cap stays in force, next reconciliation cycle retries",
                     io.openfednow.security.pii.PiiRedactor.maskAccount(accountId), e);
+            return false;
         }
     }
 
@@ -447,4 +555,49 @@ public class ReconciliationService {
         boolean reconciliationSuccessful,
         String summary
     ) {}
+
+    /** How an {@link #attemptReconciliation()} call ended. */
+    public enum Outcome {
+        /** The cycle ran to the end (accounts may still have failed or been deferred). */
+        COMPLETED,
+        /** The cycle could not start or stopped early. */
+        ABORTED,
+        /** Another cycle is already running in this JVM. */
+        SKIPPED_IN_PROGRESS,
+        /** Another instance holds the cross-instance lock. */
+        SKIPPED_ELSEWHERE
+    }
+
+    /**
+     * Detailed result of {@link #attemptReconciliation()}.
+     *
+     * @param failedAccounts   accounts whose reconciliation, or the release of
+     *                         their confirmed bridge-mode sends, failed this cycle
+     * @param deferredAccounts accounts left for a later cycle because the core
+     *                         was offline
+     * @param openWindowsRemaining bridge-mode aggregate windows (#68) still open
+     *                         after the cycle — they hold sends not releasable
+     *                         yet, so the accounts stay capped
+     */
+    public record ReconciliationAttempt(
+        Outcome outcome,
+        ReconciliationReport report,
+        int failedAccounts,
+        int deferredAccounts,
+        int openWindowsRemaining
+    ) {
+        static ReconciliationAttempt skipped(Outcome outcome, String summary) {
+            return new ReconciliationAttempt(outcome, new ReconciliationReport(0, 0, true, summary), 0, 0, 0);
+        }
+
+        /**
+         * Whether the cycle ran to the end, reconciled every account it found,
+         * and left no account capped — the only result that settles a pending
+         * reconciliation.
+         */
+        public boolean fullyReconciled() {
+            return outcome == Outcome.COMPLETED && failedAccounts == 0 && deferredAccounts == 0
+                    && openWindowsRemaining == 0;
+        }
+    }
 }

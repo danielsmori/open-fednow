@@ -436,8 +436,10 @@ public class MessageRouter {
         // exists; the atomic re-check at the debit (Step 4) is the enforcement
         // point for concurrent sends.
         String debtorAccount = message.getDebtorAccountNumber();
-        boolean countTowardAggregate = shadowLedger.isAggregateCapEnabled()
-                && (availabilityBridge.isInBridgeMode() || shadowLedger.hasOpenAggregate(debtorAccount));
+        boolean capEnabled = shadowLedger.isAggregateCapEnabled();
+        boolean inBridgeMode = capEnabled && availabilityBridge.isInBridgeMode();
+        boolean countTowardAggregate = capEnabled
+                && (inBridgeMode || shadowLedger.hasOpenAggregate(debtorAccount));
         if (countTowardAggregate
                 && shadowLedger.wouldExceedAggregateCap(debtorAccount, message.getInterbankSettlementAmount())) {
             return rejectAggregateCapExceeded(message);
@@ -450,10 +452,11 @@ public class MessageRouter {
 
         // Step 4 — reserve funds: debit debtor account in Shadow Ledger
         if (countTowardAggregate) {
-            ShadowLedger.CappedDebitResult debit = shadowLedger.applyDebitCapped(
+            ShadowLedger.CappedDebit capped = shadowLedger.applyDebitCappedDetailed(
                     debtorAccount,
                     message.getInterbankSettlementAmount(),
                     message.getTransactionId());
+            ShadowLedger.CappedDebitResult debit = capped.result();
             if (debit != ShadowLedger.CappedDebitResult.APPLIED) {
                 // Lost a race after the pre-checks: a concurrent send used up
                 // the cap or the balance. Nothing was debited or counted, so
@@ -463,6 +466,18 @@ public class MessageRouter {
                 return debit == ShadowLedger.CappedDebitResult.AGGREGATE_CAP_EXCEEDED
                         ? rejectAggregateCapExceeded(message)
                         : rejectInsufficientFunds(message);
+            }
+            if (inBridgeMode || capped.openedWindow()) {
+                // The window this send opened or grew is only closed by a
+                // reconciliation; record that one is owed — in bridge mode even
+                // if the outage is too short for the availability poll to
+                // notice, and with the core online when this send re-created a
+                // window that reconciliation had just closed. A send that joins
+                // an existing window with the core online needs no mark: that
+                // window is already owed a reconciliation, and a cycle that
+                // leaves any window open does not settle the marker.
+                availabilityBridge.markReconciliationPending(
+                        inBridgeMode ? "bridge-mode send counted" : "send re-opened an aggregate window");
             }
         } else {
             shadowLedger.applyDebit(
