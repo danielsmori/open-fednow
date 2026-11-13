@@ -412,6 +412,38 @@ class BridgeAggregateCapLedgerTest extends AbstractInfrastructureIntegrationTest
         assertThat(shadowLedger.openAggregateAccountIds()).containsExactly("ACC-AGG-SCAN-2");
     }
 
+    // ── Window gauges (PR 4) ──────────────────────────────────────────────────
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private BridgeAggregateWindowMetrics windowMetrics;
+    @org.springframework.beans.factory.annotation.Autowired
+    private io.micrometer.core.instrument.MeterRegistry meterRegistry;
+
+    @Test
+    void windowGaugesReflectRealWindows() {
+        seed("ACC-AGG-G1", 100_000);
+        seed("ACC-AGG-G2", 100_000);
+        shadowLedger.applyDebitCapped("ACC-AGG-G1", new BigDecimal("450.00"), "TXN-G1"); // 90% of $500
+        shadowLedger.applyDebitCapped("ACC-AGG-G2", new BigDecimal("10.00"), "TXN-G2");
+        // make the second window look open for longer than expected-window-hours
+        redis.opsForHash().put("bridge:aggregate:ACC-AGG-G2", "opened_at", "1000");
+
+        windowMetrics.sampleNow();
+
+        assertThat(gauge(BridgeAggregateWindowMetrics.OPEN_WINDOWS_METRIC)).isEqualTo(2.0);
+        assertThat(gauge(BridgeAggregateWindowMetrics.NEAR_CAP_METRIC)).isEqualTo(1.0);
+        assertThat(gauge(BridgeAggregateWindowMetrics.OVERDUE_METRIC)).isEqualTo(1.0);
+
+        shadowLedger.clearAggregate("ACC-AGG-G1");
+        shadowLedger.clearAggregate("ACC-AGG-G2");
+        windowMetrics.sampleNow();
+        assertThat(gauge(BridgeAggregateWindowMetrics.OPEN_WINDOWS_METRIC)).isZero();
+    }
+
+    private double gauge(String name) {
+        return meterRegistry.get(name).gauge().value();
+    }
+
     // ── Closing on core confirmation (reconciliation) ─────────────────────────
 
     @Test

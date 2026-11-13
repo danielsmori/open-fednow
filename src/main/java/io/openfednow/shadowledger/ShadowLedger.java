@@ -430,8 +430,13 @@ public class ShadowLedger {
      * @param openedWindow {@code true} when this send created the account's
      *                     aggregate window (there was none before it) — the
      *                     caller must then record that a reconciliation is owed
+     * @param pctOfCap     the window's counted total after this send, as a
+     *                     percentage of the configured cap (0 on rejection) —
+     *                     for the {@code bridge_mode.aggregate.pct_of_cap}
+     *                     distribution, so operators see the aggregate trending
+     *                     before sends start being rejected
      */
-    public record CappedDebit(CappedDebitResult result, boolean openedWindow) { }
+    public record CappedDebit(CappedDebitResult result, boolean openedWindow, double pctOfCap) { }
 
     /**
      * {@link #applyDebitCapped}, also reporting whether the send opened a new
@@ -468,14 +473,14 @@ public class ShadowLedger {
                             + "balance={} requested={}",
                     io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
                     centsToDollars(observed), amount);
-            return new CappedDebit(CappedDebitResult.INSUFFICIENT_FUNDS, false);
+            return new CappedDebit(CappedDebitResult.INSUFFICIENT_FUNDS, false, 0.0);
         }
         if (code == CAPPED_DEBIT_CAP_EXCEEDED) {
             log.warn("Shadow Ledger capped debit rejected: aggregate cap would be exceeded "
                             + "account={} aggregate={} requested={} cap={}",
                     io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
                     centsToDollars(observed), amount, centsToDollars(aggregateCapCents));
-            return new CappedDebit(CappedDebitResult.AGGREGATE_CAP_EXCEEDED, false);
+            return new CappedDebit(CappedDebitResult.AGGREGATE_CAP_EXCEEDED, false, 0.0);
         }
 
         long balanceBeforeCents = observed;
@@ -496,7 +501,8 @@ public class ShadowLedger {
                         + "aggregateAfter={}",
                 io.openfednow.security.pii.PiiRedactor.maskAccount(accountId), amount,
                 centsToDollars(balanceAfterCents), centsToDollars(aggregateAfterCents));
-        return new CappedDebit(CappedDebitResult.APPLIED, openedWindow);
+        return new CappedDebit(CappedDebitResult.APPLIED, openedWindow,
+                aggregateAfterCents * 100.0 / aggregateCapCents);
     }
 
     /**

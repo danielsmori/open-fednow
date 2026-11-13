@@ -243,6 +243,9 @@ openfednow:
     # only — a window open longer than this is flagged to operators; it never
     # resets the cap.
     expected-window-hours: ${BRIDGE_MODE_EXPECTED_WINDOW_HOURS:6}
+    # How often the window gauges (open / near-cap / overdue aggregate windows)
+    # are sampled from Redis. Sampling is skipped while the cap is disabled.
+    metrics-sample-interval-seconds: ${BRIDGE_MODE_METRICS_SAMPLE_INTERVAL_SECONDS:60}
 
   # Admin audit log retention (audit #15). Default 365 days — long enough for
   # typical compliance review windows. The sweep runs daily.

@@ -94,6 +94,28 @@ class MessageRouterAggregateCapTest {
         verify(f.shadowLedger, never()).applyDebitCappedDetailed(anyString(), any(), anyString());
     }
 
+    @Test
+    void countedSendRecordsItsPctOfCap() {
+        Fixture f = new Fixture(true, true, false);
+        when(f.shadowLedger.applyDebitCappedDetailed(anyString(), any(), anyString()))
+                .thenReturn(new ShadowLedger.CappedDebit(CappedDebitResult.APPLIED, false, 80.0));
+
+        f.router.routeOutbound(message("E2E-PCT"));
+
+        var summary = f.meterRegistry.get(MessageRouter.PCT_OF_CAP_METRIC).summary();
+        assertThat(summary.count()).isEqualTo(1);
+        assertThat(summary.totalAmount()).isEqualTo(80.0);
+    }
+
+    @Test
+    void uncountedSendRecordsNoPct() {
+        Fixture f = new Fixture(true, false, false);
+
+        f.router.routeOutbound(message("E2E-NOPCT"));
+
+        assertThat(f.meterRegistry.get(MessageRouter.PCT_OF_CAP_METRIC).summary().count()).isZero();
+    }
+
     // ── Reconciliation owed (PR 3) ───────────────────────────────────────────
 
     @Test
@@ -122,7 +144,7 @@ class MessageRouterAggregateCapTest {
         // the window, and its debit re-created it: that window is owed a cycle
         Fixture f = new Fixture(true, false, true);
         when(f.shadowLedger.applyDebitCappedDetailed(anyString(), any(), anyString()))
-                .thenReturn(new ShadowLedger.CappedDebit(CappedDebitResult.APPLIED, true));
+                .thenReturn(new ShadowLedger.CappedDebit(CappedDebitResult.APPLIED, true, 0.0));
 
         f.router.routeOutbound(message("E2E-REOPEN"));
 
@@ -133,7 +155,7 @@ class MessageRouterAggregateCapTest {
     void rejectedBridgeModeSendDoesNotMark() {
         Fixture f = new Fixture(true, true, false);
         when(f.shadowLedger.applyDebitCappedDetailed(anyString(), any(), anyString()))
-                .thenReturn(new ShadowLedger.CappedDebit(CappedDebitResult.AGGREGATE_CAP_EXCEEDED, false));
+                .thenReturn(new ShadowLedger.CappedDebit(CappedDebitResult.AGGREGATE_CAP_EXCEEDED, false, 0.0));
 
         f.router.routeOutbound(message("E2E-REJ-NOMARK"));
 
@@ -192,7 +214,7 @@ class MessageRouterAggregateCapTest {
     void raceLoserOnTheCapIsCompensatedWithAm04() {
         Fixture f = new Fixture(true, true, false);
         when(f.shadowLedger.applyDebitCappedDetailed(anyString(), any(), anyString()))
-                .thenReturn(new ShadowLedger.CappedDebit(CappedDebitResult.AGGREGATE_CAP_EXCEEDED, false));
+                .thenReturn(new ShadowLedger.CappedDebit(CappedDebitResult.AGGREGATE_CAP_EXCEEDED, false, 0.0));
 
         Pacs002Message r = f.router.routeOutbound(message("E2E-RACE-CAP")).getBody();
 
@@ -208,7 +230,7 @@ class MessageRouterAggregateCapTest {
     void raceLoserOnTheBalanceIsCompensatedWithInsufficientFunds() {
         Fixture f = new Fixture(true, true, false);
         when(f.shadowLedger.applyDebitCappedDetailed(anyString(), any(), anyString()))
-                .thenReturn(new ShadowLedger.CappedDebit(CappedDebitResult.INSUFFICIENT_FUNDS, false));
+                .thenReturn(new ShadowLedger.CappedDebit(CappedDebitResult.INSUFFICIENT_FUNDS, false, 0.0));
 
         Pacs002Message r = f.router.routeOutbound(message("E2E-RACE-NSF")).getBody();
 
@@ -263,7 +285,7 @@ class MessageRouterAggregateCapTest {
             when(shadowLedger.isAggregateCapEnabled()).thenReturn(capEnabled);
             when(shadowLedger.hasOpenAggregate(anyString())).thenReturn(windowOpen);
             when(shadowLedger.applyDebitCappedDetailed(anyString(), any(), anyString()))
-                    .thenReturn(new ShadowLedger.CappedDebit(CappedDebitResult.APPLIED, false));
+                    .thenReturn(new ShadowLedger.CappedDebit(CappedDebitResult.APPLIED, false, 0.0));
             when(sagaOrchestrator.initiate(any(), any()))
                     .thenReturn(new PaymentSaga("SAGA-1", "TXN", Rail.FEDNOW));
             router = new MessageRouter(
