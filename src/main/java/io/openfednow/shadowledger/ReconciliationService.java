@@ -211,9 +211,13 @@ public class ReconciliationService {
         int discrepanciesDetected = 0;
         // Not part of the public report: they tell the automatic trigger whether
         // every account was actually reconciled (#68).
-        int failedAccounts = 0;
-        int deferredAccounts = 0;
-        int openWindowsRemaining = 0;
+        // Sets, not counters: an account can be met twice (batch, then sweep)
+        // and must be counted once. A window release that failed in the batch
+        // but succeeded in the sweep is not a failure.
+        java.util.Set<String> failedAccounts = new java.util.HashSet<>();
+        java.util.Set<String> releaseFailedAccounts = new java.util.HashSet<>();
+        java.util.Set<String> deferredAccounts = new java.util.HashSet<>();
+        java.util.Set<String> openWindowAccounts = new java.util.HashSet<>();
 
         try {
             // Process accounts in keyset-paginated batches so a large institution's
@@ -238,12 +242,12 @@ public class ReconciliationService {
                         AccountOutcome outcome = reconcileOneAccount(accountId);
                         transactionsReplayed += outcome.confirmed();
                         discrepanciesDetected += outcome.discrepancy();
-                        if (outcome.deferred()) deferredAccounts++;
-                        if (outcome.windowReleaseFailed()) failedAccounts++;
+                        if (outcome.deferred()) deferredAccounts.add(accountId);
+                        if (outcome.windowReleaseFailed()) releaseFailedAccounts.add(accountId);
                     } catch (Exception e) {
                         log.error("Reconciliation failed for account={}", accountId, e);
                         discrepanciesDetected++;
-                        failedAccounts++;
+                        failedAccounts.add(accountId);
                     }
                 }
 
@@ -281,18 +285,19 @@ public class ReconciliationService {
                         lockWatch.verify(false);
                         try {
                             if (!shadowLedger.closeConfirmedAggregate(accountId)) {
-                                openWindowsRemaining++;
+                                openWindowAccounts.add(accountId);
                             }
+                            releaseFailedAccounts.remove(accountId);
                         } catch (Exception e) {
                             log.error("Failed to release confirmed sends from bridge aggregate window "
                                             + "account={} — cap stays in force, next cycle retries",
                                     io.openfednow.security.pii.PiiRedactor.maskAccount(accountId), e);
-                            failedAccounts++;
+                            releaseFailedAccounts.add(accountId);
                         }
                     }
                 } else {
                     log.info("Core offline — {} bridge aggregate window(s) stay open", openWindows.size());
-                    deferredAccounts += openWindows.size();
+                    deferredAccounts.addAll(openWindows);
                 }
             }
 
@@ -300,28 +305,51 @@ public class ReconciliationService {
             log.error("Reconciliation cycle failed", e);
             closeRunRecord(runId, transactionsReplayed, discrepanciesDetected, false,
                     "Reconciliation aborted: " + e.getMessage());
+            failedAccounts.addAll(releaseFailedAccounts);
             return new ReconciliationAttempt(Outcome.ABORTED,
                     new ReconciliationReport(transactionsReplayed, discrepanciesDetected, false,
                             "Aborted: " + e.getMessage()),
-                    failedAccounts, deferredAccounts, openWindowsRemaining);
+                    failedAccounts.size(), deferredAccounts.size(), openWindowAccounts.size());
         }
+        failedAccounts.addAll(releaseFailedAccounts);
 
-        boolean successful = discrepanciesDetected == 0;
-        String summary = successful
-                ? String.format("Clean reconciliation: %d entries confirmed across all accounts",
-                        transactionsReplayed)
-                : String.format("%d discrepancies detected across accounts; manual review required",
-                        discrepanciesDetected);
+        // "Successful" no longer claims a clean run when accounts were left
+        // behind: deferred (core offline, or a payment landed mid-cycle) or
+        // failed accounts were not reconciled. Accounts still capped by a send
+        // whose rail outcome is unresolved are reported but are not a failure.
+        boolean successful = discrepanciesDetected == 0 && failedAccounts.isEmpty() && deferredAccounts.isEmpty();
+        String summary;
+        if (successful) {
+            summary = String.format("Clean reconciliation: %d entries confirmed across all accounts",
+                    transactionsReplayed);
+        } else {
+            List<String> parts = new java.util.ArrayList<>();
+            if (discrepanciesDetected > 0) {
+                parts.add(String.format("%d discrepancies detected across accounts; manual review required",
+                        discrepanciesDetected));
+            }
+            if (!failedAccounts.isEmpty()) {
+                parts.add(String.format("%d account(s) failed", failedAccounts.size()));
+            }
+            if (!deferredAccounts.isEmpty()) {
+                parts.add(String.format("%d account(s) deferred to a later cycle", deferredAccounts.size()));
+            }
+            summary = String.join("; ", parts);
+        }
+        if (!openWindowAccounts.isEmpty()) {
+            summary += String.format("; %d account(s) still capped by bridge-mode sends awaiting resolution",
+                    openWindowAccounts.size());
+        }
 
         closeRunRecord(runId, transactionsReplayed, discrepanciesDetected, successful, summary);
         log.info("Reconciliation cycle complete replayed={} discrepancies={} success={} "
                         + "failedAccounts={} deferredAccounts={} openWindowsRemaining={}",
-                transactionsReplayed, discrepanciesDetected, successful, failedAccounts, deferredAccounts,
-                openWindowsRemaining);
+                transactionsReplayed, discrepanciesDetected, successful, failedAccounts.size(),
+                deferredAccounts.size(), openWindowAccounts.size());
 
         return new ReconciliationAttempt(Outcome.COMPLETED,
                 new ReconciliationReport(transactionsReplayed, discrepanciesDetected, successful, summary),
-                failedAccounts, deferredAccounts, openWindowsRemaining);
+                failedAccounts.size(), deferredAccounts.size(), openWindowAccounts.size());
     }
 
     /**
@@ -423,12 +451,11 @@ public class ReconciliationService {
      * Reconciles a single account inside its own transaction.
      *
      * <p>The Postgres-side writes — the optional RECONCILIATION audit row from
-     * {@link ShadowLedger#reconcile} and the "mark unconfirmed rows confirmed"
-     * UPDATE — commit or roll back together. The Redis update inside
-     * {@code shadowLedger.reconcile} is outside this transaction (different
-     * system); if Postgres rolls back after Redis has been updated, the
-     * subsequent cycle will detect the residual discrepancy and write the
-     * correction afresh.
+     * {@link ShadowLedger#reconcileIfUnchanged} and the "mark unconfirmed rows
+     * confirmed" UPDATE — commit or roll back together. The Redis correction
+     * is outside this transaction (different system): if Postgres rolls back
+     * after Redis was corrected, the rows stay unconfirmed and the next cycle
+     * confirms them, but that correction's audit row is lost.
      *
      * <p><strong>Bridge-mode aggregate windows (#68).</strong> An account with
      * an open aggregate window is reconciled only while the core is online;
@@ -443,7 +470,9 @@ public class ReconciliationService {
      * @return how the account was handled
      */
     private AccountOutcome reconcileOneAccount(String accountId) {
-        boolean windowOpen = shadowLedger.hasOpenAggregate(accountId);
+        // With the cap disabled, a leftover window is not enforced and must not
+        // change reconciliation: the pre-#68 path runs unchanged.
+        boolean windowOpen = shadowLedger.isAggregateCapEnabled() && shadowLedger.hasOpenAggregate(accountId);
         if (windowOpen && !coreBankingAdapter.isCoreSystemAvailable()) {
             log.warn("Core offline — deferring reconciliation of account with open bridge "
                             + "aggregate window account={}",
@@ -451,8 +480,11 @@ public class ReconciliationService {
             return new AccountOutcome(0, 0, true, false);
         }
         int[] outcome = reconcileOneAccountInTx(accountId);
+        boolean busy = outcome[2] == 1;
         boolean releaseFailed = windowOpen && !releaseConfirmedSends(accountId);
-        return new AccountOutcome(outcome[0], outcome[1], false, releaseFailed);
+        // A busy account (a payment landed mid-reconciliation) is left for the
+        // next cycle, like an account deferred for an offline core.
+        return new AccountOutcome(outcome[0], outcome[1], busy, releaseFailed);
     }
 
     /** Per-account result of {@link #reconcileOneAccount}. */
@@ -484,27 +516,74 @@ public class ReconciliationService {
         }
     }
 
+    /** Attempts per account before a busy account is left for the next cycle. */
+    static final int BUSY_ACCOUNT_ATTEMPTS = 3;
+
+    /**
+     * The per-account reconciliation, inside its own transaction, made safe
+     * against payments that keep flowing while it runs (#142/#144):
+     * <ol>
+     *   <li><strong>Cutoff first.</strong> Read the highest unconfirmed row id.
+     *       A ledger row is written after its Redis balance change, so every
+     *       row at or below the cutoff is already reflected in any snapshot
+     *       taken afterwards.</li>
+     *   <li><strong>Snapshot</strong> the shadow balance with its version, then
+     *       read the core.</li>
+     *   <li><strong>Correct only if nothing was written meanwhile.</strong> If the
+     *       balances differ, apply the core's balance with
+     *       {@link ShadowLedger#reconcileIfUnchanged}, which compares the balance
+     *       <em>version</em> — any write since the snapshot (even an
+     *       equal-and-opposite pair) makes it back off. A busy account is
+     *       retried up to {@link #BUSY_ACCOUNT_ATTEMPTS} times; if it is still
+     *       busy, nothing is written or confirmed and it is reported deferred
+     *       (not as a discrepancy: the true difference is unknown), and the
+     *       next cycle retries it. A blind overwrite would erase those
+     *       payments.</li>
+     *   <li><strong>Confirm only up to the cutoff</strong>, plus the correction's
+     *       own RECONCILIATION row. Rows written after the cutoff may not be in
+     *       the balance that was just reconciled; they stay unconfirmed for the
+     *       next cycle rather than being confirmed against a balance that never
+     *       saw them.</li>
+     * </ol>
+     *
+     * @return {@code [transactionsConfirmed, discrepancyDetected, busy]}
+     */
     private int[] reconcileOneAccountInTx(String accountId) {
         return perAccountTx.execute(status -> {
-            int confirmed = 0;
-            int discrepancyDetected = 0;
-            BigDecimal coreBalance = coreBankingAdapter.getAvailableBalance(accountId);
-            BigDecimal shadowBalance = shadowLedger.getAvailableBalance(accountId);
+            Long cutoff = jdbc.queryForObject(
+                    "SELECT MAX(id) FROM shadow_ledger_transaction_log "
+                            + "WHERE account_id = ? AND core_confirmed = FALSE",
+                    Long.class, accountId);
 
-            if (coreBalance.compareTo(shadowBalance) != 0) {
-                discrepancyDetected = 1;
-                log.warn("Balance discrepancy account={} shadow={} core={}",
-                        io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
-                        shadowBalance, coreBalance);
-                shadowLedger.reconcile(accountId, coreBalance);
+            int discrepancyDetected = 0;
+            boolean settled = false;
+            for (int attempt = 1; attempt <= BUSY_ACCOUNT_ATTEMPTS && !settled; attempt++) {
+                ShadowLedger.BalanceSnapshot snapshot = shadowLedger.snapshotBalance(accountId);
+                BigDecimal coreBalance = coreBankingAdapter.getAvailableBalance(accountId);
+                if (coreBalance.compareTo(snapshot.balance()) == 0) {
+                    settled = true;
+                } else if (shadowLedger.reconcileIfUnchanged(accountId, snapshot, coreBalance)) {
+                    discrepancyDetected = 1;
+                    log.warn("Balance discrepancy corrected account={} shadow={} core={}",
+                            io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
+                            snapshot.balance(), coreBalance);
+                    settled = true;
+                }
+            }
+            if (!settled) {
+                log.warn("Account left for the next reconciliation cycle: its balance changed during "
+                                + "each of {} attempts account={}",
+                        BUSY_ACCOUNT_ATTEMPTS, io.openfednow.security.pii.PiiRedactor.maskAccount(accountId));
+                return new int[] { 0, 0, 1 };
             }
 
-            confirmed = jdbc.update(
+            int confirmed = cutoff == null ? 0 : jdbc.update(
                     "UPDATE shadow_ledger_transaction_log " +
                     "SET core_confirmed = TRUE " +
-                    "WHERE account_id = ? AND core_confirmed = FALSE",
-                    accountId);
-            return new int[] { confirmed, discrepancyDetected };
+                    "WHERE account_id = ? AND core_confirmed = FALSE " +
+                    "AND (id <= ? OR transaction_type = 'RECONCILIATION')",
+                    accountId, cutoff);
+            return new int[] { confirmed, discrepancyDetected, 0 };
         });
     }
 
@@ -573,8 +652,9 @@ public class ReconciliationService {
      *
      * @param failedAccounts   accounts whose reconciliation, or the release of
      *                         their confirmed bridge-mode sends, failed this cycle
-     * @param deferredAccounts accounts left for a later cycle because the core
-     *                         was offline
+     * @param deferredAccounts accounts left for a later cycle — the core was
+     *                         offline, or a payment changed the account's
+     *                         balance while it was being reconciled
      * @param openWindowsRemaining bridge-mode aggregate windows (#68) still open
      *                         after the cycle — they hold sends not releasable
      *                         yet, so the accounts stay capped

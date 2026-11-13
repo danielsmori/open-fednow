@@ -338,16 +338,63 @@ class BridgeAggregateCapLedgerTest extends AbstractInfrastructureIntegrationTest
     }
 
     @Test
-    void windowStaysOpenEvenWhenEverySendWasReleased() {
-        // A window is closed by reconciliation, not by its total reaching zero:
-        // the core still has to confirm the balance.
+    void reversingTheLastCountedSendDropsTheWindow() {
+        // A window with nothing counted holds no exposure. Keeping it would put
+        // the account's later online sends on the capped path for nothing and
+        // make it look overdue (bug bash). Reversing every send closes it.
         seed("ACC-AGG-ZERO", 100_000);
         shadowLedger.applyDebitCapped("ACC-AGG-ZERO", new BigDecimal("100.00"), "TXN-ZERO-1");
-        shadowLedger.reverseDebit("TXN-ZERO-1");
+        shadowLedger.applyDebitCapped("ACC-AGG-ZERO", new BigDecimal("50.00"), "TXN-ZERO-2");
 
-        assertThat(shadowLedger.hasOpenAggregate("ACC-AGG-ZERO")).isTrue();
-        assertThat(shadowLedger.getAggregateView("ACC-AGG-ZERO").totalCounted())
-                .isEqualByComparingTo(BigDecimal.ZERO);
+        shadowLedger.reverseDebit("TXN-ZERO-1");
+        assertThat(shadowLedger.hasOpenAggregate("ACC-AGG-ZERO")).as("one send still counted").isTrue();
+
+        shadowLedger.reverseDebit("TXN-ZERO-2");
+        assertThat(shadowLedger.hasOpenAggregate("ACC-AGG-ZERO")).isFalse();
+    }
+
+    @Test
+    void auditRowFailureUndoesTheCappedDebit() {
+        // transaction_id is VARCHAR(35): a 36-character id makes the DEBIT
+        // row insert fail after the Redis script already debited and counted
+        seed("ACC-AGG-UNDO", 100_000);
+        String tooLong = "T".repeat(36);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                shadowLedger.applyDebitCapped("ACC-AGG-UNDO", new BigDecimal("100.00"), tooLong));
+
+        // nothing stays debited or counted without the row every release keys on
+        assertThat(redis.opsForValue().get("balance:ACC-AGG-UNDO")).isEqualTo("100000");
+        assertThat(shadowLedger.hasOpenAggregate("ACC-AGG-UNDO")).isFalse();
+    }
+
+    @Test
+    void auditRowFailureUndoKeepsOtherCountedSends() {
+        seed("ACC-AGG-UNDO2", 100_000);
+        shadowLedger.applyDebitCapped("ACC-AGG-UNDO2", new BigDecimal("40.00"), "TXN-UNDO2-OK");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                shadowLedger.applyDebitCapped("ACC-AGG-UNDO2", new BigDecimal("100.00"), "T".repeat(36)));
+
+        assertThat(redis.opsForValue().get("balance:ACC-AGG-UNDO2")).isEqualTo("96000");
+        BridgeAggregateView view = shadowLedger.getAggregateView("ACC-AGG-UNDO2");
+        assertThat(view.totalCounted()).isEqualByComparingTo(new BigDecimal("40.00"));
+        assertThat(view.countedSends()).isEqualTo(1);
+    }
+
+    @Test
+    void reversalWithTheCapDisabledLeavesWindowsAlone() {
+        seed("ACC-AGG-OFFREV", 100_000);
+        shadowLedger.applyDebitCapped("ACC-AGG-OFFREV", new BigDecimal("100.00"), "TXN-OFFREV-1");
+        ShadowLedger uncapped = new ShadowLedger(redis, jdbc,
+                new io.openfednow.bridgemode.BridgeAggregateCapPolicy("", 6, true));
+
+        uncapped.reverseDebit("TXN-OFFREV-1");
+
+        // balance credited back as always; the (unenforced) window untouched
+        assertThat(redis.opsForValue().get("balance:ACC-AGG-OFFREV")).isEqualTo("100000");
+        assertThat(shadowLedger.getAggregateView("ACC-AGG-OFFREV").totalCounted())
+                .isEqualByComparingTo(new BigDecimal("100.00"));
     }
 
     @Test

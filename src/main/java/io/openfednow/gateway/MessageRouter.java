@@ -392,17 +392,9 @@ public class MessageRouter {
         // send authorized here can be over-authorized against funds that a
         // card auth already claimed. The guard fires only during bridge
         // mode; online-core sends are unaffected by this flag.
-        if (!bridgeSendsAllowed && availabilityBridge.isInBridgeMode()) {
-            log.warn("Bridge-mode sends disabled by configuration — rejecting outbound during maintenance window e2e={}",
-                    message.getEndToEndId());
-            bridgeSendsBlockedCounter.increment();
-            Pacs002Message rjct = Pacs002Message.rejected(
-                    message.getEndToEndId(), message.getTransactionId(),
-                    "TS01",
-                    "Payment system unavailable: bridge-mode sends disabled during core maintenance window");
-            idempotencyService.recordOutcome(message.getEndToEndId(), rjct);
-            eventPublisher.publish(event(message, EventType.OUTBOUND_PAYMENT_REJECTED, "TS01"));
-            return ResponseEntity.ok(rjct);
+        boolean guardSawBridgeMode = !bridgeSendsAllowed && availabilityBridge.isInBridgeMode();
+        if (guardSawBridgeMode) {
+            return rejectBridgeSendsDisabled(message);
         }
 
         // Step 1.5 — fraud pre-screening before any side effects.
@@ -437,7 +429,16 @@ public class MessageRouter {
         // point for concurrent sends.
         String debtorAccount = message.getDebtorAccountNumber();
         boolean capEnabled = shadowLedger.isAggregateCapEnabled();
+        // The core may have gone offline since the guard above read "online".
+        // Re-read for the cap and fail closed on the race: with bridge-mode
+        // sends disabled, a send that is now in bridge mode gets the guard's
+        // TS01 instead of proceeding uncounted; with them enabled, it is
+        // counted. (Reusing the guard's single read would let it through
+        // uncounted.)
         boolean inBridgeMode = capEnabled && availabilityBridge.isInBridgeMode();
+        if (inBridgeMode && !bridgeSendsAllowed) {
+            return rejectBridgeSendsDisabled(message);
+        }
         boolean countTowardAggregate = capEnabled
                 && (inBridgeMode || shadowLedger.hasOpenAggregate(debtorAccount));
         if (countTowardAggregate
@@ -565,6 +566,20 @@ public class MessageRouter {
                         + "until the core confirms the balance");
         idempotencyService.recordOutcome(message.getEndToEndId(), rjct);
         eventPublisher.publish(event(message, EventType.OUTBOUND_PAYMENT_REJECTED, "AM04"));
+        return ResponseEntity.ok(rjct);
+    }
+
+    /** Final TS01 while the core is offline and bridge-mode sends are disabled (#66). */
+    private ResponseEntity<Pacs002Message> rejectBridgeSendsDisabled(Pacs008Message message) {
+        log.warn("Bridge-mode sends disabled by configuration — rejecting outbound during maintenance window e2e={}",
+                message.getEndToEndId());
+        bridgeSendsBlockedCounter.increment();
+        Pacs002Message rjct = Pacs002Message.rejected(
+                message.getEndToEndId(), message.getTransactionId(),
+                "TS01",
+                "Payment system unavailable: bridge-mode sends disabled during core maintenance window");
+        idempotencyService.recordOutcome(message.getEndToEndId(), rjct);
+        eventPublisher.publish(event(message, EventType.OUTBOUND_PAYMENT_REJECTED, "TS01"));
         return ResponseEntity.ok(rjct);
     }
 }

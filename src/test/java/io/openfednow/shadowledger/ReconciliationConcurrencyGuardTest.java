@@ -68,7 +68,7 @@ class ReconciliationConcurrencyGuardTest {
         // Adapter sleeps 500ms on the first balance lookup so the second invocation
         // overlaps the first while the lock is held.
         AtomicInteger callCount = new AtomicInteger();
-        ShadowLedger ledger = mock(ShadowLedger.class);
+        ShadowLedger ledger = LedgerMocks.mockLedger();
         when(ledger.getAvailableBalance(any())).thenReturn(BigDecimal.ZERO);
 
         CoreBankingAdapter adapter = mock(CoreBankingAdapter.class);
@@ -130,7 +130,7 @@ class ReconciliationConcurrencyGuardTest {
     void sequentialReconcileInvocationsBothRun() {
         insertPendingRow("ACC-SEQ-001", "TXN-SEQ-001");
 
-        ShadowLedger ledger = mock(ShadowLedger.class);
+        ShadowLedger ledger = LedgerMocks.mockLedger();
         when(ledger.getAvailableBalance(any())).thenReturn(BigDecimal.ZERO);
         CoreBankingAdapter adapter = mock(CoreBankingAdapter.class);
         when(adapter.getAvailableBalance(any())).thenReturn(BigDecimal.ZERO);
@@ -158,7 +158,7 @@ class ReconciliationConcurrencyGuardTest {
         // the lock is held by that thread. To exercise the skip branch we must
         // hold the lock on a different thread while the main thread calls reconcile().
         ReconciliationService service = new ReconciliationService(
-                mock(ShadowLedger.class), jdbc, mock(CoreBankingAdapter.class),
+                LedgerMocks.mockLedger(), jdbc, mock(CoreBankingAdapter.class),
                 txManager, 100, ReconciliationLock.LOCAL_ONLY);
 
         java.util.concurrent.locks.ReentrantLock lock = readLock(service);

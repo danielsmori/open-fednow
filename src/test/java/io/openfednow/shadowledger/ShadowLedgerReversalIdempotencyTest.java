@@ -13,12 +13,7 @@ import javax.sql.DataSource;
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -86,8 +81,8 @@ class ShadowLedgerReversalIdempotencyTest {
 
         // Exactly one REVERSAL row, not two
         assertThat(countReversals("TXN-D2")).isEqualTo(1);
-        // Redis increment was called exactly once — second call short-circuited
-        verify(redis.opsForValue(), times(1)).increment(any(String.class), anyLong());
+        // Redis was written exactly once — the second call short-circuited
+        assertThat(balanceWrites.get()).isEqualTo(1);
     }
 
     @Test
@@ -139,7 +134,7 @@ class ShadowLedgerReversalIdempotencyTest {
         ledger.reverseCredit("TXN-C2");
 
         assertThat(countReversals("TXN-C2")).isEqualTo(1);
-        verify(redis.opsForValue(), times(1)).increment(any(String.class), anyLong());
+        assertThat(balanceWrites.get()).isEqualTo(1);
     }
 
     @Test
@@ -169,18 +164,31 @@ class ShadowLedgerReversalIdempotencyTest {
         ledger.reverseDebit("TXN-GHOST");
 
         assertThat(countReversals("TXN-GHOST")).isZero();
-        verify(redis.opsForValue(), never()).increment(any(String.class), anyLong());
+        assertThat(balanceWrites.get()).isZero();
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────
 
+    /**
+     * Balance writes go through a versioned Lua script ({@code execute}) since
+     * #142/#144. The mock answers every script call with 0 (a non-null
+     * post-increment value) and counts them in {@link #balanceWrites}.
+     */
+    private final java.util.concurrent.atomic.AtomicInteger balanceWrites =
+            new java.util.concurrent.atomic.AtomicInteger();
+
     @SuppressWarnings("unchecked")
     private StringRedisTemplate newRedisMock() {
-        StringRedisTemplate redis = mock(StringRedisTemplate.class);
+        balanceWrites.set(0);
+        StringRedisTemplate redis = mock(StringRedisTemplate.class, invocation -> {
+            if ("execute".equals(invocation.getMethod().getName())) {
+                balanceWrites.incrementAndGet();
+                return 0L;
+            }
+            return org.mockito.Answers.RETURNS_DEFAULTS.answer(invocation);
+        });
         ValueOperations<String, String> ops = mock(ValueOperations.class);
         when(redis.opsForValue()).thenReturn(ops);
-        // increment() returns the post-increment value; any non-null value is fine
-        when(ops.increment(any(String.class), anyLong())).thenReturn(0L);
         return redis;
     }
 

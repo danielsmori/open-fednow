@@ -63,7 +63,7 @@ class ReconciliationPaginationTest {
 
     @Test
     void zeroBatchSizeIsRejected() {
-        ShadowLedger ledger = mock(ShadowLedger.class);
+        ShadowLedger ledger = LedgerMocks.mockLedger();
         CoreBankingAdapter adapter = mock(CoreBankingAdapter.class);
         assertThatThrownBy(() -> new ReconciliationService(ledger, jdbc, adapter, txManager, 0, ReconciliationLock.LOCAL_ONLY))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -72,7 +72,7 @@ class ReconciliationPaginationTest {
 
     @Test
     void negativeBatchSizeIsRejected() {
-        ShadowLedger ledger = mock(ShadowLedger.class);
+        ShadowLedger ledger = LedgerMocks.mockLedger();
         CoreBankingAdapter adapter = mock(CoreBankingAdapter.class);
         assertThatThrownBy(() -> new ReconciliationService(ledger, jdbc, adapter, txManager, -5, ReconciliationLock.LOCAL_ONLY))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -169,8 +169,9 @@ class ReconciliationPaginationTest {
         // $50 for two specific accounts and $100 for the rest. Discrepancy count
         // should be exactly 2, regardless of which batches the discrepant accounts
         // end up in.
-        ShadowLedger ledger = mock(ShadowLedger.class);
+        ShadowLedger ledger = LedgerMocks.mockLedger();
         when(ledger.getAvailableBalance(any())).thenReturn(new BigDecimal("100.00"));
+        when(ledger.reconcileIfUnchanged(any(), any(), any())).thenReturn(true);
 
         CoreBankingAdapter adapter = mock(CoreBankingAdapter.class);
         when(adapter.getAvailableBalance(any())).thenReturn(new BigDecimal("100.00"));
@@ -188,8 +189,10 @@ class ReconciliationPaginationTest {
 
         assertThat(report.discrepanciesDetected()).isEqualTo(2);
         assertThat(report.reconciliationSuccessful()).isFalse();
-        verify(ledger).reconcile(eq("ACC-00050"), eq(new BigDecimal("50.00")));
-        verify(ledger).reconcile(eq("ACC-00350"), eq(new BigDecimal("50.00")));
+        verify(ledger).reconcileIfUnchanged(eq("ACC-00050"),
+                eq(new ShadowLedger.BalanceSnapshot(new BigDecimal("100.00"), 0L)), eq(new BigDecimal("50.00")));
+        verify(ledger).reconcileIfUnchanged(eq("ACC-00350"),
+                eq(new ShadowLedger.BalanceSnapshot(new BigDecimal("100.00"), 0L)), eq(new BigDecimal("50.00")));
     }
 
     // ── Failure isolation ────────────────────────────────────────────────────
@@ -271,7 +274,7 @@ class ReconciliationPaginationTest {
     }
 
     private ShadowLedger stubLedgerAtBalance(BigDecimal balance) {
-        ShadowLedger ledger = mock(ShadowLedger.class);
+        ShadowLedger ledger = LedgerMocks.mockLedger();
         when(ledger.getAvailableBalance(any())).thenReturn(balance);
         return ledger;
     }

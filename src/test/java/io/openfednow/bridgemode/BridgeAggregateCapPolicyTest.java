@@ -48,6 +48,22 @@ class BridgeAggregateCapPolicyTest {
     }
 
     @Test
+    void capThatRoundsToZeroCentsIsRejectedAtStartup() {
+        // would otherwise silently block every counted send
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new BridgeAggregateCapPolicy("0.004", 6, true))
+                .withMessageContaining("at least 0.01");
+    }
+
+    @Test
+    void capTooLargeForCentsIsRejectedAtStartup() {
+        // would otherwise throw ArithmeticException on every counted send
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new BridgeAggregateCapPolicy("1e20", 6, true))
+                .withMessageContaining("too large");
+    }
+
+    @Test
     void zeroCapIsRejected() {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> new BridgeAggregateCapPolicy("0", 6, true))

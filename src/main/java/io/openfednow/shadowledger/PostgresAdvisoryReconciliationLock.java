@@ -43,6 +43,9 @@ public class PostgresAdvisoryReconciliationLock implements ReconciliationLock {
      */
     static final long LOCK_KEY = 0x4F464E5245434F4EL;
 
+    /** Upper bound on any single network wait on the lease connection. */
+    static final long LEASE_NETWORK_TIMEOUT_MILLIS = 30_000;
+
     /**
      * Whether the current session holds the lock. A single-bigint advisory key
      * appears in {@code pg_locks} split into {@code classid} (high 32 bits) and
@@ -71,6 +74,15 @@ public class PostgresAdvisoryReconciliationLock implements ReconciliationLock {
             // Session-level locks are independent of transactions; autocommit
             // keeps the connection from sitting idle inside a transaction.
             connection.setAutoCommit(true);
+            // This connection sits idle between liveness checks, the classic
+            // victim of a silently dropped TCP session. Bound every network
+            // wait on it so a dead socket fails the check (and the cycle)
+            // instead of blocking the cycle thread forever.
+            try {
+                connection.setNetworkTimeout(Runnable::run, (int) LEASE_NETWORK_TIMEOUT_MILLIS);
+            } catch (java.sql.SQLFeatureNotSupportedException e) {
+                log.debug("JDBC driver does not support network timeouts on the lock connection");
+            }
             boolean acquired;
             try (PreparedStatement ps = connection.prepareStatement("SELECT pg_try_advisory_lock(?)")) {
                 ps.setLong(1, LOCK_KEY);

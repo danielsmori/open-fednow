@@ -46,6 +46,8 @@ public class BridgeAggregateCapPolicy {
 
     /** Ceiling in USD, or {@code null} when the cap is disabled. */
     private final BigDecimal maxAggregateSendAmount;
+    /** Ceiling in integer cents, computed once; meaningful only when enabled. */
+    private final long maxAggregateSendCents;
     private final int expectedWindowHours;
 
     public BridgeAggregateCapPolicy(
@@ -53,6 +55,8 @@ public class BridgeAggregateCapPolicy {
             @Value("${openfednow.bridge-mode.expected-window-hours:6}") int expectedWindowHours,
             @Value("${openfednow.bridge-mode.allow-sends:false}") boolean allowSends) {
         this.maxAggregateSendAmount = parseCap(maxAggregateSendAmount);
+        this.maxAggregateSendCents = this.maxAggregateSendAmount == null ? 0L
+                : toCents(this.maxAggregateSendAmount);
         if (expectedWindowHours <= 0) {
             throw new IllegalArgumentException(
                     "openfednow.bridge-mode.expected-window-hours must be positive");
@@ -72,6 +76,30 @@ public class BridgeAggregateCapPolicy {
                         + "can occur, so the aggregate cap will never be exercised");
             }
         }
+    }
+
+    /**
+     * Converts the ceiling to the integer cents the ledger enforces, failing at
+     * startup rather than on every counted send: a value that rounds to zero
+     * cents would silently block every send, and one too large for a long
+     * would throw on every send.
+     */
+    private static long toCents(BigDecimal cap) {
+        long cents;
+        try {
+            cents = cap.setScale(2, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100))
+                    .longValueExact();
+        } catch (ArithmeticException e) {
+            throw new IllegalArgumentException(
+                    "openfednow.bridge-mode.max-aggregate-send-amount is too large: " + cap, e);
+        }
+        if (cents <= 0) {
+            throw new IllegalArgumentException(
+                    "openfednow.bridge-mode.max-aggregate-send-amount must be at least 0.01 "
+                            + "(it rounds to zero cents): " + cap);
+        }
+        return cents;
     }
 
     private static BigDecimal parseCap(String raw) {
@@ -114,9 +142,7 @@ public class BridgeAggregateCapPolicy {
         if (maxAggregateSendAmount == null) {
             throw new IllegalStateException("Aggregate cap is disabled — check isEnabled() first");
         }
-        return maxAggregateSendAmount.setScale(2, RoundingMode.HALF_UP)
-                .multiply(BigDecimal.valueOf(100))
-                .longValueExact();
+        return maxAggregateSendCents;
     }
 
     /**

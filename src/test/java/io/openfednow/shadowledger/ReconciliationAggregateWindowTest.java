@@ -109,7 +109,7 @@ class ReconciliationAggregateWindowTest {
 
         assertThat(unconfirmed("ACC-W")).isEqualTo(1);
         verify(core, never()).getAvailableBalance("ACC-W");
-        verify(ledger, never()).reconcile(anyString(), any());
+        verify(ledger, never()).reconcileIfUnchanged(anyString(), any(), any());
         verify(ledger, never()).closeConfirmedAggregate(anyString());
     }
 
@@ -162,7 +162,7 @@ class ReconciliationAggregateWindowTest {
 
         verify(ledger, times(1)).closeConfirmedAggregate("ACC-SWEPT");
         // the sweep releases sends only — it never reconciles balances
-        verify(ledger, never()).reconcile(anyString(), any());
+        verify(ledger, never()).reconcileIfUnchanged(anyString(), any(), any());
         verify(core, never()).getAvailableBalance(anyString());
     }
 
@@ -184,7 +184,7 @@ class ReconciliationAggregateWindowTest {
     }
 
     private static ShadowLedger ledger(boolean capEnabled) {
-        ShadowLedger ledger = mock(ShadowLedger.class);
+        ShadowLedger ledger = LedgerMocks.mockLedger();
         when(ledger.getAvailableBalance(any())).thenReturn(BigDecimal.ZERO);
         when(ledger.isAggregateCapEnabled()).thenReturn(capEnabled);
         return ledger;
