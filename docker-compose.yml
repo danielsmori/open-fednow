@@ -7,13 +7,37 @@
 # only relevant when KAFKA_ENABLED=true; it's kept commented out below
 # because bitnami/kafka:3.7 was removed from Docker Hub.
 #
+# Container and volume names are project-scoped: Compose derives them from the
+# project name (the checkout directory, or -p / COMPOSE_PROJECT_NAME), so a
+# second checkout can start its own stack without renaming or removing another
+# project's containers.
+#
+# Host ports are published on the loopback interface (127.0.0.1) only, so
+# these credentials-light dev services are not reachable from the network.
+# Host ports are configurable; container ports are fixed. Each variable
+# defaults to the service's standard port, so a plain `up` behaves as before.
+# REDIS_PORT and RABBITMQ_PORT are the same names application.yml reads, so
+# one export moves both the binding and the app's connection:
+#   REDIS_PORT                host port for Redis        (default 6379)
+#   RABBITMQ_PORT             host port for AMQP         (default 5672)
+#   RABBITMQ_MANAGEMENT_PORT  host port for the mgmt UI  (default 15672)
+#   POSTGRES_PORT             host port for Postgres     (default 5432)
+# A second project alongside the first, e.g.:
+#   REDIS_PORT=16379 RABBITMQ_PORT=15673 RABBITMQ_MANAGEMENT_PORT=25672 \
+#   POSTGRES_PORT=15432 docker-compose -p openfednow-eval up -d
+# Postgres has no app-side port variable; put POSTGRES_PORT into DB_URL.
+#
 # Usage:
 #   docker-compose up -d        # start in background
 #   docker-compose down         # stop and remove containers
 #   docker-compose logs -f      # follow logs
+#   docker-compose ps           # resolve the generated container names
+#
+# Address a container by service name rather than a fixed name, e.g.
+#   docker-compose exec postgres psql -U openfednow -d openfednow
 #
 # Then launch the app with Postgres:
-#   DB_URL=jdbc:postgresql://localhost:5432/openfednow \
+#   DB_URL=jdbc:postgresql://localhost:${POSTGRES_PORT:-5432}/openfednow \
 #   DB_USERNAME=openfednow DB_PASSWORD=openfednow \
 #   mvn spring-boot:run
 
@@ -21,9 +45,8 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: openfednow-redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     volumes:
       - redis-data:/data
     command: redis-server --appendonly yes
@@ -35,10 +58,9 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
-    container_name: openfednow-rabbitmq
     ports:
-      - "5672:5672"    # AMQP
-      - "15672:15672"  # Management UI — http://localhost:15672 (guest/guest)
+      - "127.0.0.1:${RABBITMQ_PORT:-5672}:5672"                # AMQP
+      - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"   # Management UI — http://localhost:15672 by default (guest/guest)
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     environment:
@@ -52,9 +74,8 @@ services:
 
   postgres:
     image: postgres:16-alpine
-    container_name: openfednow-postgres
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     environment:
       POSTGRES_DB: openfednow
       POSTGRES_USER: openfednow
