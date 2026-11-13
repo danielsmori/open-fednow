@@ -12,14 +12,14 @@ Versions follow [Semantic Versioning](https://semver.org/). Until 1.0.0, a minor
 2. Rerun the scenarios that the release covers and publish the commands, source version and raw results under [`docs/reliability/evidence/`](reliability/evidence/).
 3. Move the entries under **Unreleased** in `CHANGELOG.md` to a new heading with the version and date.
 4. Set the version in `pom.xml` (remove `-SNAPSHOT`), commit, and merge to `main`.
-5. Tag the merge commit and push the tag:
+5. Run the [release workflow](../.github/workflows/release.yml) manually from the Actions tab. Without a tag it is a dry run: it builds the container image for `linux/amd64` and `linux/arm64`, scans both, writes the SBOMs and uploads everything as an artefact, but pushes nothing and creates no release. Download the artefact and check it before going further; a tag is awkward to take back.
+6. Tag the merge commit and push the tag. If pull requests merged after step 3, move their CHANGELOG entries into the release heading first, and note in that heading which commit the step 2 evidence was recorded at, so the release says what it was measured on:
 
    ```sh
    git tag -a v0.1.0 -m "OpenFedNow 0.1.0"
    git push origin v0.1.0
    ```
 
-6. Before tagging, run the [release workflow](../.github/workflows/release.yml) manually from the Actions tab. Without a tag it is a dry run: it builds the container image for `linux/amd64` and `linux/arm64`, scans both, writes the SBOMs and uploads everything as an artefact, but pushes nothing and creates no release. A tag is awkward to take back, so check the dry run first.
 7. The release workflow then runs on the tag. It runs the unit and harness tests, builds the service jar and the test-kit zip, builds the image for both platforms, scans each one, pushes the image to `ghcr.io/danielsmori/open-fednow:<version>` and creates a GitHub Release with SHA-256 checksums. The image tag matches `image.tag` in [helm/values.yaml](../helm/values.yaml) and the chart's `appVersion`.
 8. **Check the package is publicly readable after the first publish.** Publishing 0.1.0 from this workflow created the GHCR package already public, inheriting the repository's visibility, so no manual step was needed. Confirm it rather than assume it, with an anonymous pull: `curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $(curl -s 'https://ghcr.io/token?scope=repository:danielsmori/open-fednow:pull&service=ghcr.io' | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')" https://ghcr.io/v2/danielsmori/open-fednow/manifests/<version>` should print `200`. If it ever prints `401` or `403`, set the package to public in its settings, otherwise anyone deploying the chart needs `imagePullSecrets`.
 9. Set the next `-SNAPSHOT` version in `pom.xml`.
