@@ -17,3 +17,8 @@ The newer SQL reliability path refuses a synthetic send unless its fixture decla
 ## Consequences
 
 Receive-side maintenance-window behavior remains an experiment requiring rail-status and core review. Outbound sends stay disabled by default. No national exposure amount, institution risk acceptance, outside technical review, or production mitigation result is inferred from this repository.
+
+## Update (2026-11-13)
+
+Issue #68 added sandbox controls on the legacy Redis path, within the posture this record describes: a fail-closed per-account [aggregate send cap](../bridge-mode-aggregate-cap.md) on bridge-mode sends (off unless an operator configures a ceiling), release of a counted send only on reversal or on core-confirmed reconciliation with a final rail outcome, automatic reconciliation on core recovery coordinated by a PostgreSQL advisory lock, and metrics over the capped state. These bound the FedNow-send side of the exposure during a simulated window to a configured amount. They do not observe STIP or other-channel activity, do not validate the ACSP-shaped response, and do not change this record's status: outbound bridge-mode sends remain disabled by default, and no production mitigation result is inferred from this repository.
+

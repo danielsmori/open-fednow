@@ -79,6 +79,13 @@ public class MessageRouter {
     static final String AGGREGATE_CAP_EXCEEDED_METRIC = "bridge_mode.aggregate.cap_exceeded";
 
     /**
+     * Distribution of the counted aggregate as a percentage of the cap, observed
+     * at each counted send (#68). No per-account tag: account-tagged series grow
+     * without bound and put account identifiers into the metrics backend.
+     */
+    static final String PCT_OF_CAP_METRIC = "bridge_mode.aggregate.pct_of_cap";
+
+    /**
      * Controls whether outbound FedNow sends are allowed while
      * {@link AvailabilityBridge#isInBridgeMode()} is {@code true}.
      * Defaults to {@code false}: an offline core must not authorize sends
@@ -88,6 +95,7 @@ public class MessageRouter {
     private final boolean bridgeSendsAllowed;
     private final Counter bridgeSendsBlockedCounter;
     private final Counter aggregateCapExceededCounter;
+    private final io.micrometer.core.instrument.DistributionSummary aggregatePctOfCap;
 
     public MessageRouter(FedNowClient fedNowClient,
                          CoreBankingAdapter coreBankingAdapter,
@@ -125,6 +133,12 @@ public class MessageRouter {
                 .register(meterRegistry);
         this.aggregateCapExceededCounter = Counter.builder(AGGREGATE_CAP_EXCEEDED_METRIC)
                 .description("Outbound FedNow sends rejected by the bridge-mode aggregate send cap")
+                .register(meterRegistry);
+        this.aggregatePctOfCap = io.micrometer.core.instrument.DistributionSummary
+                .builder(PCT_OF_CAP_METRIC)
+                .description("Counted aggregate as a percentage of the bridge-mode send cap, "
+                        + "observed at each counted send")
+                .baseUnit("percent")
                 .register(meterRegistry);
     }
 
@@ -468,6 +482,7 @@ public class MessageRouter {
                         ? rejectAggregateCapExceeded(message)
                         : rejectInsufficientFunds(message);
             }
+            aggregatePctOfCap.record(capped.pctOfCap());
             if (inBridgeMode || capped.openedWindow()) {
                 // The window this send opened or grew is only closed by a
                 // reconciliation; record that one is owed — in bridge mode even
