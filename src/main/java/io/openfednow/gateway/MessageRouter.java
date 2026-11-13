@@ -75,6 +75,9 @@ public class MessageRouter {
     /** Metric emitted every time the bridge-mode-off guard rejects an outbound send. */
     static final String BRIDGE_SENDS_BLOCKED_METRIC = "bridge_mode.sends.blocked";
 
+    /** Metric emitted every time the bridge-mode aggregate send cap rejects an outbound send (#68). */
+    static final String AGGREGATE_CAP_EXCEEDED_METRIC = "bridge_mode.aggregate.cap_exceeded";
+
     /**
      * Controls whether outbound FedNow sends are allowed while
      * {@link AvailabilityBridge#isInBridgeMode()} is {@code true}.
@@ -84,6 +87,7 @@ public class MessageRouter {
      */
     private final boolean bridgeSendsAllowed;
     private final Counter bridgeSendsBlockedCounter;
+    private final Counter aggregateCapExceededCounter;
 
     public MessageRouter(FedNowClient fedNowClient,
                          CoreBankingAdapter coreBankingAdapter,
@@ -118,6 +122,9 @@ public class MessageRouter {
         this.screeningFailOpen = screeningFailOpen;
         this.bridgeSendsBlockedCounter = Counter.builder(BRIDGE_SENDS_BLOCKED_METRIC)
                 .description("Outbound FedNow sends rejected by the bridge-mode allow-sends guard")
+                .register(meterRegistry);
+        this.aggregateCapExceededCounter = Counter.builder(AGGREGATE_CAP_EXCEEDED_METRIC)
+                .description("Outbound FedNow sends rejected by the bridge-mode aggregate send cap")
                 .register(meterRegistry);
     }
 
@@ -311,11 +318,23 @@ public class MessageRouter {
      *
      * <p>Processing order:
      * <ol>
-     *   <li>Idempotency check — return cached pacs.002 if this endToEndId was already sent</li>
+     *   <li>Currency guard — RJCT AM03 for a currency the rail does not support</li>
+     *   <li>Idempotency check — return cached pacs.002 if this endToEndId was already sent;
+     *       a durable saga for it answers 503 rather than risk a resend</li>
+     *   <li>Bridge-mode send guard — RJCT TS01 while the core is offline when
+     *       {@code openfednow.bridge-mode.allow-sends} is false</li>
+     *   <li>Fraud pre-screening — RJCT with the screening reason code on BLOCK</li>
      *   <li>Sufficient-funds check — return RJCT AM04 immediately if the Shadow Ledger
      *       balance cannot cover the amount (fail fast, no saga created)</li>
+     *   <li>Bridge-mode aggregate cap pre-check (#68) — when the cap is enabled and
+     *       the send counts toward the debtor's window (core offline, or a window
+     *       still open awaiting reconciliation), RJCT AM04 if it would exceed the
+     *       cap (no saga created)</li>
      *   <li>Initiate saga</li>
-     *   <li>Apply debit (reserve funds) in the Shadow Ledger → advance saga to FUNDS_RESERVED</li>
+     *   <li>Apply debit (reserve funds) in the Shadow Ledger → advance saga to
+     *       FUNDS_RESERVED. A counted send uses the atomic capped debit; if it
+     *       loses a race for the cap or the balance, the saga is compensated and
+     *       the caller gets a final RJCT AM04</li>
      *   <li>Submit to FedNow via {@link FedNowClient}</li>
      *   <li>On ACSC: advance saga to COMPLETED</li>
      *   <li>On RJCT: compensate saga — reverses the debit via Shadow Ledger</li>
@@ -405,12 +424,23 @@ public class MessageRouter {
             log.info("Outbound payment rejected: insufficient funds account={} available={} requested={}",
                     io.openfednow.security.pii.PiiRedactor.maskAccount(message.getDebtorAccountNumber()),
                     available, message.getInterbankSettlementAmount());
-            Pacs002Message insufficientFunds = Pacs002Message.rejected(
-                    message.getEndToEndId(), message.getTransactionId(),
-                    "AM04", "Insufficient funds in debtor Shadow Ledger balance");
-            idempotencyService.recordOutcome(message.getEndToEndId(), insufficientFunds);
-            eventPublisher.publish(event(message, EventType.OUTBOUND_PAYMENT_REJECTED, "AM04"));
-            return ResponseEntity.ok(insufficientFunds);
+            return rejectInsufficientFunds(message);
+        }
+
+        // Step 2.5 — bridge-mode aggregate send cap (#68). A send counts toward
+        // the debtor's aggregate window while the core is offline, and also
+        // while a window from an earlier outage is still open: after the core
+        // returns, sends keep authorizing against the cached balance until
+        // reconciliation confirms it, so the cap stays in force until then.
+        // This pre-check rejects the common case before any saga or debit
+        // exists; the atomic re-check at the debit (Step 4) is the enforcement
+        // point for concurrent sends.
+        String debtorAccount = message.getDebtorAccountNumber();
+        boolean countTowardAggregate = shadowLedger.isAggregateCapEnabled()
+                && (availabilityBridge.isInBridgeMode() || shadowLedger.hasOpenAggregate(debtorAccount));
+        if (countTowardAggregate
+                && shadowLedger.wouldExceedAggregateCap(debtorAccount, message.getInterbankSettlementAmount())) {
+            return rejectAggregateCapExceeded(message);
         }
 
         // Step 3 — initiate saga. routeOutbound is only invoked by FedNowGateway today;
@@ -419,10 +449,27 @@ public class MessageRouter {
         PaymentSaga saga = sagaOrchestrator.initiate(message, Rail.FEDNOW);
 
         // Step 4 — reserve funds: debit debtor account in Shadow Ledger
-        shadowLedger.applyDebit(
-                message.getDebtorAccountNumber(),
-                message.getInterbankSettlementAmount(),
-                message.getTransactionId());
+        if (countTowardAggregate) {
+            ShadowLedger.CappedDebitResult debit = shadowLedger.applyDebitCapped(
+                    debtorAccount,
+                    message.getInterbankSettlementAmount(),
+                    message.getTransactionId());
+            if (debit != ShadowLedger.CappedDebitResult.APPLIED) {
+                // Lost a race after the pre-checks: a concurrent send used up
+                // the cap or the balance. Nothing was debited or counted, so
+                // close the saga (INITIATED → no ledger reversal) and answer
+                // with a final AM04 rather than an error.
+                sagaOrchestrator.compensate(saga.getSagaId(), "AM04");
+                return debit == ShadowLedger.CappedDebitResult.AGGREGATE_CAP_EXCEEDED
+                        ? rejectAggregateCapExceeded(message)
+                        : rejectInsufficientFunds(message);
+            }
+        } else {
+            shadowLedger.applyDebit(
+                    debtorAccount,
+                    message.getInterbankSettlementAmount(),
+                    message.getTransactionId());
+        }
         sagaOrchestrator.advance(saga, PaymentSaga.SagaState.FUNDS_RESERVED);
 
         // Step 5 — persist the possible-send boundary BEFORE calling the rail.
@@ -474,5 +521,35 @@ public class MessageRouter {
         idempotencyService.recordOutcome(message.getEndToEndId(), response);
 
         return ResponseEntity.ok(response);
+    }
+
+    /** Final AM04 for a debtor whose Shadow Ledger balance cannot cover the send. */
+    private ResponseEntity<Pacs002Message> rejectInsufficientFunds(Pacs008Message message) {
+        Pacs002Message insufficientFunds = Pacs002Message.rejected(
+                message.getEndToEndId(), message.getTransactionId(),
+                "AM04", "Insufficient funds in debtor Shadow Ledger balance");
+        idempotencyService.recordOutcome(message.getEndToEndId(), insufficientFunds);
+        eventPublisher.publish(event(message, EventType.OUTBOUND_PAYMENT_REJECTED, "AM04"));
+        return ResponseEntity.ok(insufficientFunds);
+    }
+
+    /**
+     * Final AM04 for a send that would push the debtor's bridge-mode aggregate
+     * window over the configured cap (#68). Recorded idempotently like the
+     * other rejections, so a retry of the same end-to-end ID gets the same
+     * answer rather than being re-evaluated after the window clears.
+     */
+    private ResponseEntity<Pacs002Message> rejectAggregateCapExceeded(Pacs008Message message) {
+        log.warn("Outbound payment rejected: bridge-mode aggregate send cap reached account={} requested={}",
+                io.openfednow.security.pii.PiiRedactor.maskAccount(message.getDebtorAccountNumber()),
+                message.getInterbankSettlementAmount());
+        aggregateCapExceededCounter.increment();
+        Pacs002Message rjct = Pacs002Message.rejected(
+                message.getEndToEndId(), message.getTransactionId(),
+                "AM04", "Bridge-mode aggregate send limit reached for debtor account "
+                        + "until the core confirms the balance");
+        idempotencyService.recordOutcome(message.getEndToEndId(), rjct);
+        eventPublisher.publish(event(message, EventType.OUTBOUND_PAYMENT_REJECTED, "AM04"));
+        return ResponseEntity.ok(rjct);
     }
 }

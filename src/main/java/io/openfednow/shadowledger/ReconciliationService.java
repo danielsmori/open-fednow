@@ -170,6 +170,36 @@ public class ReconciliationService {
             log.info("Reconciliation processed {} account(s) across {}-row batches",
                     totalAccounts, batchSize);
 
+            // Bridge-mode aggregate windows (#68) are normally drained above, as
+            // part of reconciling an account with unconfirmed rows. A window can
+            // still hold sends that have become releasable since — a previous
+            // cycle confirmed them but failed to release them, or a send whose
+            // rail outcome was unresolved has since completed — and such an
+            // account may never appear in the batches again. Sweep the open
+            // windows and release what the core has confirmed. The sweep only
+            // releases sends; it never touches balances. Only with the core
+            // online: an offline core must not lift the cap. Skipped entirely
+            // when the cap is disabled — the SCAN walks the whole keyspace, and
+            // an unenforced window has nothing to protect.
+            List<String> openWindows = shadowLedger.isAggregateCapEnabled()
+                    ? shadowLedger.openAggregateAccountIds()
+                    : List.of();
+            if (!openWindows.isEmpty()) {
+                if (coreBankingAdapter.isCoreSystemAvailable()) {
+                    for (String accountId : openWindows) {
+                        try {
+                            shadowLedger.closeConfirmedAggregate(accountId);
+                        } catch (Exception e) {
+                            log.error("Failed to release confirmed sends from bridge aggregate window "
+                                            + "account={} — cap stays in force, next cycle retries",
+                                    io.openfednow.security.pii.PiiRedactor.maskAccount(accountId), e);
+                        }
+                    }
+                } else {
+                    log.info("Core offline — {} bridge aggregate window(s) stay open", openWindows.size());
+                }
+            }
+
         } catch (Exception e) {
             log.error("Reconciliation cycle failed", e);
             closeRunRecord(runId, transactionsReplayed, discrepanciesDetected, false,
@@ -298,9 +328,55 @@ public class ReconciliationService {
      * subsequent cycle will detect the residual discrepancy and write the
      * correction afresh.
      *
+     * <p><strong>Bridge-mode aggregate windows (#68).</strong> An account with
+     * an open aggregate window is reconciled only while the core is online;
+     * otherwise it is deferred untouched, so its bridge-mode debits are never
+     * marked confirmed against an offline core (which would later let the
+     * cap lift without a real confirmation). After the transaction has
+     * <em>committed</em> — never inside it, so a rollback cannot lift the cap —
+     * the sends the core has now confirmed are released from the window via
+     * {@link ShadowLedger#closeConfirmedAggregate}. Accounts without a window
+     * take exactly the pre-existing path.
+     *
      * @return a two-element array {@code [transactionsConfirmed, discrepancyDetected]}
      */
     private int[] reconcileOneAccount(String accountId) {
+        boolean windowOpen = shadowLedger.hasOpenAggregate(accountId);
+        if (windowOpen && !coreBankingAdapter.isCoreSystemAvailable()) {
+            log.warn("Core offline — deferring reconciliation of account with open bridge "
+                            + "aggregate window account={}",
+                    io.openfednow.security.pii.PiiRedactor.maskAccount(accountId));
+            return new int[] { 0, 0 };
+        }
+        int[] outcome = reconcileOneAccountInTx(accountId);
+        if (windowOpen) {
+            releaseConfirmedSends(accountId);
+        }
+        return outcome;
+    }
+
+    /**
+     * Releases the sends the just-committed reconciliation confirmed, if the
+     * core is still online. A failure is logged and left for the open-window
+     * sweep in {@link #reconcile()}: the sends stay counted (fail-closed).
+     */
+    private void releaseConfirmedSends(String accountId) {
+        try {
+            if (!coreBankingAdapter.isCoreSystemAvailable()) {
+                log.warn("Core went offline during reconciliation — bridge aggregate window "
+                                + "stays open account={}",
+                        io.openfednow.security.pii.PiiRedactor.maskAccount(accountId));
+                return;
+            }
+            shadowLedger.closeConfirmedAggregate(accountId);
+        } catch (Exception e) {
+            log.error("Failed to release confirmed sends from bridge aggregate window account={} "
+                            + "— cap stays in force, next reconciliation cycle retries",
+                    io.openfednow.security.pii.PiiRedactor.maskAccount(accountId), e);
+        }
+    }
+
+    private int[] reconcileOneAccountInTx(String accountId) {
         return perAccountTx.execute(status -> {
             int confirmed = 0;
             int discrepancyDetected = 0;
