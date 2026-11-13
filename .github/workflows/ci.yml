@@ -138,3 +138,119 @@ jobs:
         with:
           name: tigerbeetle-synthetic-reports
           path: target/tigerbeetle/ci-*.json
+
+  container-image:
+    name: Container Image
+    runs-on: ubuntu-latest
+    # Build the image only once the unit tests pass, so a code break fails on
+    # the cheaper job first.
+    needs: build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: openfednow:ci
+          build-args: |
+            VERSION=ci-${{ github.sha }}
+            REVISION=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Check the runtime layer is non-root and has no build tools
+        run: |
+          set -euo pipefail
+          user="$(docker image inspect openfednow:ci --format '{{.Config.User}}')"
+          if [ "$user" != "1000:1000" ]; then
+            echo "image user is '$user'; the Helm chart runs the pod as 1000" >&2
+            exit 1
+          fi
+          docker run --rm --entrypoint sh openfednow:ci -c '
+            set -eu
+            [ "$(id -u)" = 1000 ] || { echo "container runs as uid $(id -u)" >&2; exit 1; }
+            for tool in mvn javac jar; do
+              if command -v "$tool" >/dev/null 2>&1; then
+                echo "$tool reached the runtime layer" >&2
+                exit 1
+              fi
+            done'
+
+      - name: Start the backing services
+        run: |
+          set -euo pipefail
+          docker network create openfednow-ci
+          docker run -d --name ci-postgres --network openfednow-ci \
+            -e POSTGRES_DB=openfednow -e POSTGRES_USER=openfednow -e POSTGRES_PASSWORD=openfednow \
+            --health-cmd 'pg_isready -U openfednow -d openfednow' \
+            --health-interval 2s --health-retries 30 \
+            postgres:16-alpine
+          docker run -d --name ci-redis --network openfednow-ci redis:7-alpine
+          docker run -d --name ci-rabbitmq --network openfednow-ci rabbitmq:3-management-alpine
+          .github/scripts/wait-for-health.sh ci-postgres 120
+
+      - name: Start the image and wait for its healthcheck
+        run: |
+          set -euo pipefail
+          docker run -d --name ci-app --network openfednow-ci -p 127.0.0.1:18080:8080 \
+            -e DB_URL=jdbc:postgresql://ci-postgres:5432/openfednow \
+            -e REDIS_HOST=ci-redis -e RABBITMQ_HOST=ci-rabbitmq \
+            openfednow:ci
+          .github/scripts/wait-for-health.sh ci-app
+
+      - name: Check health routes and that the fixture gates are off
+        run: |
+          set -euo pipefail
+          code() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
+
+          health="$(code http://127.0.0.1:18080/fednow/health)"
+          [ "$health" = 200 ] || { echo "/fednow/health returned $health" >&2; exit 1; }
+
+          # The Helm chart probes these two paths, so a container that serves
+          # them is one Kubernetes can schedule.
+          for probe in liveness readiness; do
+            status="$(code "http://127.0.0.1:18080/actuator/health/$probe")"
+            [ "$status" = 200 ] || { echo "actuator $probe returned $status" >&2; exit 1; }
+          done
+
+          closed="$(code -u admin:changeme -X POST -H 'Content-Type: application/json' \
+            -d '{}' http://127.0.0.1:18080/reference/v1/fixtures/accounts)"
+          if [ "$closed" != 404 ]; then
+            echo "the fixture route answered $closed by default; expected 404" >&2
+            exit 1
+          fi
+
+      - name: Confirm that gate check can fail — same route, gate on
+        run: |
+          set -euo pipefail
+          docker run -d --name ci-app-fixtures --network openfednow-ci -p 127.0.0.1:18081:8080 \
+            -e DB_URL=jdbc:postgresql://ci-postgres:5432/openfednow \
+            -e REDIS_HOST=ci-redis -e RABBITMQ_HOST=ci-rabbitmq \
+            -e RELIABILITY_FIXTURE_API_ENABLED=true \
+            openfednow:ci
+          .github/scripts/wait-for-health.sh ci-app-fixtures
+          opened="$(curl -s -o /dev/null -w '%{http_code}' -u admin:changeme -X POST \
+            -H 'Content-Type: application/json' -d '{}' \
+            http://127.0.0.1:18081/reference/v1/fixtures/accounts)"
+          if [ "$opened" = 404 ]; then
+            echo "still 404 with the gate on, so the default-off check proves nothing" >&2
+            exit 1
+          fi
+          echo "fixture route answers $opened when explicitly enabled, 404 when not"
+
+      - name: Application log on failure
+        if: failure()
+        run: docker logs --tail 200 ci-app || true
+
+      - name: Tear down
+        if: always()
+        run: |
+          docker rm -f ci-app ci-app-fixtures ci-postgres ci-redis ci-rabbitmq >/dev/null 2>&1 || true
+          docker network rm openfednow-ci >/dev/null 2>&1 || true
