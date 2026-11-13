@@ -134,7 +134,7 @@ public class MessageRouter {
         this.aggregatePctOfCap = io.micrometer.core.instrument.DistributionSummary
                 .builder(AGGREGATE_PCT_OF_CAP_METRIC)
                 .description("Debtor aggregate window as a percentage of the bridge-mode cap after each counted send")
-                .baseUnit("percent")
+                // no baseUnit: Prometheus would append "_percent" and rename the metric
                 .serviceLevelObjectives(50, 80, 90, 100)
                 .register(meterRegistry);
         this.aggregateCapExceededCounter = Counter.builder(AGGREGATE_CAP_EXCEEDED_METRIC)

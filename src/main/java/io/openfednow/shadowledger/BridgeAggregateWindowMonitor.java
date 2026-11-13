@@ -40,6 +40,9 @@ import java.util.concurrent.atomic.AtomicLong;
  *       released these accounts (core still offline, reconciliation failing, or
  *       a send whose rail outcome is unresolved)</li>
  *   <li>{@code bridge_mode.aggregate.oldest_window_age_seconds}</li>
+ *   <li>{@code bridge_mode.aggregate.last_scan_epoch_seconds} — when the gauges
+ *       were last recomputed; a failed scan keeps the previous values, so
+ *       alert if this stops advancing</li>
  * </ul>
  * None carries an account tag: per-account series would be unbounded and would
  * put account ids in metrics. Use {@code GET /admin/accounts/{id}/bridge-aggregate}
@@ -48,8 +51,11 @@ import java.util.concurrent.atomic.AtomicLong;
  * <p>The scan runs every {@code openfednow.bridge-mode.aggregate-metrics-interval-seconds}
  * on its own thread — never the shared Spring scheduler thread, whose other
  * jobs (saga timeouts, compensation retries) must not wait on Redis. It only
- * runs while the cap is enabled; the gauges then read 0. A failed scan keeps
- * the previous values and is logged.
+ * runs while the cap is enabled; with the cap disabled every gauge stays at 0.
+ * Each instance scans the whole Redis keyspace for windows and publishes the
+ * same global counts, so aggregate these gauges with {@code max}, not
+ * {@code sum}, across instances. A failed scan keeps the previous values and
+ * is logged.
  */
 @Component
 public class BridgeAggregateWindowMonitor {
@@ -60,6 +66,7 @@ public class BridgeAggregateWindowMonitor {
     static final String WINDOWS_NEAR_CAP_METRIC = "bridge_mode.aggregate.windows_near_cap";
     static final String WINDOWS_OVERDUE_METRIC = "bridge_mode.aggregate.windows_overdue";
     static final String OLDEST_WINDOW_AGE_METRIC = "bridge_mode.aggregate.oldest_window_age_seconds";
+    static final String LAST_SCAN_METRIC = "bridge_mode.aggregate.last_scan_epoch_seconds";
 
     private final ShadowLedger shadowLedger;
     private final BridgeAggregateCapPolicy policy;
@@ -72,6 +79,7 @@ public class BridgeAggregateWindowMonitor {
     private final AtomicLong windowsNearCap = new AtomicLong();
     private final AtomicLong windowsOverdue = new AtomicLong();
     private final AtomicLong oldestWindowAgeSeconds = new AtomicLong();
+    private final AtomicLong lastScanEpochSeconds = new AtomicLong();
 
     @Autowired
     public BridgeAggregateWindowMonitor(
@@ -109,6 +117,8 @@ public class BridgeAggregateWindowMonitor {
                 "Open aggregate windows older than openfednow.bridge-mode.expected-window-hours");
         gauge(meterRegistry, OLDEST_WINDOW_AGE_METRIC, oldestWindowAgeSeconds,
                 "Age in seconds of the oldest open aggregate window");
+        gauge(meterRegistry, LAST_SCAN_METRIC, lastScanEpochSeconds,
+                "Epoch second of the last successful aggregate window scan");
     }
 
     private static void gauge(MeterRegistry registry, String name, AtomicLong value, String description) {
@@ -138,13 +148,18 @@ public class BridgeAggregateWindowMonitor {
     private void scanSafely() {
         try {
             scan();
-        } catch (RuntimeException e) {
-            log.warn("Bridge aggregate window scan failed — gauges keep their previous values", e);
+        } catch (Throwable t) {
+            // Anything escaping here would silently cancel the schedule.
+            log.warn("Bridge aggregate window scan failed — gauges keep their previous values", t);
         }
     }
 
-    /** Recomputes every gauge from the open windows. Visible for tests. */
-    void scan() {
+    /**
+     * Recomputes every gauge from the open windows. Synchronized: the schedule
+     * and direct callers (tests) must not interleave their writes. Visible for
+     * tests.
+     */
+    synchronized void scan() {
         if (!policy.isEnabled()) {
             return;
         }
@@ -180,6 +195,7 @@ public class BridgeAggregateWindowMonitor {
         windowsOpen.set(open);
         windowsNearCap.set(near);
         oldestWindowAgeSeconds.set(oldestAge);
+        lastScanEpochSeconds.set(now.getEpochSecond());
         if (overdue > 0 && overdue != previousOverdue) {
             log.warn("{} bridge-mode aggregate window(s) open longer than {}h — the accounts stay capped "
                             + "until reconciliation confirms their sends; check reconciliation and unresolved "

@@ -51,6 +51,34 @@ class BridgeAggregateWindowMonitorTest {
     }
 
     @Test
+    void aWindowExactlyAsOldAsExpectedIsNotYetOverdue() {
+        when(ledger.openAggregateAccountIds()).thenReturn(List.of("ACC-6H", "ACC-6H1S"));
+        when(ledger.getAggregateView("ACC-6H")).thenReturn(view("ACC-6H", "10.00", Duration.ofHours(6)));
+        when(ledger.getAggregateView("ACC-6H1S"))
+                .thenReturn(view("ACC-6H1S", "10.00", Duration.ofHours(6).plusSeconds(1)));
+        BridgeAggregateWindowMonitor monitor = monitor(enabledPolicy());
+
+        monitor.scan();
+
+        assertThat(gauge(BridgeAggregateWindowMonitor.WINDOWS_OVERDUE_METRIC)).isEqualTo(1);
+    }
+
+    @Test
+    void lastScanGaugeRecordsSuccessfulScansOnly() {
+        when(ledger.openAggregateAccountIds())
+                .thenReturn(List.of())
+                .thenThrow(new IllegalStateException("redis down"));
+        BridgeAggregateWindowMonitor monitor = monitor(enabledPolicy());
+
+        monitor.scan();
+        assertThat(gauge(BridgeAggregateWindowMonitor.LAST_SCAN_METRIC)).isEqualTo(NOW.getEpochSecond());
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(monitor::scan);
+        // a failed scan leaves the timestamp where it was: staleness is visible
+        assertThat(gauge(BridgeAggregateWindowMonitor.LAST_SCAN_METRIC)).isEqualTo(NOW.getEpochSecond());
+    }
+
+    @Test
     void nearCapThresholdIsInclusive() {
         when(ledger.openAggregateAccountIds()).thenReturn(List.of("ACC-80", "ACC-79"));
         when(ledger.getAggregateView("ACC-80")).thenReturn(view("ACC-80", "400.00", Duration.ZERO));
