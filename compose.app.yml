@@ -42,7 +42,9 @@ services:
     build:
       context: .
       args:
-        VERSION: ${OPENFEDNOW_VERSION:-0.1.0-compose}
+        # Image label only. Defaults to "dev" so a local build never claims a
+        # released version number.
+        VERSION: ${OPENFEDNOW_VERSION:-dev}
         REVISION: ${OPENFEDNOW_REVISION:-local}
     # Set OPENFEDNOW_IMAGE to run a published image instead of building here.
     image: ${OPENFEDNOW_IMAGE:-openfednow:local}
