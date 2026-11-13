@@ -97,7 +97,7 @@ jobs:
       # One layout per platform: Trivy cannot pick a platform out of a
       # multi-platform layout and would scan amd64 twice.
       - name: Build the linux/amd64 image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64
@@ -106,7 +106,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=image-amd64
 
       - name: Build the linux/arm64 image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/arm64

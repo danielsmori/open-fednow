@@ -74,7 +74,7 @@ jobs:
       # is allowed to reach the registry at all. Each build caches under its
       # own scope so the push step further down reuses both.
       - name: Build the linux/amd64 image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64
@@ -86,7 +86,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=image-amd64
 
       - name: Build the linux/arm64 image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/arm64
@@ -141,7 +141,7 @@ jobs:
       - name: Push the image
         if: env.PUBLISH == 'true'
         id: push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           platforms: ${{ env.PLATFORMS }}
