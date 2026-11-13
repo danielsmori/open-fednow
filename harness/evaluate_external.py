@@ -155,13 +155,18 @@ def main():
                                 "java_rss_kib_after_start": rss_kib,
                                 "total_elapsed_seconds": time.monotonic() - started,
                                 "resource_limitations": "One macOS ps RSS sample; no throughput or peak-memory benchmark"}
+    # Only entries with an exit code are runs. "ports" and "measurements" are
+    # records about the evaluation, not runs, and stay in the JSON file only.
+    runs = {name: item for name, item in results.items()
+            if isinstance(item, dict) and "exit_code" in item}
     results["all_passed"] = "execution_error" not in results and all(
-        item["exit_code"] == 0 for item in results.values()
-        if isinstance(item, dict) and "exit_code" in item)
+        item["exit_code"] == 0 for item in runs.values())
     (OUT / "external-results.json").write_text(json.dumps(results, indent=2) + "\n")
-    print(json.dumps({"all_passed": results["all_passed"],
-                      "runs": {key: value.get("exit_code") for key, value in results.items()
-                               if isinstance(value, dict)}}, indent=2))
+    summary = {"all_passed": results["all_passed"],
+               "runs": {name: item["exit_code"] for name, item in runs.items()}}
+    if "execution_error" in results:
+        summary["execution_error"] = results["execution_error"]
+    print(json.dumps(summary, indent=2))
     return 0 if results["all_passed"] else 1
 
 
