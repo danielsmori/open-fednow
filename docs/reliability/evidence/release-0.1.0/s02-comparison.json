@@ -1,0 +1,1061 @@
+{
+  "schema": "s02-ledger-rail-comparison-v1",
+  "source_revision": "589ae8d1f2e1a701fe8496f20d0a5b2d42563f7b",
+  "base_revision": "2e6dfd6b51af81dadfe42c8d0df702b22207aa25",
+  "environment": "project-built synthetic local",
+  "requested_trials_per_target": 3,
+  "revisions": {
+    "runner_sha256": "9b40f1ec5ac5a300c6d8d8577e7d4df3f71cb8204cbde7649ffb44f955d588f0",
+    "comparator_sha256": "714a45355634b93a244c9942300887a2ce81f83c4017acc49c635f1ca5f9d2b0",
+    "shared_oracle_sha256": "f379672418cc6938d6e1ce05a5bfba36217a23c93c759561e1da72c86bda0a74",
+    "profile_sha256": "b264e4b94a7cdbf782947faa4ed339a7f8f8507f0c3993f7a8c7e13c0d77992a",
+    "profile_runner_version": "1.0.0",
+    "scenario_manifest_sha256": "19b935e949696ed9459d743f5bb25ebbaddec3db4de602fbebbc2d8b7c1fe98b",
+    "python_target_sha256": "f4d88048cf5ea875bad0b3f81da6a0765af7b14ba1028413bd7897cf3eaf0e10",
+    "java_source_revision": "2e6dfd6b51af81dadfe42c8d0df702b22207aa25"
+  },
+  "predeclared_comparator_assertions": [
+    "pending_state",
+    "pending_booked_minor",
+    "pending_held_minor",
+    "same_operation_on_repeat",
+    "final_state",
+    "final_booked_minor",
+    "final_held_minor",
+    "hold_count",
+    "hold_amount_minor",
+    "post_count",
+    "post_amount_minor",
+    "release_count",
+    "rail_status",
+    "submission_attempts",
+    "settlement_events",
+    "duplicate_submission_events"
+  ],
+  "records": [
+    {
+      "target": "java_postgresql",
+      "trial": 1,
+      "case": "S02",
+      "condition": "clean",
+      "fault_kind": "none",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 1,
+        "post_amount_minor": 10000,
+        "release_count": 0,
+        "rail_status": "SETTLED",
+        "submission_attempts": 1,
+        "settlement_events": 1,
+        "duplicate_submission_events": 0
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "PASS",
+          "failed_assertions": [],
+          "unavailable_assertions": []
+        },
+        "portable_evaluator": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "target": "java_postgresql",
+      "trial": 1,
+      "case": "S02",
+      "condition": "extra_submission",
+      "fault_kind": "executable_rail_replay",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 1,
+        "post_amount_minor": 10000,
+        "release_count": 0,
+        "rail_status": "SETTLED",
+        "submission_attempts": 2,
+        "settlement_events": 1,
+        "duplicate_submission_events": 1
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "DETECT",
+          "failed_assertions": [
+            "submission_attempts",
+            "duplicate_submission_events"
+          ],
+          "unavailable_assertions": []
+        },
+        "portable_evaluator": {
+          "result": "DETECT",
+          "reason": "duplicate_remote_submission"
+        }
+      }
+    },
+    {
+      "target": "java_postgresql",
+      "trial": 1,
+      "case": "S02",
+      "condition": "missing_local_post",
+      "fault_kind": "trace_mutation",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 0,
+        "post_amount_minor": 0,
+        "release_count": 0,
+        "rail_status": "SETTLED",
+        "submission_attempts": 1,
+        "settlement_events": 1,
+        "duplicate_submission_events": 0
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "DETECT",
+          "failed_assertions": [
+            "post_count",
+            "post_amount_minor"
+          ],
+          "unavailable_assertions": []
+        },
+        "portable_evaluator": {
+          "result": "DETECT",
+          "reason": "financial_effects"
+        }
+      }
+    },
+    {
+      "target": "java_postgresql",
+      "trial": 1,
+      "case": "S02",
+      "condition": "missing_rail_evidence",
+      "fault_kind": "evidence_removed",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 1,
+        "post_amount_minor": 10000,
+        "release_count": 0,
+        "rail_status": null,
+        "submission_attempts": null,
+        "settlement_events": null,
+        "duplicate_submission_events": null
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "UNAVAILABLE",
+          "failed_assertions": [],
+          "unavailable_assertions": [
+            "rail_status",
+            "submission_attempts",
+            "settlement_events",
+            "duplicate_submission_events"
+          ]
+        },
+        "portable_evaluator": {
+          "result": "UNAVAILABLE",
+          "reason": "rail_observation_unavailable"
+        }
+      }
+    },
+    {
+      "target": "java_postgresql",
+      "trial": 2,
+      "case": "S02",
+      "condition": "clean",
+      "fault_kind": "none",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 1,
+        "post_amount_minor": 10000,
+        "release_count": 0,
+        "rail_status": "SETTLED",
+        "submission_attempts": 1,
+        "settlement_events": 1,
+        "duplicate_submission_events": 0
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "PASS",
+          "failed_assertions": [],
+          "unavailable_assertions": []
+        },
+        "portable_evaluator": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "target": "java_postgresql",
+      "trial": 2,
+      "case": "S02",
+      "condition": "extra_submission",
+      "fault_kind": "executable_rail_replay",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 1,
+        "post_amount_minor": 10000,
+        "release_count": 0,
+        "rail_status": "SETTLED",
+        "submission_attempts": 2,
+        "settlement_events": 1,
+        "duplicate_submission_events": 1
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "DETECT",
+          "failed_assertions": [
+            "submission_attempts",
+            "duplicate_submission_events"
+          ],
+          "unavailable_assertions": []
+        },
+        "portable_evaluator": {
+          "result": "DETECT",
+          "reason": "duplicate_remote_submission"
+        }
+      }
+    },
+    {
+      "target": "java_postgresql",
+      "trial": 2,
+      "case": "S02",
+      "condition": "missing_local_post",
+      "fault_kind": "trace_mutation",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 0,
+        "post_amount_minor": 0,
+        "release_count": 0,
+        "rail_status": "SETTLED",
+        "submission_attempts": 1,
+        "settlement_events": 1,
+        "duplicate_submission_events": 0
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "DETECT",
+          "failed_assertions": [
+            "post_count",
+            "post_amount_minor"
+          ],
+          "unavailable_assertions": []
+        },
+        "portable_evaluator": {
+          "result": "DETECT",
+          "reason": "financial_effects"
+        }
+      }
+    },
+    {
+      "target": "java_postgresql",
+      "trial": 2,
+      "case": "S02",
+      "condition": "missing_rail_evidence",
+      "fault_kind": "evidence_removed",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 1,
+        "post_amount_minor": 10000,
+        "release_count": 0,
+        "rail_status": null,
+        "submission_attempts": null,
+        "settlement_events": null,
+        "duplicate_submission_events": null
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "UNAVAILABLE",
+          "failed_assertions": [],
+          "unavailable_assertions": [
+            "rail_status",
+            "submission_attempts",
+            "settlement_events",
+            "duplicate_submission_events"
+          ]
+        },
+        "portable_evaluator": {
+          "result": "UNAVAILABLE",
+          "reason": "rail_observation_unavailable"
+        }
+      }
+    },
+    {
+      "target": "java_postgresql",
+      "trial": 3,
+      "case": "S02",
+      "condition": "clean",
+      "fault_kind": "none",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 1,
+        "post_amount_minor": 10000,
+        "release_count": 0,
+        "rail_status": "SETTLED",
+        "submission_attempts": 1,
+        "settlement_events": 1,
+        "duplicate_submission_events": 0
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "PASS",
+          "failed_assertions": [],
+          "unavailable_assertions": []
+        },
+        "portable_evaluator": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "target": "java_postgresql",
+      "trial": 3,
+      "case": "S02",
+      "condition": "extra_submission",
+      "fault_kind": "executable_rail_replay",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 1,
+        "post_amount_minor": 10000,
+        "release_count": 0,
+        "rail_status": "SETTLED",
+        "submission_attempts": 2,
+        "settlement_events": 1,
+        "duplicate_submission_events": 1
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "DETECT",
+          "failed_assertions": [
+            "submission_attempts",
+            "duplicate_submission_events"
+          ],
+          "unavailable_assertions": []
+        },
+        "portable_evaluator": {
+          "result": "DETECT",
+          "reason": "duplicate_remote_submission"
+        }
+      }
+    },
+    {
+      "target": "java_postgresql",
+      "trial": 3,
+      "case": "S02",
+      "condition": "missing_local_post",
+      "fault_kind": "trace_mutation",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 0,
+        "post_amount_minor": 0,
+        "release_count": 0,
+        "rail_status": "SETTLED",
+        "submission_attempts": 1,
+        "settlement_events": 1,
+        "duplicate_submission_events": 0
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "DETECT",
+          "failed_assertions": [
+            "post_count",
+            "post_amount_minor"
+          ],
+          "unavailable_assertions": []
+        },
+        "portable_evaluator": {
+          "result": "DETECT",
+          "reason": "financial_effects"
+        }
+      }
+    },
+    {
+      "target": "java_postgresql",
+      "trial": 3,
+      "case": "S02",
+      "condition": "missing_rail_evidence",
+      "fault_kind": "evidence_removed",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 1,
+        "post_amount_minor": 10000,
+        "release_count": 0,
+        "rail_status": null,
+        "submission_attempts": null,
+        "settlement_events": null,
+        "duplicate_submission_events": null
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "UNAVAILABLE",
+          "failed_assertions": [],
+          "unavailable_assertions": [
+            "rail_status",
+            "submission_attempts",
+            "settlement_events",
+            "duplicate_submission_events"
+          ]
+        },
+        "portable_evaluator": {
+          "result": "UNAVAILABLE",
+          "reason": "rail_observation_unavailable"
+        }
+      }
+    },
+    {
+      "target": "python_sqlite",
+      "trial": 1,
+      "case": "S02",
+      "condition": "clean",
+      "fault_kind": "none",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 1,
+        "post_amount_minor": 10000,
+        "release_count": 0,
+        "rail_status": "SETTLED",
+        "submission_attempts": 1,
+        "settlement_events": 1,
+        "duplicate_submission_events": 0
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "PASS",
+          "failed_assertions": [],
+          "unavailable_assertions": []
+        },
+        "portable_evaluator": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "target": "python_sqlite",
+      "trial": 1,
+      "case": "S02",
+      "condition": "extra_submission",
+      "fault_kind": "executable_rail_replay",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 1,
+        "post_amount_minor": 10000,
+        "release_count": 0,
+        "rail_status": "SETTLED",
+        "submission_attempts": 2,
+        "settlement_events": 1,
+        "duplicate_submission_events": 1
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "DETECT",
+          "failed_assertions": [
+            "submission_attempts",
+            "duplicate_submission_events"
+          ],
+          "unavailable_assertions": []
+        },
+        "portable_evaluator": {
+          "result": "DETECT",
+          "reason": "duplicate_remote_submission"
+        }
+      }
+    },
+    {
+      "target": "python_sqlite",
+      "trial": 1,
+      "case": "S02",
+      "condition": "missing_local_post",
+      "fault_kind": "trace_mutation",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 0,
+        "post_amount_minor": 0,
+        "release_count": 0,
+        "rail_status": "SETTLED",
+        "submission_attempts": 1,
+        "settlement_events": 1,
+        "duplicate_submission_events": 0
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "DETECT",
+          "failed_assertions": [
+            "post_count",
+            "post_amount_minor"
+          ],
+          "unavailable_assertions": []
+        },
+        "portable_evaluator": {
+          "result": "DETECT",
+          "reason": "financial_effects"
+        }
+      }
+    },
+    {
+      "target": "python_sqlite",
+      "trial": 1,
+      "case": "S02",
+      "condition": "missing_rail_evidence",
+      "fault_kind": "evidence_removed",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 1,
+        "post_amount_minor": 10000,
+        "release_count": 0,
+        "rail_status": null,
+        "submission_attempts": null,
+        "settlement_events": null,
+        "duplicate_submission_events": null
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "UNAVAILABLE",
+          "failed_assertions": [],
+          "unavailable_assertions": [
+            "rail_status",
+            "submission_attempts",
+            "settlement_events",
+            "duplicate_submission_events"
+          ]
+        },
+        "portable_evaluator": {
+          "result": "UNAVAILABLE",
+          "reason": "rail_observation_unavailable"
+        }
+      }
+    },
+    {
+      "target": "python_sqlite",
+      "trial": 2,
+      "case": "S02",
+      "condition": "clean",
+      "fault_kind": "none",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 1,
+        "post_amount_minor": 10000,
+        "release_count": 0,
+        "rail_status": "SETTLED",
+        "submission_attempts": 1,
+        "settlement_events": 1,
+        "duplicate_submission_events": 0
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "PASS",
+          "failed_assertions": [],
+          "unavailable_assertions": []
+        },
+        "portable_evaluator": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "target": "python_sqlite",
+      "trial": 2,
+      "case": "S02",
+      "condition": "extra_submission",
+      "fault_kind": "executable_rail_replay",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 1,
+        "post_amount_minor": 10000,
+        "release_count": 0,
+        "rail_status": "SETTLED",
+        "submission_attempts": 2,
+        "settlement_events": 1,
+        "duplicate_submission_events": 1
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "DETECT",
+          "failed_assertions": [
+            "submission_attempts",
+            "duplicate_submission_events"
+          ],
+          "unavailable_assertions": []
+        },
+        "portable_evaluator": {
+          "result": "DETECT",
+          "reason": "duplicate_remote_submission"
+        }
+      }
+    },
+    {
+      "target": "python_sqlite",
+      "trial": 2,
+      "case": "S02",
+      "condition": "missing_local_post",
+      "fault_kind": "trace_mutation",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 0,
+        "post_amount_minor": 0,
+        "release_count": 0,
+        "rail_status": "SETTLED",
+        "submission_attempts": 1,
+        "settlement_events": 1,
+        "duplicate_submission_events": 0
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "DETECT",
+          "failed_assertions": [
+            "post_count",
+            "post_amount_minor"
+          ],
+          "unavailable_assertions": []
+        },
+        "portable_evaluator": {
+          "result": "DETECT",
+          "reason": "financial_effects"
+        }
+      }
+    },
+    {
+      "target": "python_sqlite",
+      "trial": 2,
+      "case": "S02",
+      "condition": "missing_rail_evidence",
+      "fault_kind": "evidence_removed",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 1,
+        "post_amount_minor": 10000,
+        "release_count": 0,
+        "rail_status": null,
+        "submission_attempts": null,
+        "settlement_events": null,
+        "duplicate_submission_events": null
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "UNAVAILABLE",
+          "failed_assertions": [],
+          "unavailable_assertions": [
+            "rail_status",
+            "submission_attempts",
+            "settlement_events",
+            "duplicate_submission_events"
+          ]
+        },
+        "portable_evaluator": {
+          "result": "UNAVAILABLE",
+          "reason": "rail_observation_unavailable"
+        }
+      }
+    },
+    {
+      "target": "python_sqlite",
+      "trial": 3,
+      "case": "S02",
+      "condition": "clean",
+      "fault_kind": "none",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 1,
+        "post_amount_minor": 10000,
+        "release_count": 0,
+        "rail_status": "SETTLED",
+        "submission_attempts": 1,
+        "settlement_events": 1,
+        "duplicate_submission_events": 0
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "PASS",
+          "failed_assertions": [],
+          "unavailable_assertions": []
+        },
+        "portable_evaluator": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "target": "python_sqlite",
+      "trial": 3,
+      "case": "S02",
+      "condition": "extra_submission",
+      "fault_kind": "executable_rail_replay",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 1,
+        "post_amount_minor": 10000,
+        "release_count": 0,
+        "rail_status": "SETTLED",
+        "submission_attempts": 2,
+        "settlement_events": 1,
+        "duplicate_submission_events": 1
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "DETECT",
+          "failed_assertions": [
+            "submission_attempts",
+            "duplicate_submission_events"
+          ],
+          "unavailable_assertions": []
+        },
+        "portable_evaluator": {
+          "result": "DETECT",
+          "reason": "duplicate_remote_submission"
+        }
+      }
+    },
+    {
+      "target": "python_sqlite",
+      "trial": 3,
+      "case": "S02",
+      "condition": "missing_local_post",
+      "fault_kind": "trace_mutation",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 0,
+        "post_amount_minor": 0,
+        "release_count": 0,
+        "rail_status": "SETTLED",
+        "submission_attempts": 1,
+        "settlement_events": 1,
+        "duplicate_submission_events": 0
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "DETECT",
+          "failed_assertions": [
+            "post_count",
+            "post_amount_minor"
+          ],
+          "unavailable_assertions": []
+        },
+        "portable_evaluator": {
+          "result": "DETECT",
+          "reason": "financial_effects"
+        }
+      }
+    },
+    {
+      "target": "python_sqlite",
+      "trial": 3,
+      "case": "S02",
+      "condition": "missing_rail_evidence",
+      "fault_kind": "evidence_removed",
+      "observed": {
+        "pending_state": "OUTCOME_UNKNOWN",
+        "pending_booked_minor": 100000,
+        "pending_held_minor": 10000,
+        "same_operation_on_repeat": true,
+        "final_state": "SETTLED",
+        "final_booked_minor": 90000,
+        "final_held_minor": 0,
+        "hold_count": 1,
+        "hold_amount_minor": 10000,
+        "post_count": 1,
+        "post_amount_minor": 10000,
+        "release_count": 0,
+        "rail_status": null,
+        "submission_attempts": null,
+        "settlement_events": null,
+        "duplicate_submission_events": null
+      },
+      "workflows": {
+        "historical_status_only": {
+          "result": "PASS"
+        },
+        "ledger_rail_comparator": {
+          "result": "UNAVAILABLE",
+          "failed_assertions": [],
+          "unavailable_assertions": [
+            "rail_status",
+            "submission_attempts",
+            "settlement_events",
+            "duplicate_submission_events"
+          ]
+        },
+        "portable_evaluator": {
+          "result": "UNAVAILABLE",
+          "reason": "rail_observation_unavailable"
+        }
+      }
+    }
+  ],
+  "execution_problems": [],
+  "summary": {
+    "historical_status_only": {
+      "valid_faults_detected": 0,
+      "valid_faults_eligible": 12,
+      "clean_false_alarms": 0,
+      "clean_trials": 6,
+      "clean_unavailable": 0,
+      "unavailable_cases": 0
+    },
+    "ledger_rail_comparator": {
+      "valid_faults_detected": 12,
+      "valid_faults_eligible": 12,
+      "clean_false_alarms": 0,
+      "clean_trials": 6,
+      "clean_unavailable": 0,
+      "unavailable_cases": 6
+    },
+    "portable_evaluator": {
+      "valid_faults_detected": 12,
+      "valid_faults_eligible": 12,
+      "clean_false_alarms": 0,
+      "clean_trials": 6,
+      "clean_unavailable": 0,
+      "unavailable_cases": 6
+    }
+  },
+  "valid_clean_trials": 6
+}

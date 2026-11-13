@@ -191,7 +191,7 @@ Please also read the [Code of Conduct](CODE_OF_CONDUCT.md), the [governance note
 
 ## Citing
 
-**The software.** Cite the repository, https://github.com/danielsmori/open-fednow, with the commit hash you used, or the release tag once a tagged release exists. Citation metadata is in [CITATION.cff](CITATION.cff), and GitHub's **Cite this repository** button reads it. The software does not have its own DOI. Use the commit-specific [evaluation report](docs/reliability/evaluation-report.md) to assess a particular checkout.
+**The software.** Cite the repository, https://github.com/danielsmori/open-fednow, with the [release](https://github.com/danielsmori/open-fednow/releases) tag you used (for example `v0.1.0`), or the commit hash if you used an untagged checkout. Citation metadata is in [CITATION.cff](CITATION.cff), and GitHub's **Cite this repository** button reads it. The software does not have its own DOI. Use the commit-specific [evaluation report](docs/reliability/evaluation-report.md) to assess a particular checkout.
 
 **The paper.** The architecture preprint, *Bridging Legacy Core Banking to Both U.S. Instant Payment Rails: FedNow and RTP*, has its own DOI: [10.5281/zenodo.21114113](https://doi.org/10.5281/zenodo.21114113). That DOI identifies the preprint dated May 13, 2026, not this repository. The revised version of November 9, 2026 is in [docs/whitepaper.pdf](docs/whitepaper.pdf).
 
