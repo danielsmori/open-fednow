@@ -98,9 +98,12 @@ Requires JDK 17+, Maven and Docker with Compose. The default application profile
 ```sh
 git clone https://github.com/danielsmori/open-fednow.git
 cd open-fednow
+python3 scripts/preflight.py          # checks JDK 17, Maven, Python, Docker and the host ports
 docker compose up -d postgres redis rabbitmq
 mvn spring-boot:run
 ```
+
+Container and volume names are scoped to the Compose project, so a second checkout can run its own stack with `docker compose -p <name> up -d`. The published host ports default to the standard ones and move with `POSTGRES_PORT`, `REDIS_PORT`, `RABBITMQ_PORT` and `RABBITMQ_MANAGEMENT_PORT`; they bind `127.0.0.1` only.
 
 The local health route is `http://localhost:8080/fednow/health`; `http://localhost:8080/demo/` is a synthetic browser demonstration. The optional `./demo/run-demo.sh` exercises legacy outbound and return examples and requires starting the app with `LEGACY_OUTBOUND_SANDBOX_ENABLED=true LEGACY_RETURN_SANDBOX_ENABLED=true` in a **local sandbox**. Those routes are disabled by default. The reliability bridge is a separate opt-in non-production path; see [reproduction instructions](docs/reliability/reproduce.md).
 

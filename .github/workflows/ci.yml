@@ -34,6 +34,15 @@ jobs:
       - name: Run Banking Hub preflight tests
         run: python3 -m unittest discover -s scripts -p 'test_fiserv_trial_preflight.py'
 
+      - name: Run clean-checkout preflight tests
+        run: python3 -m unittest discover -s scripts -p 'test_preflight.py'
+
+      - name: Check the clean-checkout preflight runs
+        # The runner has JDK 17, Maven, Python and Docker, so the documented
+        # preflight must pass here; a non-zero status means the documented
+        # clean-checkout path is broken.
+        run: python3 scripts/preflight.py
+
       - name: Run portable reliability profile tests
         run: python3 -m unittest discover -s harness -p 'test_portable_profile.py'
 

@@ -43,6 +43,9 @@ If you have access to a Fiserv, FIS, or Jack Henry sandbox environment, testing 
 git clone https://github.com/danielsmori/open-fednow.git
 cd open-fednow
 
+# Check the toolchain and host ports before anything else
+python3 scripts/preflight.py
+
 # Start local dependencies (PostgreSQL + Redis + RabbitMQ)
 docker compose up -d
 

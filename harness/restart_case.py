@@ -2,14 +2,14 @@
 """S05: kill the Java target after a synthetic remote effect, then recover."""
 import argparse
 import json
-import os
 import subprocess
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from run import Client, OpenFedNowDriver, assert_effects, final_snapshot, payment, require
+from run import (Client, OpenFedNowDriver, assert_effects, database_env, final_snapshot,
+                 free_ports, payment, require)
 
 
 def wait_healthy(client, deadline_seconds=25):
@@ -29,25 +29,25 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--jar", required=True)
     parser.add_argument("--rail-url", default="http://127.0.0.1:8099")
-    parser.add_argument("--target-port", type=int, default=8081)
+    parser.add_argument("--target-port", type=int,
+                        help="Port for the restarted JVM (default: an unused port)")
     parser.add_argument("--output", default="target/evaluation/restart-s05.json")
     parser.add_argument("--investigation-evidence",
                         help="Edge-case JSON containing an aged investigation to verify across restart")
     args = parser.parse_args()
+    target_port = args.target_port or free_ports(1)[0]
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
     log_path = out.with_suffix(".target.log")
     rail = Client(args.rail_url)
-    target = Client(f"http://127.0.0.1:{args.target_port}", "admin", "changeme")
+    target = Client(f"http://127.0.0.1:{target_port}", "admin", "changeme")
     driver = OpenFedNowDriver(target)
     app = None
     run_log = log_path.open("wb")
 
     def start():
-        env = dict(os.environ)
-        env.update({"DB_URL": "jdbc:postgresql://localhost:5432/openfednow",
-                    "DB_USERNAME": "openfednow", "DB_PASSWORD": "openfednow",
-                    "SPRING_APPLICATION_JSON": json.dumps({"server": {"port": args.target_port},
+        env = database_env()
+        env.update({"SPRING_APPLICATION_JSON": json.dumps({"server": {"port": target_port},
                         "openfednow": {"reliability": {
                             "synthetic-rail-url": args.rail_url,
                             "fixture-api-enabled": True}}})})

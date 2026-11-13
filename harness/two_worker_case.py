@@ -2,7 +2,6 @@
 """Two JVMs contend for one SQL inquiry lease; stale completion is fenced."""
 import argparse
 import json
-import os
 import subprocess
 import sys
 import time
@@ -10,7 +9,8 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from run import Client, OpenFedNowDriver, payment, final_snapshot, assert_effects, require
+from run import (Client, OpenFedNowDriver, assert_effects, database_env, final_snapshot,
+                 free_ports, payment, require)
 
 
 def main():
@@ -18,23 +18,25 @@ def main():
     parser.add_argument("--jar", required=True)
     parser.add_argument("--rail-url", default="http://127.0.0.1:8099")
     parser.add_argument("--output", default="target/evaluation/two-worker-s11.json")
+    parser.add_argument("--worker-ports", type=int, nargs=2, metavar=("PORT1", "PORT2"),
+                        help="Ports for the two worker JVMs (default: two unused ports)")
     args = parser.parse_args()
+    worker_ports = args.worker_ports or free_ports(2)
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
     rail = Client(args.rail_url)
-    clients = [Client("http://127.0.0.1:8081", "admin", "changeme"),
-               Client("http://127.0.0.1:8082", "admin", "changeme")]
+    clients = [Client(f"http://127.0.0.1:{port}", "admin", "changeme")
+               for port in worker_ports]
     processes = []
     logs = []
-    result = {"id": "S11", "result": "FAIL", "workers": 2, "leaseSeconds": 15}
+    result = {"id": "S11", "result": "FAIL", "workers": 2, "leaseSeconds": 15,
+              "workerPorts": worker_ports}
     try:
-        for index, port in enumerate((8081, 8082)):
+        for index, port in enumerate(worker_ports):
             log = out.with_suffix(f".worker{index + 1}.log").open("wb")
             logs.append(log)
-            env = dict(os.environ)
-            env.update({"DB_URL": "jdbc:postgresql://localhost:5432/openfednow",
-                        "DB_USERNAME": "openfednow", "DB_PASSWORD": "openfednow",
-                        "SPRING_APPLICATION_JSON": json.dumps({"server": {"port": port},
+            env = database_env()
+            env.update({"SPRING_APPLICATION_JSON": json.dumps({"server": {"port": port},
                             "openfednow": {"reliability": {
                                 "synthetic-rail-url": args.rail_url,
                                 "fixture-api-enabled": True,

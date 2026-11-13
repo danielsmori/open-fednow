@@ -3,6 +3,8 @@
 import argparse
 import base64
 import json
+import os
+import socket
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -76,6 +78,37 @@ class OpenFedNowDriver:
 
     def ack_core(self, operation):
         return self.client.call("POST", f"/reference/v1/fixtures/payments/{operation}/core-ack")
+
+
+def free_ports(count=1):
+    """Reserve `count` distinct loopback ports the operating system is offering.
+
+    Each port is released as soon as it is observed, so the child process has
+    to bind it promptly. That is the same trade-off `harness/smoke_profile.py`
+    makes and it is sound for local evaluation runs; it is what lets two
+    evaluations of different checkouts run at the same time without a fixed
+    port list.
+    """
+    ports = set()
+    while len(ports) < count:
+        with socket.socket() as probe:
+            probe.bind(("127.0.0.1", 0))
+            ports.add(probe.getsockname()[1])
+    return sorted(ports)
+
+
+def database_env(base=None):
+    """Postgres settings for a child JVM, preserving any already in the environment.
+
+    The caller's DB_URL/DB_USERNAME/DB_PASSWORD win, so an evaluation can point
+    at a Compose stack on a non-default port (see POSTGRES_PORT in
+    docker-compose.yml) instead of being forced onto localhost:5432.
+    """
+    env = dict(os.environ if base is None else base)
+    env.setdefault("DB_URL", "jdbc:postgresql://localhost:5432/openfednow")
+    env.setdefault("DB_USERNAME", "openfednow")
+    env.setdefault("DB_PASSWORD", "openfednow")
+    return env
 
 
 def payment(case, account, amount="100.00"):
