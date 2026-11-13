@@ -223,6 +223,27 @@ class ReconciliationLockingTest {
     }
 
     @Test
+    void accountChangedMidReconciliationIsDeferredNotConfirmed() {
+        // #142/#144: the compare-and-set refused because a payment changed the
+        // balance after it was read — nothing may be confirmed for the account
+        ShadowLedger ledger = ledger();
+        when(ledger.getAvailableBalance("ACC-BUSY")).thenReturn(new BigDecimal("100.00"));
+        when(ledger.reconcileIfUnchanged(eq("ACC-BUSY"), any(), any())).thenReturn(false);
+        CoreBankingAdapter core = core();
+        when(core.getAvailableBalance(eq("ACC-BUSY"))).thenReturn(new BigDecimal("50.00"));
+        insertPendingRow("ACC-BUSY");
+
+        ReconciliationAttempt attempt = service(ledger, core, ReconciliationLock.LOCAL_ONLY)
+                .attemptReconciliation();
+
+        assertThat(attempt.outcome()).isEqualTo(Outcome.COMPLETED);
+        assertThat(attempt.deferredAccounts()).isEqualTo(1);
+        assertThat(attempt.fullyReconciled()).isFalse();
+        assertThat(attempt.report().transactionsReplayed()).isZero();
+        assertThat(unconfirmed()).isEqualTo(1);
+    }
+
+    @Test
     void publicReportIsUnchangedByTheNewEntryPoint() {
         insertPendingRow("ACC-A");
 

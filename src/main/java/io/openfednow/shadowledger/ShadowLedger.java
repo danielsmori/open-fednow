@@ -157,6 +157,18 @@ public class ShadowLedger {
                     "return 1",
             Long.class);
 
+    /**
+     * Compare-and-set for {@link #reconcileIfUnchanged}. KEYS[1] = balance key;
+     * ARGV[1] = expected cents (absent key = 0), ARGV[2] = confirmed cents.
+     * Returns 1 if set, 0 if the balance no longer matches.
+     */
+    private static final RedisScript<Long> RECONCILE_IF_UNCHANGED_SCRIPT = new DefaultRedisScript<>(
+            "local cur = tonumber(redis.call('GET', KEYS[1]) or '0')\n" +
+                    "if cur ~= tonumber(ARGV[1]) then return 0 end\n" +
+                    "redis.call('SET', KEYS[1], ARGV[2])\n" +
+                    "return 1",
+            Long.class);
+
     /** Outcome of {@link #applyDebitCapped}. */
     public enum CappedDebitResult {
         /** Balance debited and the amount counted toward the aggregate window. */
@@ -590,7 +602,7 @@ public class ShadowLedger {
      *
      * <p>Used by the on-demand admin seed endpoint, where the operator has
      * explicitly asked for the balance to be replaced with the core's current view.
-     * Distinct from {@link #reconcile(String, BigDecimal)} in that this is a
+     * Distinct from {@link #reconcileIfUnchanged} in that this is a
      * one-shot operator action and does not log a RECONCILIATION audit row —
      * those rows belong to the scheduled reconciliation cycle.
      */
@@ -601,35 +613,60 @@ public class ShadowLedger {
     }
 
     /**
-     * Overwrites the Shadow Ledger balance with the core system's confirmed balance.
-     * Logs the reconciliation with discrepancy detection. No-ops when balances match.
+     * Sets the Shadow Ledger balance to the core's confirmed balance — but only
+     * if the balance is still exactly what the caller observed before reading
+     * the core (#142/#144).
+     *
+     * <p>Reconciliation reads the shadow balance, then the core balance, then
+     * corrects the shadow balance. Payments keep flowing meanwhile: a debit or
+     * credit applied between the read and the correction would be silently
+     * erased by a plain overwrite, making spent money spendable again (or a
+     * credit vanish). This method performs the check and the write as one
+     * atomic Redis script, so the correction applies only if nothing changed;
+     * otherwise nothing is written and the caller retries the account later.
+     * An absent balance key counts as zero, matching
+     * {@link #getAvailableBalance}.
+     *
+     * <p>When applied and the balances differed, a {@code RECONCILIATION} audit
+     * row records the correction, as before.
+     *
+     * @param expectedShadowBalance the shadow balance the caller read before
+     *                              reading the core
+     * @param confirmedBalance      the core's authoritative balance
+     * @return {@code true} if the balance now equals {@code confirmedBalance};
+     *         {@code false} if a concurrent update changed it since the caller's
+     *         read (nothing written)
      */
-    public void reconcile(String accountId, BigDecimal confirmedBalance) {
-        String key = BALANCE_KEY_PREFIX + accountId;
+    public boolean reconcileIfUnchanged(String accountId, BigDecimal expectedShadowBalance,
+                                        BigDecimal confirmedBalance) {
+        long expectedCents = dollarsToCents(expectedShadowBalance);
         long confirmedCents = dollarsToCents(confirmedBalance);
-
-        String raw = redis.opsForValue().get(key);
-        long shadowCents = raw != null ? Long.parseLong(raw) : 0L;
-
-        if (shadowCents != confirmedCents) {
-            log.warn("Shadow Ledger discrepancy detected account={} shadow={} confirmed={}",
-                    io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
-                    centsToDollars(shadowCents), confirmedBalance);
-        } else {
-            log.debug("Shadow Ledger reconciliation: balances match account={}",
+        Long applied = redis.execute(RECONCILE_IF_UNCHANGED_SCRIPT,
+                List.of(BALANCE_KEY_PREFIX + accountId),
+                String.valueOf(expectedCents), String.valueOf(confirmedCents));
+        if (applied == null || applied != 1L) {
+            log.info("Shadow Ledger reconciliation deferred — balance changed since it was read "
+                            + "account={}",
                     io.openfednow.security.pii.PiiRedactor.maskAccount(accountId));
+            return false;
         }
-
-        redis.opsForValue().set(key, String.valueOf(confirmedCents));
-
-        BigDecimal diff = confirmedBalance.subtract(centsToDollars(shadowCents)).abs();
-        if (diff.compareTo(BigDecimal.ZERO) > 0) {
-            String syntheticTxnId = "RECONCILE-" + accountId + "-" + System.currentTimeMillis();
+        if (expectedCents != confirmedCents) {
+            log.warn("Shadow Ledger discrepancy corrected account={} shadow={} confirmed={}",
+                    io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
+                    centsToDollars(expectedCents), confirmedBalance);
+            BigDecimal diff = confirmedBalance.subtract(centsToDollars(expectedCents)).abs();
+            // transaction_id / end_to_end_id are VARCHAR(35). The previous
+            // "RECONCILE-<account>-<millis>" overflowed for any account id longer
+            // than 11 characters, so the audit row failed to insert and the
+            // correction went unrecorded. "RCN" + 32 hex digits is exactly 35;
+            // the account is in its own column.
+            String syntheticTxnId = "RCN" + java.util.UUID.randomUUID().toString().replace("-", "");
             logTransaction(syntheticTxnId, syntheticTxnId, accountId, "RECONCILIATION",
-                    diff, centsToDollars(shadowCents), confirmedBalance);
+                    diff, centsToDollars(expectedCents), confirmedBalance);
         }
-
-        log.info("Shadow Ledger reconciled account={} confirmedBalance={}", accountId, confirmedBalance);
+        log.info("Shadow Ledger reconciled account={} confirmedBalance={}",
+                io.openfednow.security.pii.PiiRedactor.maskAccount(accountId), confirmedBalance);
+        return true;
     }
 
     /**

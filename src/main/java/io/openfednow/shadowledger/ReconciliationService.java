@@ -423,8 +423,8 @@ public class ReconciliationService {
      * Reconciles a single account inside its own transaction.
      *
      * <p>The Postgres-side writes — the optional RECONCILIATION audit row from
-     * {@link ShadowLedger#reconcile} and the "mark unconfirmed rows confirmed"
-     * UPDATE — commit or roll back together. The Redis update inside
+     * {@link ShadowLedger#reconcileIfUnchanged} and the "mark unconfirmed rows
+     * confirmed" UPDATE — commit or roll back together. The Redis update inside
      * {@code shadowLedger.reconcile} is outside this transaction (different
      * system); if Postgres rolls back after Redis has been updated, the
      * subsequent cycle will detect the residual discrepancy and write the
@@ -451,8 +451,11 @@ public class ReconciliationService {
             return new AccountOutcome(0, 0, true, false);
         }
         int[] outcome = reconcileOneAccountInTx(accountId);
+        boolean busy = outcome[2] == 1;
         boolean releaseFailed = windowOpen && !releaseConfirmedSends(accountId);
-        return new AccountOutcome(outcome[0], outcome[1], false, releaseFailed);
+        // A busy account (a payment landed mid-reconciliation) is left for the
+        // next cycle, like an account deferred for an offline core.
+        return new AccountOutcome(outcome[0], outcome[1], busy, releaseFailed);
     }
 
     /** Per-account result of {@link #reconcileOneAccount}. */
@@ -484,27 +487,54 @@ public class ReconciliationService {
         }
     }
 
+    /**
+     * The per-account reconciliation, inside its own transaction, made safe
+     * against payments that keep flowing while it runs (#142/#144):
+     * <ol>
+     *   <li><strong>Cutoff first.</strong> Read the highest unconfirmed row id.
+     *       A ledger row is written after its Redis balance change, so every
+     *       row at or below the cutoff is already reflected in the snapshot
+     *       taken next.</li>
+     *   <li><strong>Snapshot</strong> the shadow balance, then read the core.</li>
+     *   <li><strong>Correct only if unchanged.</strong> If they differ, apply the
+     *       core's balance with {@link ShadowLedger#reconcileIfUnchanged}. If a
+     *       payment changed the shadow balance meanwhile, nothing is written,
+     *       nothing is confirmed, and the account is reported busy — the next
+     *       cycle retries it. A blind overwrite would erase that payment.</li>
+     *   <li><strong>Confirm only up to the cutoff.</strong> Rows written after the
+     *       cutoff may not be in the balance that was just reconciled; they stay
+     *       unconfirmed for the next cycle rather than being confirmed against a
+     *       balance that never saw them.</li>
+     * </ol>
+     *
+     * @return {@code [transactionsConfirmed, discrepancyDetected, busy]}
+     */
     private int[] reconcileOneAccountInTx(String accountId) {
         return perAccountTx.execute(status -> {
-            int confirmed = 0;
-            int discrepancyDetected = 0;
-            BigDecimal coreBalance = coreBankingAdapter.getAvailableBalance(accountId);
+            Long cutoff = jdbc.queryForObject(
+                    "SELECT MAX(id) FROM shadow_ledger_transaction_log "
+                            + "WHERE account_id = ? AND core_confirmed = FALSE",
+                    Long.class, accountId);
             BigDecimal shadowBalance = shadowLedger.getAvailableBalance(accountId);
+            BigDecimal coreBalance = coreBankingAdapter.getAvailableBalance(accountId);
 
+            int discrepancyDetected = 0;
             if (coreBalance.compareTo(shadowBalance) != 0) {
                 discrepancyDetected = 1;
                 log.warn("Balance discrepancy account={} shadow={} core={}",
                         io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
                         shadowBalance, coreBalance);
-                shadowLedger.reconcile(accountId, coreBalance);
+                if (!shadowLedger.reconcileIfUnchanged(accountId, shadowBalance, coreBalance)) {
+                    return new int[] { 0, discrepancyDetected, 1 };
+                }
             }
 
-            confirmed = jdbc.update(
+            int confirmed = cutoff == null ? 0 : jdbc.update(
                     "UPDATE shadow_ledger_transaction_log " +
                     "SET core_confirmed = TRUE " +
-                    "WHERE account_id = ? AND core_confirmed = FALSE",
-                    accountId);
-            return new int[] { confirmed, discrepancyDetected };
+                    "WHERE account_id = ? AND core_confirmed = FALSE AND id <= ?",
+                    accountId, cutoff);
+            return new int[] { confirmed, discrepancyDetected, 0 };
         });
     }
 
@@ -573,8 +603,9 @@ public class ReconciliationService {
      *
      * @param failedAccounts   accounts whose reconciliation, or the release of
      *                         their confirmed bridge-mode sends, failed this cycle
-     * @param deferredAccounts accounts left for a later cycle because the core
-     *                         was offline
+     * @param deferredAccounts accounts left for a later cycle — the core was
+     *                         offline, or a payment changed the account's
+     *                         balance while it was being reconciled
      * @param openWindowsRemaining bridge-mode aggregate windows (#68) still open
      *                         after the cycle — they hold sends not releasable
      *                         yet, so the accounts stay capped
