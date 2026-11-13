@@ -4,7 +4,8 @@ Notable changes to OpenFedNow, newest first. The first tagged release is 0.1.0. 
 
 ## Unreleased
 
-Nothing yet.
+### Added
+- The component for the per-account aggregate send cap during bridge mode ([#68](https://github.com/danielsmori/open-fednow/issues/68)): a configurable ceiling (`openfednow.bridge-mode.max-aggregate-send-amount`, unset = disabled) on the total a single account can send against the cached Shadow Ledger balance in one maintenance window, counted atomically with the debit and released only when a send's reversal actually happens. Fails closed — no time-based reset; `expected-window-hours` only alerts. Not yet enforced in the outbound dispatch path; enforcement, clearing on reconciliation, automatic reconciliation and metrics follow in the next PRs on the issue ([#139](https://github.com/danielsmori/open-fednow/pull/139)).
 
 ## 0.1.0 - 2026-11-13
 
