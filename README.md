@@ -105,6 +105,18 @@ mvn spring-boot:run
 
 Container and volume names are scoped to the Compose project, so a second checkout can run its own stack with `docker compose -p <name> up -d`. The published host ports default to the standard ones and move with `POSTGRES_PORT`, `REDIS_PORT`, `RABBITMQ_PORT` and `RABBITMQ_MANAGEMENT_PORT`; they bind `127.0.0.1` only.
 
+To run the service in a container instead of on the host, add `compose.app.yml`:
+
+```sh
+python3 scripts/preflight.py --mode app
+docker compose -f docker-compose.yml -f compose.app.yml up -d --wait
+curl http://127.0.0.1:8080/fednow/health
+```
+
+Tagged releases publish this image to `ghcr.io/danielsmori/open-fednow` for `linux/amd64` and `linux/arm64`; set `OPENFEDNOW_IMAGE` to run a published one instead of building locally. See [docs/releasing.md](docs/releasing.md).
+
+In that mode the service reaches PostgreSQL, Redis and RabbitMQ by name inside the Compose network, so only the service's own port is published, on `127.0.0.1`. `APP_PORT` moves it, which lets two checkouts run the whole stack at once. This is a synthetic local stack: no live FedNow rail, no core banking system, and the non-production fixture gates stay off. The recorded reliability evidence is produced against the service running on the host, not this container; see [ADR-0011](docs/adr/0011-evaluate-the-host-run-jvm.md).
+
 The local health route is `http://localhost:8080/fednow/health`; `http://localhost:8080/demo/` is a synthetic browser demonstration. The optional `./demo/run-demo.sh` exercises legacy outbound and return examples and requires starting the app with `LEGACY_OUTBOUND_SANDBOX_ENABLED=true LEGACY_RETURN_SANDBOX_ENABLED=true` in a **local sandbox**. Those routes are disabled by default. The reliability bridge is a separate opt-in non-production path; see [reproduction instructions](docs/reliability/reproduce.md).
 
 Default tests run without Docker; tagged integration tests require Docker:

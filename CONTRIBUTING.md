@@ -49,6 +49,10 @@ python3 scripts/preflight.py
 # Start local dependencies (PostgreSQL + Redis + RabbitMQ)
 docker compose up -d
 
+# Or run the service in a container too, publishing only its own port:
+#   python3 scripts/preflight.py --mode app
+#   docker compose -f docker-compose.yml -f compose.app.yml up -d --wait
+
 # Build
 mvn -B --no-transfer-progress package -DskipTests
 

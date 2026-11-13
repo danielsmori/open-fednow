@@ -23,4 +23,6 @@ Failures should be investigated from `target/evaluation/*.log`, JUnit XML and th
 
 To run just the external oracle against already running processes, see `harness/contract-v1.md` and use `python3 harness/run.py --target-url ... --rail-url ...`. The repo is Apache-2.0 licensed; all new harness fixtures use Python's standard library.
 
+These results describe the service running on the host as a JVM, which is what the commands above start. `compose.app.yml` can run the same service in a container, but that path is verified only by a CI smoke test — a healthy start, the health routes, and the non-production fixture gates staying closed — and no scenario result here was produced against it. [ADR-0011](../adr/0011-evaluate-the-host-run-jvm.md) records why, including the loopback-only binding of the synthetic rail and reference target.
+
 The adapter driver contract is in [contract-v1.md](../../harness/contract-v1.md), the practical lost-confirmation exercise in [walkthrough.md](walkthrough.md), and the vendor-shaped capability gate in [adapter-capabilities-v1.md](adapter-capabilities-v1.md). Run `python3 harness/run.py --help` to see the target URL, core mode and `--submit-path` options. `--submit-path /fednow/send` is only valid when the controlled bridge flag is enabled outside the production profile.

@@ -19,15 +19,25 @@ Versions follow [Semantic Versioning](https://semver.org/). Until 1.0.0, a minor
    git push origin v0.1.0
    ```
 
-6. The [release workflow](../.github/workflows/release.yml) runs the unit tests and the harness tests, builds the service jar and a zip of the test kit, and creates a GitHub Release with SHA-256 checksums.
-7. Set the next `-SNAPSHOT` version in `pom.xml`.
+6. Before tagging, run the [release workflow](../.github/workflows/release.yml) manually from the Actions tab. Without a tag it is a dry run: it builds the container image for `linux/amd64` and `linux/arm64`, scans both, writes the SBOMs and uploads everything as an artefact, but pushes nothing and creates no release. A tag is awkward to take back, so check the dry run first.
+7. The release workflow then runs on the tag. It runs the unit and harness tests, builds the service jar and the test-kit zip, builds the image for both platforms, scans each one, pushes the image to `ghcr.io/danielsmori/open-fednow:<version>` and creates a GitHub Release with SHA-256 checksums. The image tag matches `image.tag` in [helm/values.yaml](../helm/values.yaml) and the chart's `appVersion`.
+8. **Check the package is publicly readable after the first publish.** Publishing 0.1.0 from this workflow created the GHCR package already public, inheriting the repository's visibility, so no manual step was needed. Confirm it rather than assume it, with an anonymous pull: `curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $(curl -s 'https://ghcr.io/token?scope=repository:danielsmori/open-fednow:pull&service=ghcr.io' | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')" https://ghcr.io/v2/danielsmori/open-fednow/manifests/<version>` should print `200`. If it ever prints `401` or `403`, set the package to public in its settings, otherwise anyone deploying the chart needs `imagePullSecrets`.
+9. Set the next `-SNAPSHOT` version in `pom.xml`.
+
+### If the image scan fails
+
+The scan fails the release before anything is pushed, which is the intent: a vulnerable image never reaches the registry. Fix the dependency, or add a scoped exception to [`.trivyignore`](../.trivyignore) with the CVE, the reason it does not apply to this application, and the advisory link. Do not widen the severity filter to get a release out.
 
 ## What a release contains
 
 - `openfednow-<version>.jar`: the Java reference service.
 - `openfednow-test-kit-<version>.zip`: the `harness/` directory (which includes the driver contract), the profile guide, `LICENSE` and `NOTICE`. From the extracted folder, `python3 harness/smoke_profile.py --all` runs the four portable tests with Python 3.9 or later and no other packages. The zip does not contain `scripts/evaluate.py` or the Java service; the full evaluation needs a repository checkout.
 - `smoke-report-<version>.json`: the report from the four portable tests, as run by the release workflow.
+- `openfednow-<version>-sbom-amd64.cdx.json` and `openfednow-<version>-sbom-arm64.cdx.json`: CycloneDX software bills of materials for each image platform.
+- `openfednow-<version>-image-digest.txt`: the published image reference and its digest. Pin the digest rather than the tag when a deployment needs to be reproducible.
 - `SHA256SUMS.txt`: checksums for the files above.
+
+The container image is published separately to `ghcr.io/danielsmori/open-fednow:<version>` for `linux/amd64` and `linux/arm64`, with an SBOM and a provenance attestation attached in the registry. Pull it with `docker pull ghcr.io/danielsmori/open-fednow:<version>`, and verify the attestations with `docker buildx imagetools inspect`.
 
 ## What a release does not mean
 
