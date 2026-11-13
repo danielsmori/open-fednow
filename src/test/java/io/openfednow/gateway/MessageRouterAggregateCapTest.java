@@ -168,6 +168,36 @@ class MessageRouterAggregateCapTest {
         verify(f.availabilityBridge).markReconciliationPending(anyString());
     }
 
+    // ── pct_of_cap (PR 4) ────────────────────────────────────────────────────
+
+    @Test
+    void countedSendRecordsHowFullTheWindowIs() {
+        Fixture f = new Fixture(true, true, false);
+        when(f.shadowLedger.applyDebitCappedDetailed(anyString(), any(), anyString()))
+                .thenReturn(new ShadowLedger.CappedDebit(CappedDebitResult.APPLIED, false, 90.0));
+
+        f.router.routeOutbound(message("E2E-PCT"));
+
+        var summary = f.meterRegistry.get(MessageRouter.AGGREGATE_PCT_OF_CAP_METRIC).summary();
+        assertThat(summary.count()).isEqualTo(1);
+        assertThat(summary.max()).isEqualTo(90.0);
+        // no account tag
+        assertThat(summary.getId().getTags()).isEmpty();
+    }
+
+    @Test
+    void rejectedOrUncountedSendsRecordNothing() {
+        Fixture capped = new Fixture(true, true, false);
+        when(capped.shadowLedger.applyDebitCappedDetailed(anyString(), any(), anyString()))
+                .thenReturn(new ShadowLedger.CappedDebit(CappedDebitResult.AGGREGATE_CAP_EXCEEDED, false));
+        capped.router.routeOutbound(message("E2E-PCT-REJ"));
+        assertThat(capped.meterRegistry.get(MessageRouter.AGGREGATE_PCT_OF_CAP_METRIC).summary().count()).isZero();
+
+        Fixture online = new Fixture(true, false, false);
+        online.router.routeOutbound(message("E2E-PCT-ONLINE"));
+        assertThat(online.meterRegistry.get(MessageRouter.AGGREGATE_PCT_OF_CAP_METRIC).summary().count()).isZero();
+    }
+
     // ── Pre-check ────────────────────────────────────────────────────────────
 
     @Test

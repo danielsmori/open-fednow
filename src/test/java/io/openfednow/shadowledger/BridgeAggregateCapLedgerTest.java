@@ -304,6 +304,19 @@ class BridgeAggregateCapLedgerTest extends AbstractInfrastructureIntegrationTest
     }
 
     @Test
+    void detailedDebitReportsHowFullTheWindowIsAfterTheSend() {
+        seed("ACC-AGG-PCT", 100_000); // cap is $500
+
+        assertThat(shadowLedger.applyDebitCappedDetailed(
+                "ACC-AGG-PCT", new BigDecimal("100.00"), "TXN-PCT-1").pctOfCapAfter()).isEqualTo(20.0);
+        assertThat(shadowLedger.applyDebitCappedDetailed(
+                "ACC-AGG-PCT", new BigDecimal("300.00"), "TXN-PCT-2").pctOfCapAfter()).isEqualTo(80.0);
+        assertThat(shadowLedger.applyDebitCappedDetailed(
+                "ACC-AGG-PCT", new BigDecimal("200.00"), "TXN-PCT-3").pctOfCapAfter())
+                .as("rejected").isZero();
+    }
+
+    @Test
     void ledgerReadsTheCapFromThePolicy() {
         assertThat(shadowLedger.isAggregateCapEnabled()).isTrue();
     }

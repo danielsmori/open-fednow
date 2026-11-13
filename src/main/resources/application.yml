@@ -243,6 +243,12 @@ openfednow:
     # only — a window open longer than this is flagged to operators; it never
     # resets the cap.
     expected-window-hours: ${BRIDGE_MODE_EXPECTED_WINDOW_HOURS:6}
+    # Aggregate-window gauges (bridge_mode.aggregate.windows_open,
+    # .windows_near_cap, .windows_overdue, .oldest_window_age_seconds) are
+    # recomputed this often while the cap is enabled. A window counts as
+    # "near cap" at or above this percentage of the cap.
+    aggregate-metrics-interval-seconds: ${BRIDGE_MODE_AGGREGATE_METRICS_INTERVAL_SECONDS:60}
+    near-cap-threshold-percent: ${BRIDGE_MODE_NEAR_CAP_THRESHOLD_PERCENT:80}
 
   # Admin audit log retention (audit #15). Default 365 days — long enough for
   # typical compliance review windows. The sweep runs daily.

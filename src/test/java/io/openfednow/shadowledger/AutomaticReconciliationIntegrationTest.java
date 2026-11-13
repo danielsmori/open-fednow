@@ -57,6 +57,7 @@ class AutomaticReconciliationIntegrationTest extends AbstractInfrastructureInteg
     @Autowired private StringRedisTemplate redis;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private io.micrometer.core.instrument.MeterRegistry meterRegistry;
+    @Autowired private BridgeAggregateWindowMonitor windowMonitor;
 
     @MockBean private CoreBankingAdapter coreBankingAdapter;
     @MockBean private FedNowClient fedNowClient;
@@ -195,6 +196,26 @@ class AutomaticReconciliationIntegrationTest extends AbstractInfrastructureInteg
     }
 
     @Test
+    void windowGaugesTrackTheCappedAccountUntilReconciliationReleasesIt() {
+        coreOffline();
+        send("GAUGE-1", "400.00"); // 80% of the $500 cap
+
+        windowMonitor.scan();
+        assertThat(gaugeValue(BridgeAggregateWindowMonitor.WINDOWS_OPEN_METRIC)).isEqualTo(1);
+        assertThat(gaugeValue(BridgeAggregateWindowMonitor.WINDOWS_NEAR_CAP_METRIC)).isEqualTo(1);
+        assertThat(gaugeValue(BridgeAggregateWindowMonitor.WINDOWS_OVERDUE_METRIC)).isZero();
+
+        coreOnline(new BigDecimal("9600.00"));
+        awaitTrue(() -> {
+            availabilityBridge.pollCoreAvailability();
+            return !shadowLedger.hasOpenAggregate(DEBTOR);
+        });
+        windowMonitor.scan();
+        assertThat(gaugeValue(BridgeAggregateWindowMonitor.WINDOWS_OPEN_METRIC)).isZero();
+        assertThat(gaugeValue(BridgeAggregateWindowMonitor.WINDOWS_NEAR_CAP_METRIC)).isZero();
+    }
+
+    @Test
     void markerIsClearedOnlyByTheTokenThatWasRead() {
         pendingMarker.mark("first");
         String first = pendingMarker.currentToken().orElseThrow();
@@ -235,6 +256,10 @@ class AutomaticReconciliationIntegrationTest extends AbstractInfrastructureInteg
     private void coreOnline(BigDecimal confirmedBalance) {
         when(coreBankingAdapter.isCoreSystemAvailable()).thenReturn(true);
         when(coreBankingAdapter.getAvailableBalance(anyString())).thenReturn(confirmedBalance);
+    }
+
+    private double gaugeValue(String name) {
+        return meterRegistry.get(name).gauge().value();
     }
 
     private double unsettledCycles() {
