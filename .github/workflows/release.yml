@@ -67,41 +67,47 @@ jobs:
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Built once for both platforms into a local OCI layout. Nothing is
-      # pushed here, so the scan below decides whether this image is allowed
-      # to reach the registry at all.
-      - name: Build the image for ${{ env.PLATFORMS }}
+      # One OCI layout per platform. Trivy cannot pick a platform out of a
+      # multi-platform layout; it scans the first image it finds, so a single
+      # combined layout would scan amd64 twice and label one copy arm64.
+      # Nothing is pushed here, so the scan below decides whether this image
+      # is allowed to reach the registry at all. Each build caches under its
+      # own scope so the push step further down reuses both.
+      - name: Build the linux/amd64 image
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: ${{ env.PLATFORMS }}
+          platforms: linux/amd64
           build-args: |
             VERSION=${{ env.VERSION }}
             REVISION=${{ github.sha }}
-          outputs: type=oci,dest=image-layout,tar=false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          outputs: type=oci,dest=image-layout-amd64,tar=false
+          cache-from: type=gha,scope=image-amd64
+          cache-to: type=gha,mode=max,scope=image-amd64
+
+      - name: Build the linux/arm64 image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          build-args: |
+            VERSION=${{ env.VERSION }}
+            REVISION=${{ github.sha }}
+          outputs: type=oci,dest=image-layout-arm64,tar=false
+          cache-from: type=gha,scope=image-arm64
+          cache-to: type=gha,mode=max,scope=image-arm64
 
       - name: Scan each platform and write its SBOM
         run: |
           set -euo pipefail
+          # The script checks that each SBOM really describes its own
+          # architecture before trusting the scan, then fails on any HIGH or
+          # CRITICAL finding outside .trivyignore. Its entries are scoped
+          # exceptions with written justifications.
           for platform in ${PLATFORMS//,/ }; do
             arch="${platform##*/}"
             echo "::group::$platform"
-            # Runs from the repository root, so .trivyignore applies. Its
-            # entries are scoped exceptions with written justifications; a
-            # finding outside that file fails the release here, before the
-            # image is published.
-            docker run --rm -v "$PWD:/work" -w /work \
-              "aquasec/trivy:${TRIVY_VERSION}" image \
-              --input image-layout --platform "$platform" \
-              --scanners vuln --severity HIGH,CRITICAL --exit-code 1 \
-              --format table
-            docker run --rm -v "$PWD:/work" -w /work \
-              "aquasec/trivy:${TRIVY_VERSION}" image \
-              --input image-layout --platform "$platform" \
-              --format cyclonedx --quiet \
-              --output "sbom-${arch}.cdx.json"
+            .github/scripts/scan-image-layout.sh "image-layout-${arch}" "$arch" "sbom-${arch}.cdx.json"
             echo "::endgroup::"
           done
 
@@ -128,8 +134,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      # The layers are already in the build cache, so this re-export pushes
-      # rather than rebuilds. It also attaches an SBOM and provenance
+      # Same pinned inputs and source as the scanned builds, and both of
+      # their caches, so this re-exports the scanned layers rather than
+      # rebuilding them. It also attaches an SBOM and provenance
       # attestation to the image in the registry.
       - name: Push the image
         if: env.PUBLISH == 'true'
@@ -145,7 +152,9 @@ jobs:
           push: true
           sbom: true
           provenance: mode=max
-          cache-from: type=gha
+          cache-from: |
+            type=gha,scope=image-amd64
+            type=gha,scope=image-arm64
 
       - name: Record the published digest
         if: env.PUBLISH == 'true'
