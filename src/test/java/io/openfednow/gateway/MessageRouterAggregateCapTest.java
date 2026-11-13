@@ -27,6 +27,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -139,6 +140,21 @@ class MessageRouterAggregateCapTest {
         verify(f.availabilityBridge, never()).markReconciliationPending(anyString());
     }
 
+    @Test
+    void bridgeModeIsReadOnceSoTheGuardAndTheCapAgree() {
+        // allow-sends=false: the guard reads "online", then the core goes
+        // offline. A second read would count the send as a bridge-mode send
+        // that the guard had just let through as online.
+        Fixture f = new Fixture(true, false, false, false);
+        when(f.availabilityBridge.isInBridgeMode()).thenReturn(false, true);
+
+        f.router.routeOutbound(message("E2E-ONE-READ"));
+
+        verify(f.availabilityBridge, times(1)).isInBridgeMode();
+        verify(f.shadowLedger, never()).applyDebitCappedDetailed(anyString(), any(), anyString());
+        verify(f.availabilityBridge, never()).markReconciliationPending(anyString());
+    }
+
     // ── Pre-check ────────────────────────────────────────────────────────────
 
     @Test
@@ -222,6 +238,10 @@ class MessageRouterAggregateCapTest {
         final MessageRouter router;
 
         Fixture(boolean capEnabled, boolean inBridgeMode, boolean windowOpen) {
+            this(capEnabled, inBridgeMode, windowOpen, true);
+        }
+
+        Fixture(boolean capEnabled, boolean inBridgeMode, boolean windowOpen, boolean bridgeSendsAllowed) {
             when(idempotencyService.checkDuplicate(any())).thenReturn(Optional.empty());
             when(sagaOrchestrator.findByEndToEndId(any())).thenReturn(Optional.empty());
             when(availabilityBridge.isInBridgeMode()).thenReturn(inBridgeMode);
@@ -246,7 +266,7 @@ class MessageRouterAggregateCapTest {
                     fraudScreeningPort,
                     meterRegistry,
                     1500L,
-                    true, false);
+                    bridgeSendsAllowed, false);
         }
 
         double capExceeded() {

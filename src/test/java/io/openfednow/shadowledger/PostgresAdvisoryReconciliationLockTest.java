@@ -129,6 +129,42 @@ class PostgresAdvisoryReconciliationLockTest extends AbstractInfrastructureInteg
     }
 
     @Test
+    void failedUnlockOnALiveSessionNeverLeaksTheLockIntoThePool() {
+        // From the bug bash: the unlock fails while the session is alive. The
+        // connection must be aborted, not returned to the pool still holding
+        // the lock — that would make every instance skip reconciliation forever.
+        DataSource unlockFails = mock(DataSource.class);
+        try {
+            when(unlockFails.getConnection()).thenAnswer(inv -> failingUnlock(dataSource.getConnection()));
+        } catch (java.sql.SQLException e) {
+            throw new IllegalStateException(e);
+        }
+
+        ReconciliationLock.Lease lease = new PostgresAdvisoryReconciliationLock(unlockFails).tryAcquire().orElseThrow();
+        lease.close();
+
+        Integer holders = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM pg_locks " + LOCK_FILTER + " AND granted", Integer.class, CLASS_ID, OBJ_ID);
+        assertThat(holders).as("no pooled session may keep the lock").isZero();
+        new PostgresAdvisoryReconciliationLock(dataSource).tryAcquire().orElseThrow().close();
+    }
+
+    private static java.sql.Connection failingUnlock(java.sql.Connection real) {
+        return (java.sql.Connection) java.lang.reflect.Proxy.newProxyInstance(
+                java.sql.Connection.class.getClassLoader(), new Class<?>[]{java.sql.Connection.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("prepareStatement") && String.valueOf(args[0]).contains("unlock")) {
+                        throw new java.sql.SQLException("simulated unlock failure");
+                    }
+                    try {
+                        return method.invoke(real, args);
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        throw e.getCause();
+                    }
+                });
+    }
+
+    @Test
     void twoInstancesNeverRunAReconciliationCycleAtTheSameTime() throws Exception {
         insertPendingRow("ACC-LOCK-1");
 

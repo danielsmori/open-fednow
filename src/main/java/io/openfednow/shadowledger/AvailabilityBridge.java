@@ -83,6 +83,9 @@ public class AvailabilityBridge {
      * @param payload       the serialized pacs.008 transaction payload
      */
     public void queueForCoreProcessing(String transactionId, String payload) {
+        // Mark first: the provisional credit is already applied, so a
+        // reconciliation is owed even if the publish below fails.
+        markReconciliationPending("inbound payment queued for core replay");
         rabbitTemplate.convertAndSend(RabbitMqConfig.MAINTENANCE_QUEUE, payload,
                 message -> {
                     message.getMessageProperties().setMessageId(transactionId);
@@ -90,7 +93,6 @@ public class AvailabilityBridge {
                     return message;
                 });
         log.info("Transaction queued for core replay transactionId={}", transactionId);
-        markReconciliationPending("inbound payment queued for core replay");
     }
 
     /**

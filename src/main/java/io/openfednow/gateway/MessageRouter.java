@@ -392,7 +392,16 @@ public class MessageRouter {
         // send authorized here can be over-authorized against funds that a
         // card auth already claimed. The guard fires only during bridge
         // mode; online-core sends are unaffected by this flag.
-        if (!bridgeSendsAllowed && availabilityBridge.isInBridgeMode()) {
+        //
+        // Bridge mode is read at most once per send, and the same answer is
+        // used by the aggregate cap below: two reads could disagree if the
+        // core went offline in between, letting a send pass this guard as
+        // "online" and then be counted as a bridge-mode send.
+        Boolean bridgeModeRead = null;
+        if (!bridgeSendsAllowed) {
+            bridgeModeRead = availabilityBridge.isInBridgeMode();
+        }
+        if (!bridgeSendsAllowed && bridgeModeRead) {
             log.warn("Bridge-mode sends disabled by configuration — rejecting outbound during maintenance window e2e={}",
                     message.getEndToEndId());
             bridgeSendsBlockedCounter.increment();
@@ -437,7 +446,8 @@ public class MessageRouter {
         // point for concurrent sends.
         String debtorAccount = message.getDebtorAccountNumber();
         boolean capEnabled = shadowLedger.isAggregateCapEnabled();
-        boolean inBridgeMode = capEnabled && availabilityBridge.isInBridgeMode();
+        boolean inBridgeMode = capEnabled
+                && (bridgeModeRead != null ? bridgeModeRead : availabilityBridge.isInBridgeMode());
         boolean countTowardAggregate = capEnabled
                 && (inBridgeMode || shadowLedger.hasOpenAggregate(debtorAccount));
         if (countTowardAggregate

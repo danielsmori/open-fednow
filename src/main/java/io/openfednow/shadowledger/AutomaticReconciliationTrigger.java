@@ -218,7 +218,11 @@ public class AutomaticReconciliationTrigger {
         try {
             Optional<String> token = pendingMarker.currentToken();
             if (token.isEmpty()) {
-                return; // nothing owed
+                // Nothing owed (perhaps settled by another instance): this
+                // instance is no longer behind on anything.
+                consecutiveUnsettled.set(0);
+                backoffToken = null;
+                return;
             }
             readToken = token.get();
             if (backoffToken != null && !readToken.equals(backoffToken)) {
@@ -269,6 +273,14 @@ public class AutomaticReconciliationTrigger {
             }
         } catch (RuntimeException e) {
             failedCycles.increment();
+            if (readToken == null) {
+                // The marker itself was unreadable (e.g. Redis down): no cycle
+                // ran, so this is not an unsettled cycle. Counting it would
+                // inflate the backoff of the next real owed work.
+                log.warn("Automatic reconciliation could not read the pending marker — retrying on the next poll",
+                        e);
+                return;
+            }
             long backoff = backoffAfter(consecutiveUnsettled.incrementAndGet());
             // Back off the work this cycle failed on. If the marker itself was
             // unreadable (readToken null), the next poll fails at the same read

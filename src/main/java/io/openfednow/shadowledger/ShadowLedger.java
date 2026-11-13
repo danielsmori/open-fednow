@@ -70,13 +70,22 @@ public class ShadowLedger {
     /** Prefix of the per-send hash fields ({@code txn:<transactionId>} → cents). */
     static final String AGGREGATE_TXN_FIELD_PREFIX = "txn:";
 
+    /** Transaction ids per release-eligibility query (see {@link #confirmedAndResolved}). */
+    static final int RELEASE_QUERY_BATCH = 500;
+
     /** Maximum retry attempts when an optimistic lock conflict is detected. */
     private static final int MAX_RETRY_ATTEMPTS = 3;
 
     /**
      * Atomic, idempotent release of one counted send from the aggregate window.
      * KEYS[1] = aggregate hash key, ARGV[1] = the send's {@code txn:<id>} field,
-     * ARGV[2] = the {@code total} field name.
+     * ARGV[2] = the {@code total} field name, ARGV[3] = the {@code txn:} prefix.
+     *
+     * <p>The total is decremented <em>before</em> the field is deleted: Redis
+     * does not roll a script back on error, so the reverse order could delete
+     * the field yet leave the total counted. A window left with no counted
+     * send is deleted — it holds no exposure, and keeping it would keep the
+     * account's later online sends on the capped path for nothing.
      *
      * <p>The per-send field is the idempotency token: the first call deletes it
      * and decrements {@code total} by the amount that was counted; any repeat —
@@ -87,12 +96,38 @@ public class ShadowLedger {
      */
     private static final RedisScript<Long> AGGREGATE_RELEASE_SCRIPT = new DefaultRedisScript<>(
             "local amt = redis.call('HGET', KEYS[1], ARGV[1])\n" +
-                    "if amt then\n" +
-                    "  redis.call('HDEL', KEYS[1], ARGV[1])\n" +
-                    "  redis.call('HINCRBY', KEYS[1], ARGV[2], '-' .. amt)\n" +
-                    "  return tonumber(amt)\n" +
+                    "if not amt then return nil end\n" +
+                    "if tonumber(amt) ~= 0 then redis.call('HINCRBY', KEYS[1], ARGV[2], '-' .. amt) end\n" +
+                    "redis.call('HDEL', KEYS[1], ARGV[1])\n" +
+                    "local prefixLen = string.len(ARGV[3])\n" +
+                    "for _, k in ipairs(redis.call('HKEYS', KEYS[1])) do\n" +
+                    "  if string.sub(k, 1, prefixLen) == ARGV[3] then return tonumber(amt) end\n" +
                     "end\n" +
-                    "return nil",
+                    "redis.call('DEL', KEYS[1])\n" +
+                    "return tonumber(amt)",
+            Long.class);
+
+    /**
+     * Undoes a capped debit whose DEBIT audit row could not be written, so no
+     * send is ever counted (and debited) without the row every release path
+     * keys on. KEYS[1] = balance key, KEYS[2] = aggregate hash; ARGV[1] = the
+     * send's {@code txn:} field, ARGV[2] = {@code total} field, ARGV[3] = the
+     * {@code txn:} prefix. Credits the counted amount back, releases the send,
+     * and drops the window if it is left empty. Returns the cents undone, or
+     * nil if the send was not counted.
+     */
+    private static final RedisScript<Long> UNDO_CAPPED_DEBIT_SCRIPT = new DefaultRedisScript<>(
+            "local amt = redis.call('HGET', KEYS[2], ARGV[1])\n" +
+                    "if not amt then return nil end\n" +
+                    "redis.call('INCRBY', KEYS[1], amt)\n" +
+                    "if tonumber(amt) ~= 0 then redis.call('HINCRBY', KEYS[2], ARGV[2], '-' .. amt) end\n" +
+                    "redis.call('HDEL', KEYS[2], ARGV[1])\n" +
+                    "local prefixLen = string.len(ARGV[3])\n" +
+                    "for _, k in ipairs(redis.call('HKEYS', KEYS[2])) do\n" +
+                    "  if string.sub(k, 1, prefixLen) == ARGV[3] then return tonumber(amt) end\n" +
+                    "end\n" +
+                    "redis.call('DEL', KEYS[2])\n" +
+                    "return tonumber(amt)",
             Long.class);
 
     /** {@link #CAPPED_DEBIT_SCRIPT} result code: insufficient funds. */
@@ -143,8 +178,8 @@ public class ShadowLedger {
             "for i = 3, #ARGV do\n" +
                     "  local amt = redis.call('HGET', KEYS[1], ARGV[i])\n" +
                     "  if amt then\n" +
+                    "    if tonumber(amt) ~= 0 then redis.call('HINCRBY', KEYS[1], ARGV[1], '-' .. amt) end\n" +
                     "    redis.call('HDEL', KEYS[1], ARGV[i])\n" +
-                    "    redis.call('HINCRBY', KEYS[1], ARGV[1], '-' .. amt)\n" +
                     "  end\n" +
                     "end\n" +
                     "local prefixLen = string.len(ARGV[2])\n" +
@@ -380,7 +415,8 @@ public class ShadowLedger {
                 String.valueOf(Instant.now().getEpochSecond()));
         if (result == null || result.isEmpty()) {
             throw new IllegalStateException(
-                    "Shadow Ledger capped debit returned no result: account=" + accountId);
+                    "Shadow Ledger capped debit returned no result: account="
+                            + io.openfednow.security.pii.PiiRedactor.maskAccount(accountId));
         }
         long code = ((Number) result.get(0)).longValue();
         long observed = result.size() > 1 ? ((Number) result.get(1)).longValue() : 0L;
@@ -404,8 +440,16 @@ public class ShadowLedger {
         long balanceAfterCents = balanceBeforeCents - amountCents;
         long aggregateAfterCents = ((Number) result.get(2)).longValue();
         boolean openedWindow = result.size() > 3 && ((Number) result.get(3)).longValue() == 1L;
-        logTransaction(transactionId, transactionId, accountId, "DEBIT",
-                amount, centsToDollars(balanceBeforeCents), centsToDollars(balanceAfterCents));
+        try {
+            logTransaction(transactionId, transactionId, accountId, "DEBIT",
+                    amount, centsToDollars(balanceBeforeCents), centsToDollars(balanceAfterCents));
+        } catch (RuntimeException e) {
+            // Every release path (reversal, reconciliation) keys on the DEBIT
+            // row. Without it the send would stay counted — and debited —
+            // forever, with only the admin override able to lift the cap.
+            undoCappedDebit(accountId, transactionId);
+            throw e;
+        }
         log.info("Shadow Ledger capped debit applied account={} amount={} balanceAfter={} "
                         + "aggregateAfter={}",
                 io.openfednow.security.pii.PiiRedactor.maskAccount(accountId), amount,
@@ -485,7 +529,43 @@ public class ShadowLedger {
         // confirms it. The script no-ops when the send was never counted
         // (online-mode debit) or was already released (duplicate compensation,
         // closed window).
-        releaseFromAggregate(accountId, transactionId);
+        //
+        // Skipped while the cap is disabled (nothing is counted or enforced),
+        // and a release error is logged rather than thrown: the reversal itself
+        // has succeeded, and reporting it as failed would mislead the
+        // compensation paths.
+        if (aggregateCapPolicy.isEnabled()) {
+            try {
+                releaseFromAggregate(accountId, transactionId);
+            } catch (RuntimeException e) {
+                log.error("Reversal applied but releasing it from the bridge aggregate window failed "
+                                + "account={} transactionId={} — the send stays counted until reconciliation",
+                        io.openfednow.security.pii.PiiRedactor.maskAccount(accountId), transactionId, e);
+            }
+        }
+    }
+
+    /**
+     * Reverts a capped debit whose audit row failed to insert. If the undo
+     * itself fails the send stays counted (fail-closed) and the error says how
+     * to recover it.
+     */
+    private void undoCappedDebit(String accountId, String transactionId) {
+        try {
+            Long undone = redis.execute(UNDO_CAPPED_DEBIT_SCRIPT,
+                    List.of(BALANCE_KEY_PREFIX + accountId, AGGREGATE_KEY_PREFIX + accountId),
+                    AGGREGATE_TXN_FIELD_PREFIX + transactionId, AGGREGATE_TOTAL_FIELD,
+                    AGGREGATE_TXN_FIELD_PREFIX);
+            log.warn("Shadow Ledger capped debit undone after its audit row failed account={} "
+                            + "transactionId={} amount={}",
+                    io.openfednow.security.pii.PiiRedactor.maskAccount(accountId), transactionId,
+                    undone == null ? null : centsToDollars(undone));
+        } catch (RuntimeException undoFailure) {
+            log.error("Could not undo capped debit after its audit row failed account={} transactionId={} "
+                            + "— the send stays counted; clear it via DELETE "
+                            + "/admin/accounts/{accountId}/bridge-aggregate once the position is established",
+                    io.openfednow.security.pii.PiiRedactor.maskAccount(accountId), transactionId, undoFailure);
+        }
     }
 
     /**
@@ -497,7 +577,8 @@ public class ShadowLedger {
         String aggregateKey = AGGREGATE_KEY_PREFIX + accountId;
         Long releasedCents = redis.execute(AGGREGATE_RELEASE_SCRIPT,
                 List.of(aggregateKey),
-                AGGREGATE_TXN_FIELD_PREFIX + transactionId, AGGREGATE_TOTAL_FIELD);
+                AGGREGATE_TXN_FIELD_PREFIX + transactionId, AGGREGATE_TOTAL_FIELD,
+                AGGREGATE_TXN_FIELD_PREFIX);
         if (releasedCents != null) {
             log.info("Bridge aggregate released account={} transactionId={} amount={}",
                     io.openfednow.security.pii.PiiRedactor.maskAccount(accountId),
@@ -753,6 +834,16 @@ public class ShadowLedger {
      * core-confirmed and whose saga (if any) is final.
      */
     private List<String> confirmedAndResolved(String accountId, List<String> transactionIds) {
+        // Bounded bind-parameter lists: a pathological window with thousands of
+        // counted sends must not make every reconciliation cycle fail.
+        if (transactionIds.size() > RELEASE_QUERY_BATCH) {
+            List<String> all = new ArrayList<>();
+            for (int i = 0; i < transactionIds.size(); i += RELEASE_QUERY_BATCH) {
+                all.addAll(confirmedAndResolved(accountId,
+                        transactionIds.subList(i, Math.min(i + RELEASE_QUERY_BATCH, transactionIds.size()))));
+            }
+            return all;
+        }
         String placeholders = String.join(",", java.util.Collections.nCopies(transactionIds.size(), "?"));
         List<Object> params = new ArrayList<>();
         params.add(accountId);

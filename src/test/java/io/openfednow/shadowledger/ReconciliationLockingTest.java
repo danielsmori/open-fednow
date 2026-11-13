@@ -244,6 +244,66 @@ class ReconciliationLockingTest {
     }
 
     @Test
+    void deferredAccountIsCountedOnceAndTheReportIsNotSuccessful() {
+        // core offline: the window account is deferred in the batch AND seen
+        // again by the sweep — one account, one deferral, and no "clean" claim
+        ShadowLedger ledger = ledger();
+        when(ledger.isAggregateCapEnabled()).thenReturn(true);
+        when(ledger.hasOpenAggregate("ACC-W")).thenReturn(true);
+        when(ledger.openAggregateAccountIds()).thenReturn(List.of("ACC-W"));
+        CoreBankingAdapter core = core();
+        when(core.isCoreSystemAvailable()).thenReturn(false);
+        insertPendingRow("ACC-W");
+
+        ReconciliationAttempt attempt = service(ledger, core, ReconciliationLock.LOCAL_ONLY)
+                .attemptReconciliation();
+
+        assertThat(attempt.deferredAccounts()).isEqualTo(1);
+        assertThat(attempt.report().reconciliationSuccessful()).isFalse();
+        assertThat(attempt.report().summary()).contains("1 account(s) deferred");
+        Boolean runSuccessful = jdbc.queryForObject(
+                "SELECT successful FROM reconciliation_run ORDER BY id DESC LIMIT 1", Boolean.class);
+        assertThat(runSuccessful).isFalse();
+    }
+
+    @Test
+    void releaseFailingInTheBatchButSucceedingInTheSweepIsNotAFailure() {
+        ShadowLedger ledger = ledger();
+        when(ledger.isAggregateCapEnabled()).thenReturn(true);
+        when(ledger.hasOpenAggregate("ACC-W")).thenReturn(true);
+        when(ledger.openAggregateAccountIds()).thenReturn(List.of("ACC-W"));
+        when(ledger.closeConfirmedAggregate("ACC-W"))
+                .thenThrow(new IllegalStateException("redis blip"))
+                .thenReturn(true);
+        insertPendingRow("ACC-W");
+
+        ReconciliationAttempt attempt = service(ledger, core(), ReconciliationLock.LOCAL_ONLY)
+                .attemptReconciliation();
+
+        assertThat(attempt.failedAccounts()).isZero();
+        assertThat(attempt.fullyReconciled()).isTrue();
+    }
+
+    @Test
+    void capDisabledIgnoresALeftoverWindowAsBefore68() {
+        // a window left from when the cap was enabled must not defer the
+        // account — with the cap off, reconciliation behaves as before #68
+        ShadowLedger ledger = ledger();
+        when(ledger.isAggregateCapEnabled()).thenReturn(false);
+        when(ledger.hasOpenAggregate("ACC-W")).thenReturn(true);
+        CoreBankingAdapter core = core();
+        when(core.isCoreSystemAvailable()).thenReturn(false);
+        insertPendingRow("ACC-W");
+
+        ReconciliationAttempt attempt = service(ledger, core, ReconciliationLock.LOCAL_ONLY)
+                .attemptReconciliation();
+
+        assertThat(attempt.deferredAccounts()).isZero();
+        assertThat(unconfirmed()).isZero();
+        verify(ledger, never()).hasOpenAggregate(any());
+    }
+
+    @Test
     void publicReportIsUnchangedByTheNewEntryPoint() {
         insertPendingRow("ACC-A");
 

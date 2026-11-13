@@ -195,6 +195,50 @@ class AutomaticReconciliationTriggerTest {
     }
 
     @Test
+    void unreadableMarkerDoesNotInflateTheBackoffOfLaterWork() {
+        // Redis blips for three polls; then a real outage's cycle is unsettled.
+        // Its backoff must start at 30s, not 30s × 2^3.
+        when(marker.currentToken())
+                .thenThrow(new RuntimeException("redis down"))
+                .thenThrow(new RuntimeException("redis down"))
+                .thenThrow(new RuntimeException("redis down"))
+                .thenReturn(Optional.of("NEW-OUTAGE"));
+        when(service.attemptReconciliation()).thenReturn(attempt(Outcome.COMPLETED, 1, 0, 0));
+        AutomaticReconciliationTrigger trigger = trigger(true);
+
+        trigger.onCoreOnline();
+        trigger.onCoreOnline();
+        trigger.onCoreOnline();
+        assertThat(trigger.consecutiveUnsettled()).isZero();
+
+        trigger.onCoreOnline();                 // unsettled → back off 30s
+        clock.addAndGet(30 * SECOND);
+        trigger.onCoreOnline();                 // retried after 30s, not 240s
+
+        verify(service, times(2)).attemptReconciliation();
+    }
+
+    @Test
+    void nothingOwedResetsTheUnsettledGauge() {
+        // this instance had an unsettled cycle; another instance then settled
+        // the backlog and cleared the marker
+        when(marker.currentToken())
+                .thenReturn(Optional.of("T1"))
+                .thenReturn(Optional.empty());
+        when(service.attemptReconciliation()).thenReturn(attempt(Outcome.COMPLETED, 1, 0, 0));
+        AutomaticReconciliationTrigger trigger = trigger(true);
+
+        trigger.onCoreOnline();
+        assertThat(trigger.consecutiveUnsettled()).isEqualTo(1);
+        clock.addAndGet(3600 * SECOND);
+        trigger.onCoreOnline();
+
+        assertThat(trigger.consecutiveUnsettled()).isZero();
+        assertThat(meters.get(AutomaticReconciliationTrigger.CONSECUTIVE_UNSETTLED_METRIC).gauge().value())
+                .isZero();
+    }
+
+    @Test
     void aSettledCycleResetsTheBackoff() {
         when(marker.currentToken()).thenReturn(Optional.of("T1"));
         when(service.attemptReconciliation())

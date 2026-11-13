@@ -68,6 +68,17 @@ class AvailabilityBridgeReconciliationTest {
     }
 
     @Test
+    void failedPublishStillMarksReconciliationPending() {
+        // the provisional credit is already applied: a reconciliation is owed
+        org.mockito.Mockito.doThrow(new RuntimeException("broker down")).when(rabbit)
+                .convertAndSend(anyString(), any(Object.class), any(MessagePostProcessor.class));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> bridge.queueForCoreProcessing("E2E-2", "{}"));
+
+        verify(trigger).markPending(anyString());
+    }
+
+    @Test
     void paymentPathMarksGoThroughTheTrigger() {
         bridge.markReconciliationPending("bridge-mode send counted");
 
