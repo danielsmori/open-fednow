@@ -92,7 +92,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       # One layout per platform: Trivy cannot pick a platform out of a
       # multi-platform layout and would scan amd64 twice.
