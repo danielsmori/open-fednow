@@ -10,10 +10,12 @@ Nothing yet.
 
 First tagged release, published as [v0.1.0](https://github.com/danielsmori/open-fednow/releases/tag/v0.1.0) with the container image `ghcr.io/danielsmori/open-fednow:0.1.0` (`sha256:55c071c41a4989fef5ba53c4e29090c609c9adcb0bbc0fb55538e44b0cb833de`, `linux/amd64` and `linux/arm64`). It contains everything listed under the dated headings below, plus the changes in this section. The commands, source version and raw results for this release are in [`docs/reliability/evidence/release-0.1.0/`](docs/reliability/evidence/release-0.1.0/manifest.md).
 
+The evidence bundle was recorded at `589ae8d`; the tag points at `a4034bd`. Between those two commits no Java source, `pom.xml`, scenario definition, profile, reference target or rail simulator changed. The differences are the harness's port allocation and database settings, two helper functions added to `run.py`, and the evaluator's console summary.
+
 ### Added
 - Container image for the gateway, built from a pinned two-stage `Dockerfile` and published to `ghcr.io/danielsmori/open-fednow` for `linux/amd64` and `linux/arm64` on a release tag, with a CycloneDX SBOM per platform, a recorded image digest, and a Trivy image scan that blocks publishing on HIGH or CRITICAL findings ([#121](https://github.com/danielsmori/open-fednow/pull/121)).
 - `compose.app.yml`, an opt-in Compose file that runs the gateway inside the Compose network. The backing services then publish no host ports and only the gateway's port is published, on `127.0.0.1`, moved by `APP_PORT`, so two checkouts can run the whole stack at once ([#127](https://github.com/danielsmori/open-fednow/pull/127)).
-- `scripts/preflight.py --mode app` for the containerised stack, and a Compose 2.24 minimum version check.
+- `scripts/preflight.py`, a clean-checkout check for JDK 17, Maven, Python, Docker, Compose and the host ports that names the fix for each failure ([#118](https://github.com/danielsmori/open-fednow/pull/118)), with `--mode app` for the containerised stack and a Compose 2.24 minimum version check ([#127](https://github.com/danielsmori/open-fednow/pull/127)).
 - [ADR-0011](docs/adr/0011-evaluate-the-host-run-jvm.md): the reliability evidence describes the host-run JVM, not the container, and the reasons that would have to be addressed before the evaluator could target a container.
 - A weekly and pull-request Trivy scan of the container image, which sees transitive dependencies and base-image OS packages that the existing filesystem scan does not.
 - README now leads with the one-command test run and a plain description of the three failures tested.
@@ -23,6 +25,8 @@ First tagged release, published as [v0.1.0](https://github.com/danielsmori/open-
 
 ### Changed
 - The release workflow can be run manually as a dry run that builds, scans and writes SBOMs without pushing an image or creating a release.
+- `docker-compose.yml` no longer fixes container names, so a second Compose project starts without renaming or removing another one's containers. Host ports bind `127.0.0.1` only and move with `POSTGRES_PORT`, `REDIS_PORT`, `RABBITMQ_PORT` and `RABBITMQ_MANAGEMENT_PORT` ([#118](https://github.com/danielsmori/open-fednow/pull/118)).
+- The external evaluator chooses its application ports at run time, and `restart_case.py` and `two_worker_case.py` no longer overwrite `DB_URL`, `DB_USERNAME` and `DB_PASSWORD` ([#118](https://github.com/danielsmori/open-fednow/pull/118)). Its console summary lists only actual runs and shows the execution error when there is one ([#132](https://github.com/danielsmori/open-fednow/pull/132)).
 - The full component table moved from the README to [docs/status.md](docs/status.md), and the development phases to [docs/roadmap.md](docs/roadmap.md).
 - `docs/whitepaper.pdf` replaced by the revised November 9, 2026 preprint.
 - Project version set to `0.1.0`. `demo/payment-integration.sh` and `harness/evaluate_external.py` now read the jar name from `pom.xml` instead of a fixed `0.1.0-SNAPSHOT` name.
