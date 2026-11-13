@@ -4,7 +4,15 @@ Notable changes to OpenFedNow, newest first. The first tagged release is 0.1.0. 
 
 ## Unreleased
 
-Nothing yet.
+### Added
+- Container image for the gateway, built from a pinned two-stage `Dockerfile` and published to `ghcr.io/danielsmori/open-fednow` for `linux/amd64` and `linux/arm64` on a release tag, with a CycloneDX SBOM per platform, a recorded image digest, and a Trivy image scan that blocks publishing on HIGH or CRITICAL findings ([#121](https://github.com/danielsmori/open-fednow/pull/121)).
+- `compose.app.yml`, an opt-in Compose file that runs the gateway inside the Compose network. The backing services then publish no host ports and only the gateway's port is published, on `127.0.0.1`, moved by `APP_PORT`, so two checkouts can run the whole stack at once ([#127](https://github.com/danielsmori/open-fednow/pull/127)).
+- `scripts/preflight.py --mode app` for the containerised stack, and a Compose 2.24 minimum version check.
+- [ADR-0011](docs/adr/0011-evaluate-the-host-run-jvm.md): the reliability evidence describes the host-run JVM, not the container, and the reasons that would have to be addressed before the evaluator could target a container.
+- A weekly and pull-request Trivy scan of the container image, which sees transitive dependencies and base-image OS packages that the existing filesystem scan does not.
+
+### Changed
+- The release workflow can be run manually as a dry run that builds, scans and writes SBOMs without pushing an image or creating a release.
 
 ## 0.1.0 - 2026-11-12
 

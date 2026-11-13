@@ -14,13 +14,20 @@
 # Build:
 #   docker build -t openfednow:dev .
 #
+# Release builds publish linux/amd64 and linux/arm64 from one builder:
+#   docker buildx build --platform linux/amd64,linux/arm64 -t openfednow:dev .
+#
 # Run, with Postgres, Redis and RabbitMQ reachable by name on the same network:
 #   docker run --rm -p 127.0.0.1:8080:8080 \
 #     -e DB_URL=jdbc:postgresql://postgres:5432/openfednow \
 #     -e REDIS_HOST=redis -e RABBITMQ_HOST=rabbitmq openfednow:dev
 
 # maven:3.9-eclipse-temurin-17
-FROM maven@sha256:1a352420f7aba21f5ad08df31bab55f74c013fb491f1ae8ab1dd7ff9ed698584 AS build
+#
+# --platform=$BUILDPLATFORM keeps this stage on the builder's own architecture.
+# Java bytecode is architecture-independent, so the jar built here serves every
+# target platform and no Maven build ever runs under emulation.
+FROM --platform=$BUILDPLATFORM maven@sha256:1a352420f7aba21f5ad08df31bab55f74c013fb491f1ae8ab1dd7ff9ed698584 AS build
 
 WORKDIR /build
 
@@ -54,24 +61,26 @@ LABEL org.opencontainers.image.title="OpenFedNow" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${REVISION}"
 
-# The Helm chart runs the pod as runAsUser 1000 with fsGroup 1000, so the image
-# matches that UID. Ubuntu already defines UID 1000, so the numeric form avoids
-# creating a second user for the same id.
-WORKDIR /app
-RUN chown 1000:1000 /app
-USER 1000:1000
-
 # Keep anything that writes to a home directory inside the owned workdir.
 ENV HOME=/app
 # Size the heap from the container's memory limit, not the host's total.
 # Deployers can replace this; the Helm chart sets its own resource limits.
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0"
 
-# Slowest-changing layer first.
-COPY --from=build --chown=1000:1000 /build/extracted/dependencies/ ./
-COPY --from=build --chown=1000:1000 /build/extracted/spring-boot-loader/ ./
-COPY --from=build --chown=1000:1000 /build/extracted/snapshot-dependencies/ ./
-COPY --from=build --chown=1000:1000 /build/extracted/application/ ./
+# Slowest-changing layer first. These COPY instructions create /app owned by
+# 1000:1000, which is why no RUN is needed here: a stage without RUN is copied
+# rather than emulated when building for another architecture.
+#
+# The Helm chart runs the pod as runAsUser 1000 with fsGroup 1000, so the image
+# matches that UID. Ubuntu already defines UID 1000, so the numeric form avoids
+# creating a second user for the same id.
+COPY --from=build --chown=1000:1000 /build/extracted/dependencies/ /app/
+COPY --from=build --chown=1000:1000 /build/extracted/spring-boot-loader/ /app/
+COPY --from=build --chown=1000:1000 /build/extracted/snapshot-dependencies/ /app/
+COPY --from=build --chown=1000:1000 /build/extracted/application/ /app/
+
+WORKDIR /app
+USER 1000:1000
 
 EXPOSE 8080
 
