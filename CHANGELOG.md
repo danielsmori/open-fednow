@@ -4,15 +4,7 @@ Notable changes to OpenFedNow, newest first. The first tagged release is 0.1.0. 
 
 ## Unreleased
 
-### Added
-- Container image for the gateway, built from a pinned two-stage `Dockerfile` and published to `ghcr.io/danielsmori/open-fednow` for `linux/amd64` and `linux/arm64` on a release tag, with a CycloneDX SBOM per platform, a recorded image digest, and a Trivy image scan that blocks publishing on HIGH or CRITICAL findings ([#121](https://github.com/danielsmori/open-fednow/pull/121)).
-- `compose.app.yml`, an opt-in Compose file that runs the gateway inside the Compose network. The backing services then publish no host ports and only the gateway's port is published, on `127.0.0.1`, moved by `APP_PORT`, so two checkouts can run the whole stack at once ([#127](https://github.com/danielsmori/open-fednow/pull/127)).
-- `scripts/preflight.py --mode app` for the containerised stack, and a Compose 2.24 minimum version check.
-- [ADR-0011](docs/adr/0011-evaluate-the-host-run-jvm.md): the reliability evidence describes the host-run JVM, not the container, and the reasons that would have to be addressed before the evaluator could target a container.
-- A weekly and pull-request Trivy scan of the container image, which sees transitive dependencies and base-image OS packages that the existing filesystem scan does not.
-
-### Changed
-- The release workflow can be run manually as a dry run that builds, scans and writes SBOMs without pushing an image or creating a release.
+Nothing yet.
 
 ## 0.1.0 - 2026-11-12
 
@@ -23,12 +15,19 @@ First tagged release. It contains everything listed under the dated headings bel
 - Affiliation and trademark notice in the README and a `NOTICE` file.
 - `SECURITY.md`, `CODE_OF_CONDUCT.md`, `GOVERNANCE.md`, `CITATION.cff`, issue templates and a pull-request template.
 - Release process ([docs/releasing.md](docs/releasing.md)) and a tag-triggered release workflow.
+- Container image for the gateway, built from a pinned two-stage `Dockerfile` and published to `ghcr.io/danielsmori/open-fednow` for `linux/amd64` and `linux/arm64` on a release tag, with a CycloneDX SBOM per platform, a recorded image digest, and a Trivy image scan that blocks publishing on HIGH or CRITICAL findings ([#121](https://github.com/danielsmori/open-fednow/pull/121)).
+- `compose.app.yml`, an opt-in Compose file that runs the gateway inside the Compose network. The backing services then publish no host ports and only the gateway's port is published, on `127.0.0.1`, moved by `APP_PORT`, so two checkouts can run the whole stack at once ([#127](https://github.com/danielsmori/open-fednow/pull/127)).
+- `scripts/preflight.py --mode app` for the containerised stack, and a Compose 2.24 minimum version check.
+- [ADR-0011](docs/adr/0011-evaluate-the-host-run-jvm.md): the reliability evidence describes the host-run JVM, not the container, and the reasons that would have to be addressed before the evaluator could target a container.
+- A weekly and pull-request Trivy scan of the container image, which sees transitive dependencies and base-image OS packages that the existing filesystem scan does not ([#128](https://github.com/danielsmori/open-fednow/pull/128)).
 
 ### Changed
 - The full component table moved from the README to [docs/status.md](docs/status.md), and the development phases to [docs/roadmap.md](docs/roadmap.md).
 - `docs/whitepaper.pdf` replaced by the revised November 9, 2026 preprint.
 - Project version set to `0.1.0`. `demo/payment-integration.sh` and `harness/evaluate_external.py` now read the jar name from `pom.xml` instead of a fixed `0.1.0-SNAPSHOT` name.
 - The README DOI badge is now labelled as the preprint's DOI. The DOI identifies the architecture preprint; the software is cited by repository and commit or release tag.
+- The clean-checkout setup is project-isolated: Compose no longer fixes container names, host ports bind `127.0.0.1` and are overridable, the evaluator picks its own application ports, and `scripts/preflight.py` checks the toolchain before a run ([#118](https://github.com/danielsmori/open-fednow/pull/118)).
+- The release workflow can be run manually as a dry run that builds, scans and writes SBOMs without pushing an image or creating a release ([#128](https://github.com/danielsmori/open-fednow/pull/128)).
 
 ## 2026-11-12
 
