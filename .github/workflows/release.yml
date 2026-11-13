@@ -1,12 +1,25 @@
 name: Release
 
+# A tag push builds, tests, scans and publishes. `workflow_dispatch` runs the
+# same pipeline as a dry run: it builds the image for both platforms, scans it
+# and produces the SBOMs, but pushes nothing and creates no release. Use the
+# dry run to check this workflow before tagging, because a tag is awkward to
+# take back.
 on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
 
 permissions:
   contents: write
+  # Required to push the image to GHCR.
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+  PLATFORMS: linux/amd64,linux/arm64
+  TRIVY_VERSION: '0.74.0'
 
 jobs:
   release:
@@ -24,6 +37,20 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Decide version and whether this run publishes
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = push ]; then
+            tag="${{ github.ref_name }}"
+            echo "PUBLISH=true" >> "$GITHUB_ENV"
+            echo "VERSION=${tag#v}" >> "$GITHUB_ENV"
+          else
+            # A dry run has no tag, so the version comes from the pom. The
+            # image is built and scanned but never pushed.
+            echo "PUBLISH=false" >> "$GITHUB_ENV"
+            echo "VERSION=$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)" >> "$GITHUB_ENV"
+          fi
+
       - name: Run unit tests
         run: mvn -B test --no-transfer-progress
 
@@ -37,22 +64,113 @@ jobs:
       - name: Build service jar
         run: mvn -B package -DskipTests --no-transfer-progress
 
-      - name: Assemble release files
-        env:
-          TAG: ${{ github.ref_name }}
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Built once for both platforms into a local OCI layout. Nothing is
+      # pushed here, so the scan below decides whether this image is allowed
+      # to reach the registry at all.
+      - name: Build the image for ${{ env.PLATFORMS }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ env.PLATFORMS }}
+          build-args: |
+            VERSION=${{ env.VERSION }}
+            REVISION=${{ github.sha }}
+          outputs: type=oci,dest=image-layout,tar=false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan each platform and write its SBOM
         run: |
-          VERSION="${TAG#v}"
+          set -euo pipefail
+          for platform in ${PLATFORMS//,/ }; do
+            arch="${platform##*/}"
+            echo "::group::$platform"
+            # Runs from the repository root, so .trivyignore applies. Its
+            # entries are scoped exceptions with written justifications; a
+            # finding outside that file fails the release here, before the
+            # image is published.
+            docker run --rm -v "$PWD:/work" -w /work \
+              "aquasec/trivy:${TRIVY_VERSION}" image \
+              --input image-layout --platform "$platform" \
+              --scanners vuln --severity HIGH,CRITICAL --exit-code 1 \
+              --format table
+            docker run --rm -v "$PWD:/work" -w /work \
+              "aquasec/trivy:${TRIVY_VERSION}" image \
+              --input image-layout --platform "$platform" \
+              --format cyclonedx --quiet \
+              --output "sbom-${arch}.cdx.json"
+            echo "::endgroup::"
+          done
+
+      - name: Assemble release files
+        run: |
+          set -euo pipefail
           mkdir -p dist
-          JAR="$(ls target/openfednow-*.jar | grep -v original | head -n 1)"
-          cp "$JAR" "dist/openfednow-${VERSION}.jar"
+          jar="$(ls target/openfednow-*.jar | grep -v original | head -n 1)"
+          cp "$jar" "dist/openfednow-${VERSION}.jar"
           zip -r "dist/openfednow-test-kit-${VERSION}.zip" \
             harness docs/reliability/portable-send-profile.md LICENSE NOTICE \
             -x 'harness/__pycache__/*'
           cp target/portable/release-smoke.json "dist/smoke-report-${VERSION}.json"
-          (cd dist && sha256sum * > SHA256SUMS.txt)
+          for platform in ${PLATFORMS//,/ }; do
+            arch="${platform##*/}"
+            cp "sbom-${arch}.cdx.json" "dist/openfednow-${VERSION}-sbom-${arch}.cdx.json"
+          done
+
+      - name: Log in to GHCR
+        if: env.PUBLISH == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      # The layers are already in the build cache, so this re-export pushes
+      # rather than rebuilds. It also attaches an SBOM and provenance
+      # attestation to the image in the registry.
+      - name: Push the image
+        if: env.PUBLISH == 'true'
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ env.PLATFORMS }}
+          build-args: |
+            VERSION=${{ env.VERSION }}
+            REVISION=${{ github.sha }}
+          tags: ${{ env.IMAGE }}:${{ env.VERSION }}
+          push: true
+          sbom: true
+          provenance: mode=max
+          cache-from: type=gha
+
+      - name: Record the published digest
+        if: env.PUBLISH == 'true'
+        run: |
+          set -euo pipefail
+          # The digest, not the tag, is what a deployment should pin.
+          printf '%s:%s@%s\n' "$IMAGE" "$VERSION" "${{ steps.push.outputs.digest }}" \
+            > "dist/openfednow-${VERSION}-image-digest.txt"
+          cat "dist/openfednow-${VERSION}-image-digest.txt"
+
+      - name: Checksum the release files
+        run: (cd dist && sha256sum * > SHA256SUMS.txt)
 
       - name: Create GitHub Release
+        if: env.PUBLISH == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
-        run: gh release create "$TAG" dist/* --title "OpenFedNow ${TAG#v}" --generate-notes --verify-tag
+        run: gh release create "$TAG" dist/* --title "OpenFedNow ${VERSION}" --generate-notes --verify-tag
+
+      # A dry run keeps its output so the artefacts can be inspected before a
+      # tag is pushed.
+      - name: Upload dry-run artefacts
+        if: env.PUBLISH != 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-dry-run
+          path: dist/

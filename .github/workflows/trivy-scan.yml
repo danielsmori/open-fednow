@@ -1,7 +1,10 @@
 name: Dependency Vulnerability Scan
 
-# Scan Maven dependencies without an NVD API key. HIGH/CRITICAL findings fail
-# the job. Application-specific exceptions, if any, are documented in .trivyignore.
+# Two scans, because they see different things. The filesystem scan reads
+# pom.xml and catches declared dependencies. The image scan reads the jars that
+# are actually shipped, so it also sees transitive dependencies and the base
+# image's OS packages. HIGH/CRITICAL findings fail either job. Scoped
+# exceptions, with their justifications, are in .trivyignore.
 on:
   schedule:
     - cron: "0 4 * * 1"
@@ -9,6 +12,9 @@ on:
     branches: [ main ]
     paths:
       - "pom.xml"
+      - "Dockerfile"
+      - ".dockerignore"
+      - "compose.app.yml"
       - ".github/workflows/trivy-scan.yml"
       - ".trivyignore*"
   workflow_dispatch:
@@ -59,6 +65,8 @@ jobs:
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-results.sarif
+          # Distinct category per scan, or one upload overwrites the other.
+          category: trivy-filesystem
 
       - name: Upload vulnerability report
         if: always()
@@ -68,4 +76,74 @@ jobs:
           path: |
             trivy-results.json
             trivy-results.sarif
+          if-no-files-found: warn
+
+  image-scan:
+    name: Scan the container image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    env:
+      TRIVY_VERSION: '0.74.0'
+      PLATFORMS: linux/amd64,linux/arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build the image for both platforms
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ env.PLATFORMS }}
+          outputs: type=oci,dest=image-layout,tar=false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan each platform
+        run: |
+          set -euo pipefail
+          status=0
+          for platform in ${PLATFORMS//,/ }; do
+            arch="${platform##*/}"
+            echo "::group::$platform"
+            # Runs from the repository root so .trivyignore applies, and keeps
+            # going across platforms so one report is not hidden by the other.
+            docker run --rm -v "$PWD:/work" -w /work \
+              "aquasec/trivy:${TRIVY_VERSION}" image \
+              --input image-layout --platform "$platform" \
+              --scanners vuln --severity HIGH,CRITICAL --exit-code 1 \
+              --format table || status=1
+            docker run --rm -v "$PWD:/work" -w /work \
+              "aquasec/trivy:${TRIVY_VERSION}" image \
+              --input image-layout --platform "$platform" \
+              --scanners vuln --severity HIGH,CRITICAL --quiet \
+              --format sarif --output "trivy-image-${arch}.sarif"
+            echo "::endgroup::"
+          done
+          exit "$status"
+
+      - name: Upload SARIF for linux/amd64
+        if: always() && hashFiles('trivy-image-amd64.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-image-amd64.sarif
+          category: trivy-image-amd64
+
+      - name: Upload SARIF for linux/arm64
+        if: always() && hashFiles('trivy-image-arm64.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-image-arm64.sarif
+          category: trivy-image-arm64
+
+      - name: Upload image vulnerability report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: image-vulnerability-report
+          path: trivy-image-*.sarif
           if-no-files-found: warn
