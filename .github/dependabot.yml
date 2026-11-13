@@ -40,6 +40,20 @@ updates:
       - dependency-name: "org.springdoc:*"
         update-types: ["version-update:semver-major"]
 
+  # ── Docker ────────────────────────────────────────────────────────────
+  # The Dockerfile pins its base images by digest. Without this entry those
+  # digests would quietly go stale and the image would keep shipping base-layer
+  # CVEs that upstream has already fixed.
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
+
   # ── GitHub Actions ────────────────────────────────────────────────────
   - package-ecosystem: "github-actions"
     directory: "/"

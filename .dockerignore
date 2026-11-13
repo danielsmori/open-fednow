@@ -1,0 +1,12 @@
+# The build context is only what Maven needs: pom.xml and main sources.
+# Everything else is excluded by default, so git history, the recorded evidence
+# archive under docs/reliability/evidence/, the Python harness, local target/
+# output and any untracked local files cannot reach the image or inflate the
+# context.
+*
+!pom.xml
+!src
+
+# Tests run in CI against the source tree, not inside the image build, and the
+# image build passes -DskipTests.
+src/test
