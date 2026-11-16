@@ -47,7 +47,7 @@ RUN jar="$(ls target/openfednow-*.jar)" \
 
 
 # eclipse-temurin:17-jre
-FROM eclipse-temurin@sha256:0b6521287f850ec1c4b31c9074c5a1ae1d67c5922c3fefd21065c7c32e244d4a AS runtime
+FROM eclipse-temurin@sha256:b8705e936964c228dfce359e63dbf08f6c69cb380ed1d576b1f6b1064f15567d AS runtime
 
 ARG VERSION=0.0.0-dev
 ARG REVISION=unknown
