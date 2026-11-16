@@ -27,7 +27,7 @@
 # --platform=$BUILDPLATFORM keeps this stage on the builder's own architecture.
 # Java bytecode is architecture-independent, so the jar built here serves every
 # target platform and no Maven build ever runs under emulation.
-FROM --platform=$BUILDPLATFORM maven@sha256:1a352420f7aba21f5ad08df31bab55f74c013fb491f1ae8ab1dd7ff9ed698584 AS build
+FROM --platform=$BUILDPLATFORM maven@sha256:3175c44b207d6698aecb9bbb5bf285b5b4efcf7f567d6f65d88cd218276a6ab2 AS build
 
 WORKDIR /build
 
