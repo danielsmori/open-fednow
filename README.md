@@ -1,8 +1,10 @@
 <p align="center">
-  <img src="docs/assets/logo.png" alt="OpenFedNow" width="520">
+  <img src="docs/assets/logo.png" alt="OpenInstantBridge" width="520">
 </p>
 
-# OpenFedNow
+# OpenInstantBridge
+
+> **Formerly OpenFedNow.** OpenInstantBridge is the same project under a new name, with its commit history, pull requests and issues preserved. Earlier publications and documentation may use the former name. The [previous repository URL](https://github.com/danielsmori/open-fednow) redirects to this repository.
 
 **Open-source failure tests and reference code for sending U.S. instant payments from an existing bank core.**
 
@@ -12,11 +14,11 @@
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue)]()
 [![Preprint DOI](https://img.shields.io/badge/Preprint%20DOI-10.5281%2Fzenodo.21114113-blue)](https://doi.org/10.5281/zenodo.21114113)
 
-> **Independent project.** OpenFedNow is not affiliated with, endorsed by, or connected to the Federal Reserve Banks, the FedNow Service, The Clearing House, or any core banking provider. It does not connect to a live payment network. See [Trademarks and affiliation](#trademarks-and-affiliation).
+> **Independent project.** OpenInstantBridge is not affiliated with, endorsed by, or connected to the Federal Reserve Banks, the FedNow Service, The Clearing House, or any core banking provider. It does not connect to a live payment network. See [Trademarks and affiliation](#trademarks-and-affiliation).
 
 ## What it does
 
-An instant payment moves money between banks in seconds, and settlement is final. The software between a bank's core system and the payment service has to stay correct when something fails in the middle of a payment. OpenFedNow tests three sending-side failures:
+An instant payment moves money between banks in seconds, and settlement is final. The software between a bank's core system and the payment service has to stay correct when something fails in the middle of a payment. OpenInstantBridge tests three sending-side failures:
 
 | Situation | What can go wrong | What the test checks |
 |---|---|---|
@@ -84,7 +86,7 @@ The full list of components is in [docs/status.md](docs/status.md). Development 
 
 ## Scope and limits
 
-OpenFedNow is a sandbox and reference implementation. Its results come from synthetic accounts and a simulated payment service.
+OpenInstantBridge is a sandbox and reference implementation. Its results come from synthetic accounts and a simulated payment service.
 
 - **Evaluation scope: synthetic FedNow routing.** Outbound RTP is disabled; screening failures reject by default; downtime sends default to disabled. On the legacy path, an unknown outbound rail outcome keeps the reservation and requires review. The separate SQL reliability path adds synthetic status inquiry and recovery; live status authority remains unverified. See the [capability matrix](docs/capability-matrix.md), [current practical evaluation](docs/reliability/practical-evaluation-2026-10-01.md), and [September candidate report](docs/reliability/evaluation-report.md).
 - **Sandbox / reference implementation.** Routing, vendor-shaped adapters, saga lifecycle, idempotency, reconciliation, screening, cancellation, rate limiting, and admin audit have synthetic test coverage. Passing tests do not establish atomic money movement across Redis and SQL, live rail connectivity, vendor compatibility, or production readiness. See [reliability scope](docs/reliability/scope.md), [docs/known-limitations.md](docs/known-limitations.md), and [Production Boundaries](#production-boundaries).
@@ -215,7 +217,7 @@ Apache 2.0 permits reuse under its stated terms; it does not establish suitabili
 
 ## Trademarks and affiliation
 
-OpenFedNow is an independent open-source project maintained by Daniel Stelzer Mori. It is not affiliated with, sponsored by, or endorsed by the Federal Reserve Banks, the Board of Governors of the Federal Reserve System, The Clearing House, Fiserv, FIS, Jack Henry, TigerBeetle or any other organization named in this repository.
+OpenInstantBridge is an independent open-source project maintained by Daniel Stelzer Mori. It is not affiliated with, sponsored by, or endorsed by the Federal Reserve Banks, the Board of Governors of the Federal Reserve System, The Clearing House, Fiserv, FIS, Jack Henry, TigerBeetle or any other organization named in this repository.
 
 "FedNow" is a service mark of the Federal Reserve Banks. "RTP" is a service mark of The Clearing House Payments Company L.L.C. Other names are the property of their respective owners and are used only to describe the systems this project studies. See [NOTICE](NOTICE).
 
